@@ -10,21 +10,96 @@ import {
   Box,
   Alert,
   Snackbar,
+  IconButton,
+  Chip,
 } from '@mui/material';
-import { Work as WorkIcon } from '@mui/icons-material';
+import { 
+  Work as WorkIcon, 
+  Brightness4 as DarkIcon,
+  Brightness7 as LightIcon,
+  CloudSync as SyncIcon,
+  Storage as DatabaseIcon,
+} from '@mui/icons-material';
 import { JobCard } from './components/JobCard';
 import { StatsCards } from './components/StatsCards';
 import { FilterControls } from './components/FilterControls';
+import { JobLoadingInfo } from './components/JobLoadingInfo';
 import { jobApi } from './services/api';
 import { Job, JobStats, FilterState } from './types';
 
-const theme = createTheme({
+const createAppTheme = (mode: 'light' | 'dark') => createTheme({
   palette: {
+    mode,
     primary: {
-      main: '#0077b5',
+      main: mode === 'dark' ? '#0ea5e9' : '#0077b5',
     },
     secondary: {
-      main: '#00a0dc',
+      main: '#10b981',
+    },
+    background: {
+      default: mode === 'dark' ? '#0f172a' : '#f8fafc',
+      paper: mode === 'dark' ? '#1e293b' : '#ffffff',
+    },
+    text: {
+      primary: mode === 'dark' ? '#f8fafc' : '#1e293b',
+      secondary: mode === 'dark' ? '#cbd5e1' : '#64748b',
+    },
+    success: {
+      main: '#10b981',
+    },
+    warning: {
+      main: '#f59e0b',
+    },
+    error: {
+      main: '#ef4444',
+    },
+  },
+  typography: {
+    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+    h4: {
+      fontWeight: 600,
+    },
+    h6: {
+      fontWeight: 600,
+    },
+  },
+  components: {
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          backgroundColor: mode === 'dark' ? '#1e293b' : '#ffffff',
+          borderRadius: 12,
+          border: mode === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0',
+          transition: 'all 0.2s ease-in-out',
+        },
+      },
+    },
+    MuiChip: {
+      styleOverrides: {
+        root: {
+          fontWeight: 500,
+        },
+      },
+    },
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          borderRadius: 8,
+          fontWeight: 600,
+          textTransform: 'none',
+        },
+      },
+    },
+    MuiAppBar: {
+      styleOverrides: {
+        root: {
+          backgroundColor: mode === 'dark' ? '#1e293b' : '#ffffff',
+          color: mode === 'dark' ? '#f8fafc' : '#1e293b',
+          boxShadow: mode === 'dark' 
+            ? '0 1px 3px rgba(0, 0, 0, 0.3)' 
+            : '0 1px 3px rgba(0, 0, 0, 0.1)',
+        },
+      },
     },
   },
 });
@@ -33,6 +108,7 @@ const EXCLUDED_COMPANIES_KEY = 'excludedCompanies';
 const AUTO_REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
 function App() {
+  const [darkMode, setDarkMode] = useState(true); // Default to dark mode
   const [jobs, setJobs] = useState<Record<string, Job>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +119,8 @@ function App() {
     message: string;
     severity: 'success' | 'error' | 'info';
   } | null>(null);
+  
+  const theme = useMemo(() => createAppTheme(darkMode ? 'dark' : 'light'), [darkMode]);
   
   const [filters, setFilters] = useState<FilterState>({
     status: 'all',
@@ -271,9 +349,36 @@ function App() {
       <AppBar position="static" elevation={0}>
         <Toolbar>
           <WorkIcon sx={{ mr: 2 }} />
-          <Typography variant="h6" component="div">
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             📊 LinkedIn Job Manager
           </Typography>
+          
+          {/* Job Loading Status */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mr: 2 }}>
+            <Chip
+              icon={<DatabaseIcon />}
+              label={`${Object.keys(jobs).length} Jobs Loaded`}
+              variant="outlined"
+              size="small"
+            />
+            <Chip
+              icon={<SyncIcon />}
+              label="Database Only"
+              color="info"
+              variant="outlined"
+              size="small"
+              title="Jobs loaded from existing database (scraping disabled on Railway)"
+            />
+          </Box>
+          
+          {/* Theme Toggle */}
+          <IconButton 
+            onClick={() => setDarkMode(!darkMode)} 
+            color="inherit"
+            title={`Switch to ${darkMode ? 'light' : 'dark'} mode`}
+          >
+            {darkMode ? <LightIcon /> : <DarkIcon />}
+          </IconButton>
         </Toolbar>
       </AppBar>
 
@@ -285,6 +390,8 @@ function App() {
         )}
 
         <StatsCards stats={stats} />
+
+        <JobLoadingInfo jobCount={Object.keys(jobs).length} />
 
         <FilterControls
           filters={filters}
