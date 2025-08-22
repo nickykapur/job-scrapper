@@ -3,7 +3,7 @@ FROM node:18-alpine as frontend-build
 
 WORKDIR /app/frontend
 COPY job-manager-ui/package*.json ./
-RUN npm install
+RUN npm ci --only=production --silent
 COPY job-manager-ui/ ./
 RUN npm run build
 
@@ -12,21 +12,17 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies for Selenium
-RUN apt-get update && apt-get install -y \
+# Install system dependencies for Selenium (optimized)
+RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
-    gnupg \
+    gnupg2 \
     unzip \
     curl \
     xvfb \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Chrome
-RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - \
-    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list \
-    && apt-get update \
-    && apt-get install -y google-chrome-stable \
-    && rm -rf /var/lib/apt/lists/*
+    chromium \
+    chromium-driver \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 # Copy Python requirements and install
 COPY requirements-fastapi.txt .
@@ -47,5 +43,7 @@ EXPOSE 8000
 
 ENV PYTHONPATH=/app
 ENV DISPLAY=:99
+ENV CHROME_BIN=/usr/bin/chromium
+ENV CHROMEDRIVER_PATH=/usr/bin/chromedriver
 
 CMD ["python", "fastapi_server.py"]

@@ -79,54 +79,54 @@ export const FilterControls: React.FC<FilterControlsProps> = ({
     <>
       <Paper sx={{ p: 2, mb: 3 }}>
         <Box
-          display=\"flex\"
+          display="flex"
           gap={2}
-          flexWrap=\"wrap\"
-          alignItems=\"center\"
+          flexWrap="wrap"
+          alignItems="center"
           sx={{ mb: excludedCompanies.length > 0 ? 2 : 0 }}
         >
-          <FormControl size=\"small\" sx={{ minWidth: 120 }}>
+          <FormControl size="small" sx={{ minWidth: 120 }}>
             <InputLabel>Status</InputLabel>
             <Select
               value={filters.status}
-              label=\"Status\"
+              label="Status"
               onChange={(e) =>
                 onFiltersChange({ ...filters, status: e.target.value as any })
               }
             >
-              <MenuItem value=\"all\">All Jobs</MenuItem>
-              <MenuItem value=\"applied\">Applied</MenuItem>
-              <MenuItem value=\"not-applied\">Not Applied</MenuItem>
-              <MenuItem value=\"new\">New Jobs</MenuItem>
+              <MenuItem value="all">All Jobs</MenuItem>
+              <MenuItem value="applied">Applied</MenuItem>
+              <MenuItem value="not-applied">Not Applied</MenuItem>
+              <MenuItem value="new">New Jobs</MenuItem>
             </Select>
           </FormControl>
 
-          <FormControl size=\"small\" sx={{ minWidth: 140 }}>
+          <FormControl size="small" sx={{ minWidth: 140 }}>
             <InputLabel>Sort by</InputLabel>
             <Select
               value={filters.sort}
-              label=\"Sort by\"
+              label="Sort by"
               onChange={(e) =>
                 onFiltersChange({ ...filters, sort: e.target.value as any })
               }
             >
-              <MenuItem value=\"newest\">Newest First</MenuItem>
-              <MenuItem value=\"oldest\">Oldest First</MenuItem>
-              <MenuItem value=\"title\">Title A-Z</MenuItem>
-              <MenuItem value=\"company\">Company A-Z</MenuItem>
+              <MenuItem value="newest">Newest First</MenuItem>
+              <MenuItem value="oldest">Oldest First</MenuItem>
+              <MenuItem value="title">Title A-Z</MenuItem>
+              <MenuItem value="company">Company A-Z</MenuItem>
             </Select>
           </FormControl>
 
           <TextField
-            size=\"small\"
-            placeholder=\"Search jobs...\"
+            size="small"
+            placeholder="Search jobs..."
             value={filters.search}
             onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
             sx={{ minWidth: 200 }}
           />
 
           <Button
-            variant=\"outlined\"
+            variant="outlined"
             startIcon={<RefreshIcon />}
             onClick={onRefresh}
             disabled={isRefreshing}
@@ -134,17 +134,17 @@ export const FilterControls: React.FC<FilterControlsProps> = ({
             {isRefreshing ? 'Refreshing...' : 'Refresh'}
           </Button>
 
-          <Button variant=\"outlined\" startIcon={<DownloadIcon />} onClick={onExport}>
+          <Button variant="outlined" startIcon={<DownloadIcon />} onClick={onExport}>
             Export
           </Button>
 
-          <Button variant=\"outlined\" startIcon={<VisibilityIcon />} onClick={onMarkAllRead}>
+          <Button variant="outlined" startIcon={<VisibilityIcon />} onClick={onMarkAllRead}>
             Mark All Read
           </Button>
 
           <Button
-            variant=\"outlined\"
-            color=\"error\"
+            variant="outlined"
+            color="error"
             startIcon={<DeleteIcon />}
             onClick={onRemoveApplied}
           >
@@ -152,7 +152,7 @@ export const FilterControls: React.FC<FilterControlsProps> = ({
           </Button>
 
           <Button
-            variant=\"contained\"
+            variant="contained"
             startIcon={<SearchIcon />}
             onClick={() => setSearchDialog(true)}
             disabled={isSearching}
@@ -161,7 +161,7 @@ export const FilterControls: React.FC<FilterControlsProps> = ({
           </Button>
 
           <Button
-            variant=\"outlined\"
+            variant="outlined"
             startIcon={<BlockIcon />}
             onClick={() => setExcludeDialog(true)}
           >
@@ -171,18 +171,18 @@ export const FilterControls: React.FC<FilterControlsProps> = ({
 
         {excludedCompanies.length > 0 && (
           <Box>
-            <Typography variant=\"body2\" color=\"text.secondary\" sx={{ mb: 1 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
               🚫 Excluded companies:
             </Typography>
-            <Box display=\"flex\" gap={1} flexWrap=\"wrap\">
+            <Box display="flex" gap={1} flexWrap="wrap">
               {excludedCompanies.map((company) => (
                 <Chip
                   key={company}
                   label={company}
                   onDelete={() => onRemoveExcludedCompany(company)}
-                  color=\"error\"
-                  variant=\"outlined\"
-                  size=\"small\"
+                  color="error"
+                  variant="outlined"
+                  size="small"
                 />
               ))}
             </Box>
@@ -196,11 +196,11 @@ export const FilterControls: React.FC<FilterControlsProps> = ({
         <DialogContent>
           <TextField
             autoFocus
-            margin=\"dense\"
-            label=\"Keywords\"
-            placeholder=\"e.g., Python Developer\"
+            margin="dense"
+            label="Keywords"
+            placeholder="e.g., Python Developer"
             fullWidth
-            variant=\"outlined\"
+            variant="outlined"
             value={searchKeywords}
             onChange={(e) => setSearchKeywords(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
@@ -208,7 +208,7 @@ export const FilterControls: React.FC<FilterControlsProps> = ({
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setSearchDialog(false)}>Cancel</Button>
-          <Button onClick={handleSearch} variant=\"contained\">
+          <Button onClick={handleSearch} variant="contained">
             Search
           </Button>
         </DialogActions>
@@ -220,22 +220,22 @@ export const FilterControls: React.FC<FilterControlsProps> = ({
         <DialogContent>
           <TextField
             autoFocus
-            margin=\"dense\"
-            label=\"Company Name\"
-            placeholder=\"e.g., Company XYZ\"
+            margin="dense"
+            label="Company Name"
+            placeholder="e.g., Company XYZ"
             fullWidth
-            variant=\"outlined\"
+            variant="outlined"
             value={excludeCompany}
             onChange={(e) => setExcludeCompany(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleExclude()}
           />
-          <Typography variant=\"body2\" color=\"text.secondary\" sx={{ mt: 1 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
             Jobs from this company will be hidden from the list.
           </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setExcludeDialog(false)}>Cancel</Button>
-          <Button onClick={handleExclude} variant=\"contained\">
+          <Button onClick={handleExclude} variant="contained">
             Exclude
           </Button>
         </DialogActions>

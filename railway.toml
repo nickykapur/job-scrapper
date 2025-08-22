@@ -1,6 +1,6 @@
 [build]
 builder = "nixpacks"
-buildCommand = "cd job-manager-ui && npm install && npm run build && cd .. && pip install -r requirements-fastapi.txt"
+buildCommand = "cd job-manager-ui && npm ci --only=production --silent && npm run build && cd .. && pip install --no-cache-dir -r requirements-fastapi.txt"
 
 [deploy]
 startCommand = "python fastapi_server.py"
@@ -11,3 +11,5 @@ restartPolicyMaxRetries = 10
 NODE_ENV = "production"
 PYTHONPATH = "/app"
 PORT = "8000"
+CHROME_BIN = "/usr/bin/chromium"
+CHROMEDRIVER_PATH = "/usr/bin/chromedriver"

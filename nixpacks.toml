@@ -1,0 +1,22 @@
+# Railway Nixpacks configuration for optimized builds
+[phases.setup]
+nixPkgs = ["nodejs-18_x", "python311", "gcc"]
+
+[phases.install]
+dependsOn = ["setup"]
+cmds = [
+    "cd job-manager-ui && npm ci --only=production --silent",
+    "cd job-manager-ui && npm run build",
+    "pip install --no-cache-dir -r requirements-fastapi.txt"
+]
+
+[phases.build]
+dependsOn = ["install"]
+
+[start]
+cmd = "python fastapi_server.py"
+
+[variables]
+NODE_ENV = "production"
+PYTHONPATH = "/app"
+PORT = "8000"
