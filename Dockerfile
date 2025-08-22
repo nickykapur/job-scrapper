@@ -7,26 +7,20 @@ RUN npm ci --only=production --silent
 COPY job-manager-ui/ ./
 RUN npm run build
 
-# Python backend stage
+# Python backend stage - minimal for Railway
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies for Selenium (optimized)
+# Install only essential system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    wget \
-    gnupg2 \
-    unzip \
     curl \
-    xvfb \
-    chromium \
-    chromium-driver \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
 # Copy Python requirements and install
-COPY requirements-fastapi.txt .
-RUN pip install --no-cache-dir -r requirements-fastapi.txt
+COPY requirements-railway.txt .
+RUN pip install --no-cache-dir -r requirements-railway.txt
 
 # Copy backend code
 COPY *.py ./
@@ -42,8 +36,6 @@ USER appuser
 EXPOSE 8000
 
 ENV PYTHONPATH=/app
-ENV DISPLAY=:99
-ENV CHROME_BIN=/usr/bin/chromium
-ENV CHROMEDRIVER_PATH=/usr/bin/chromedriver
+ENV RAILWAY_ENVIRONMENT=production
 
 CMD ["python", "fastapi_server.py"]

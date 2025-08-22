@@ -28,6 +28,15 @@ if os.path.exists("job-manager-ui/dist"):
 
 JOBS_DATABASE_FILE = "jobs_database.json"
 
+@app.get("/api/health")
+async def health_check():
+    """Health check endpoint"""
+    return {
+        "status": "healthy",
+        "environment": os.environ.get("RAILWAY_ENVIRONMENT", "development"),
+        "jobs_database_exists": os.path.exists(JOBS_DATABASE_FILE)
+    }
+
 class JobUpdateRequest(BaseModel):
     job_id: str
     applied: bool
@@ -116,7 +125,15 @@ async def search_jobs(request: SearchRequest):
         if not request.keywords.strip():
             raise HTTPException(status_code=400, detail="Keywords required")
         
-        # Run the job scraper
+        # Check if we're in Railway environment
+        if os.environ.get("RAILWAY_ENVIRONMENT") == "production":
+            return {
+                "success": False, 
+                "message": "Job scraping is disabled on Railway due to browser limitations. Please use the app with your existing job database or run scraping locally.",
+                "new_jobs": 0
+            }
+        
+        # Run the job scraper (local development only)
         result = subprocess.run([
             sys.executable, 'main.py', 'search', request.keywords.strip(), '--headless'
         ], capture_output=True, text=True, cwd='.')
