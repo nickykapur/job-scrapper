@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  job-manager:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./jobs_database.json:/app/jobs_database.json:rw
+    environment:
+      - NODE_ENV=production
+      - REACT_APP_API_URL=http://localhost:8000
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

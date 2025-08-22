@@ -1,0 +1,31 @@
+{
+  "name": "linkedin-job-manager",
+  "version": "1.0.0",
+  "description": "LinkedIn Job Manager with React UI and Python Backend",
+  "scripts": {
+    "install:all": "npm install && cd job-manager-ui && npm install",
+    "dev": "concurrently \"python fastapi_server.py\" \"cd job-manager-ui && npm run dev\"",
+    "build": "cd job-manager-ui && npm install && npm run build",
+    "start": "python fastapi_server.py",
+    "deploy:netlify": "cd job-manager-ui && npm run build && netlify deploy --prod --dir=dist",
+    "deploy:vercel": "cd job-manager-ui && vercel --prod"
+  },
+  "keywords": [
+    "linkedin",
+    "job-manager",
+    "react",
+    "python",
+    "fastapi",
+    "selenium",
+    "material-ui"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "python": ">=3.8.0"
+  }
+}

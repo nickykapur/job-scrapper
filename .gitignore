@@ -1,0 +1,99 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+venv/
+.venv/
+env/
+.env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+
+# React build
+job-manager-ui/dist/
+job-manager-ui/build/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+
+# Chrome driver
+chromedriver*
+
+# Backup files
+*backup*
+*.bak
+
+# Database backups  
+applied_jobs_backup_*.json
+
+# Old files (for cleanup)
+job_manager.html
+web_server.py
+start_ui.py
+debug_selectors.py
+fix_job_data.py
+cleanup_applied_jobs.py
+linkedin_jobs.json
+google-chrome-stable_current_amd64.deb
+netlify/
+functions/
+netlify.toml
+lighthouserc.json

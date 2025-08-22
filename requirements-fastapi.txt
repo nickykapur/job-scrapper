@@ -1,0 +1,11 @@
+# FastAPI Backend Requirements
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+pydantic==2.5.0
+
+# Existing scraper requirements
+selenium==4.15.2
+beautifulsoup4==4.12.2
+requests==2.31.0
+webdriver-manager==4.0.1
