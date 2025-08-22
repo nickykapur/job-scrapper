@@ -69,7 +69,7 @@ const createAppTheme = (mode: 'light' | 'dark') => createTheme({
       styleOverrides: {
         root: {
           backgroundColor: mode === 'dark' ? '#1e293b' : '#ffffff',
-          borderRadius: 12,
+          borderRadius: 8,
           border: mode === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0',
           transition: 'all 0.2s ease-in-out',
         },
@@ -85,7 +85,7 @@ const createAppTheme = (mode: 'light' | 'dark') => createTheme({
     MuiButton: {
       styleOverrides: {
         root: {
-          borderRadius: 8,
+          borderRadius: 6,
           fontWeight: 600,
           textTransform: 'none',
         },
@@ -99,6 +99,14 @@ const createAppTheme = (mode: 'light' | 'dark') => createTheme({
           boxShadow: mode === 'dark' 
             ? '0 1px 3px rgba(0, 0, 0, 0.3)' 
             : '0 1px 3px rgba(0, 0, 0, 0.1)',
+        },
+      },
+    },
+    MuiContainer: {
+      styleOverrides: {
+        root: {
+          paddingLeft: '16px !important',
+          paddingRight: '16px !important',
         },
       },
     },
@@ -289,37 +297,36 @@ function App() {
     showNotification(`✅ Removed exclusion for: ${company}`, 'success');
   };
 
-  const filteredJobs = useMemo(() => {
-    return Object.values(jobs).filter(job => {
-      // Status filter
-      if (filters.status === 'applied' && !job.applied) return false;
-      if (filters.status === 'not-applied' && job.applied) return false;
-      if (filters.status === 'new' && !job.is_new) return false;
+  // Filter out metadata and create clean jobs object
+  const cleanJobs = useMemo(() => {
+    const filtered = Object.fromEntries(
+      Object.entries(jobs).filter(([key, job]) => {
+        // Skip metadata entries
+        if (key.startsWith('_')) return false;
+        
+        // Ensure job has required fields
+        if (!job.title || !job.company || !job.id) return false;
+        
+        // Status filter
+        if (filters.status === 'applied' && !job.applied) return false;
+        if (filters.status === 'not-applied' && job.applied) return false;
+        if (filters.status === 'new' && !job.is_new) return false;
 
-      // Search filter
-      if (filters.search) {
-        const searchTerm = filters.search.toLowerCase();
-        const searchFields = [job.title, job.company, job.location].join(' ').toLowerCase();
-        if (!searchFields.includes(searchTerm)) return false;
-      }
+        // Search filter
+        if (filters.search) {
+          const searchTerm = filters.search.toLowerCase();
+          const searchFields = [job.title, job.company, job.location].join(' ').toLowerCase();
+          if (!searchFields.includes(searchTerm)) return false;
+        }
 
-      // Company exclusion filter
-      if (excludedCompanies.includes(job.company)) return false;
+        // Company exclusion filter
+        if (excludedCompanies.includes(job.company)) return false;
 
-      return true;
-    }).sort((a, b) => {
-      switch (filters.sort) {
-        case 'oldest':
-          return new Date(a.scraped_at).getTime() - new Date(b.scraped_at).getTime();
-        case 'title':
-          return a.title.localeCompare(b.title);
-        case 'company':
-          return a.company.localeCompare(b.company);
-        case 'newest':
-        default:
-          return new Date(b.scraped_at).getTime() - new Date(a.scraped_at).getTime();
-      }
-    });
+        return true;
+      })
+    );
+    
+    return filtered;
   }, [jobs, filters, excludedCompanies]);
 
   const stats: JobStats = useMemo(() => {
@@ -397,7 +404,7 @@ function App() {
         </Toolbar>
       </AppBar>
 
-      <Container maxWidth="lg" sx={{ py: 3 }}>
+      <Container maxWidth={false} sx={{ px: 3, py: 2, minHeight: 'calc(100vh - 64px)' }}>
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
@@ -407,6 +414,17 @@ function App() {
         <StatsCards stats={stats} />
 
         <JobLoadingInfo jobCount={Object.keys(jobs).length} />
+
+        {/* Debug Info - Remove in production */}
+        {process.env.NODE_ENV === 'development' && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            <Typography variant="body2">
+              Debug: {Object.keys(jobs).length} total entries, 
+              {Object.entries(jobs).filter(([key]) => !key.startsWith('_')).length} jobs,
+              API Base: {process.env.REACT_APP_API_URL || 'Same domain'}
+            </Typography>
+          </Alert>
+        )}
 
         <FilterControls
           filters={filters}

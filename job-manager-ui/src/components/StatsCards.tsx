@@ -41,21 +41,23 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ stats }) => {
   ];
 
   return (
-    <Grid container spacing={3} sx={{ mb: 3 }}>
+    <Grid container spacing={2} sx={{ mb: 2 }}>
       {statItems.map((item) => (
-        <Grid item xs={6} md={3} key={item.label}>
+        <Grid item xs={6} sm={3} md={3} key={item.label}>
           <Paper
             sx={{
               p: 2,
               display: 'flex',
-              flexDirection: 'column',
+              flexDirection: 'row',
               alignItems: 'center',
+              gap: 2,
               borderLeft: `4px solid ${item.color}`,
               '&:hover': {
-                transform: 'translateY(-2px)',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                transform: 'translateY(-1px)',
+                boxShadow: '0 3px 12px rgba(0,0,0,0.1)',
               },
-              transition: 'all 0.3s ease',
+              transition: 'all 0.2s ease',
+              minHeight: 80,
             }}
           >
             <Box
@@ -63,22 +65,24 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ stats }) => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: 48,
-                height: 48,
+                width: 40,
+                height: 40,
                 borderRadius: '50%',
                 backgroundColor: `${item.color}20`,
                 color: item.color,
-                mb: 1,
+                flexShrink: 0,
               }}
             >
               {item.icon}
             </Box>
-            <Typography variant="h4" component="div" color={item.color} fontWeight="bold">
-              {item.value}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" textAlign="center">
-              {item.label}
-            </Typography>
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="h5" component="div" color={item.color} fontWeight="bold" sx={{ lineHeight: 1 }}>
+                {item.value}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {item.label}
+              </Typography>
+            </Box>
           </Paper>
         </Grid>
       ))}

@@ -45,88 +45,88 @@ export const JobCard: React.FC<JobCardProps> = ({
   return (
     <Card
       sx={{
-        mb: 2,
+        mb: 1.5,
         ...getCardStyle(),
         '&:hover': {
-          transform: 'translateY(-2px)',
-          boxShadow: '0 4px 20px rgba(0,119,181,0.2)',
+          transform: 'translateY(-1px)',
+          boxShadow: '0 4px 16px rgba(0,119,181,0.15)',
         },
-        transition: 'all 0.3s ease',
+        transition: 'all 0.2s ease',
         animation: job.is_new ? 'pulse 2s ease-in-out' : 'none',
       }}
     >
-      <CardContent>
-        <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
-          <Box flex={1}>
-            <Typography variant="h6" component="h2" gutterBottom>
+      <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+        {/* Header Row */}
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.5}>
+          <Box flex={1} mr={2}>
+            <Typography variant="h6" component="h2" sx={{ fontSize: '1.1rem', fontWeight: 600, mb: 0.5 }}>
               {job.title}
             </Typography>
-            <Typography variant="subtitle1" color="text.secondary" gutterBottom>
+            <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 500 }}>
               {job.company}
             </Typography>
           </Box>
-          <Box display="flex" gap={1} flexWrap="wrap">
+          
+          {/* Status Chips */}
+          <Box display="flex" gap={1} alignItems="center">
             {job.is_new && (
               <Chip
                 icon={<CheckIcon />}
                 label="New"
                 size="small"
                 color="success"
-                variant="outlined"
+                variant="filled"
+                sx={{ height: 24 }}
               />
             )}
             <Chip
               icon={job.applied ? <CheckIcon /> : <ScheduleIcon />}
-              label={job.applied ? 'Applied' : 'Not Applied'}
+              label={job.applied ? 'Applied' : 'Pending'}
               size="small"
-              color={job.applied ? 'primary' : 'warning'}
-              variant="outlined"
+              color={job.applied ? 'success' : 'warning'}
+              variant={job.applied ? 'filled' : 'outlined'}
+              sx={{ height: 24 }}
             />
           </Box>
         </Box>
 
-        <Box
-          display="grid"
-          gridTemplateColumns={{ xs: '1fr', sm: 'repeat(2, 1fr)' }}
-          gap={1}
-          mb={2}
-        >
-          <Typography variant="body2" color="text.secondary">
-            <strong>Location:</strong> {job.location}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            <strong>Posted:</strong> {job.posted_date}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            <strong>Job ID:</strong> {job.id}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            <strong>Scraped:</strong> {formatDate(job.scraped_at)}
-          </Typography>
-        </Box>
-
-        <Box display="flex" gap={1} flexWrap="wrap">
-          <Button
-            variant={job.applied ? 'contained' : 'outlined'}
-            color={job.applied ? 'success' : 'warning'}
-            size="small"
-            onClick={() => onToggleApplied(job.id)}
-            disabled={isUpdating}
-            startIcon={job.applied ? <CheckIcon /> : <ScheduleIcon />}
-          >
-            {isUpdating ? 'Updating...' : job.applied ? 'Applied' : 'Mark as Applied'}
-          </Button>
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={<OpenInNewIcon />}
-            component={Link}
-            href={job.job_url}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            View Job
-          </Button>
+        {/* Info Row */}
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.5}>
+          <Box display="flex" gap={3}>
+            <Typography variant="body2" color="text.secondary">
+              📍 {job.location}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              📅 {job.posted_date}
+            </Typography>
+          </Box>
+          
+          {/* Action Buttons */}
+          <Box display="flex" gap={1}>
+            <Button
+              variant={job.applied ? 'contained' : 'outlined'}
+              color={job.applied ? 'success' : 'primary'}
+              size="small"
+              onClick={() => onToggleApplied(job.id)}
+              disabled={isUpdating}
+              startIcon={job.applied ? <CheckIcon /> : <ScheduleIcon />}
+              sx={{ minWidth: 120 }}
+            >
+              {isUpdating ? 'Updating...' : job.applied ? 'Applied' : 'Mark Applied'}
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<OpenInNewIcon />}
+              component={Link}
+              href={job.job_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              sx={{ minWidth: 100 }}
+            >
+              View Job
+            </Button>
+          </Box>
         </Box>
       </CardContent>
     </Card>

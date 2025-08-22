@@ -30,9 +30,46 @@ export const JobSections: React.FC<JobSectionsProps> = ({
   onToggleApplied,
   updatingJobs,
 }) => {
-  // Filter out metadata and categorize jobs
+  // Function to check if job was posted within last 24 hours
+  const isWithin24Hours = (postedDate: string): boolean => {
+    if (!postedDate) return false;
+    
+    const normalizedDate = postedDate.toLowerCase().trim();
+    
+    // Handle "X hours ago" - these are definitely within 24 hours
+    if (normalizedDate.includes('hour') && normalizedDate.includes('ago')) {
+      return true;
+    }
+    
+    // Handle "1 day ago" - this is exactly 24 hours
+    if (normalizedDate === '1 day ago') {
+      return true;
+    }
+    
+    // Handle "X days ago" - anything more than 1 day is outside 24 hours
+    if (normalizedDate.includes('day') && normalizedDate.includes('ago')) {
+      const match = normalizedDate.match(/(\d+)\s+days?\s+ago/);
+      if (match) {
+        const days = parseInt(match[1]);
+        return days <= 1;
+      }
+    }
+    
+    // Handle "today" or similar
+    if (normalizedDate.includes('today') || normalizedDate.includes('now')) {
+      return true;
+    }
+    
+    // Default to false for unparseable dates
+    return false;
+  };
+
+  // Filter out metadata and categorize jobs, then filter by 24 hours
   const jobEntries = Object.entries(jobs).filter(([key]) => !key.startsWith('_'));
-  const jobValues = jobEntries.map(([, job]) => job);
+  const allJobValues = jobEntries.map(([, job]) => job);
+  
+  // Filter to show only jobs posted in last 24 hours
+  const jobValues = allJobValues.filter(job => isWithin24Hours(job.posted_date));
   
   const newJobs = jobValues.filter(job => job.category === 'new');
   const last24hJobs = jobValues.filter(job => job.category === 'last_24h');
@@ -182,14 +219,53 @@ export const JobSections: React.FC<JobSectionsProps> = ({
         </Accordion>
       )}
 
+      {/* Fallback: Show All Jobs if No Categories */}
+      {newJobs.length === 0 && last24hJobs.length === 0 && otherJobs.length === 0 && jobValues.length > 0 && (
+        <Accordion defaultExpanded sx={{ mb: 2 }}>
+          <AccordionSummary expandIcon={<ExpandIcon />}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
+              <Badge badgeContent={jobValues.length} color="primary">
+                <AllIcon color="primary" />
+              </Badge>
+              <Typography variant="h6" sx={{ flexGrow: 1 }}>
+                📋 Jobs (Last 24 Hours)
+              </Typography>
+              <Chip
+                label={`${jobValues.length} jobs`}
+                color="primary"
+                size="small"
+                variant="outlined"
+              />
+            </Box>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Jobs posted in the last 24 hours from your database
+              {allJobValues.length > jobValues.length && ` (${allJobValues.length - jobValues.length} older jobs hidden)`}
+            </Typography>
+            {jobValues.map((job) => (
+              <JobCard
+                key={job.id}
+                job={job}
+                onToggleApplied={onToggleApplied}
+                isUpdating={updatingJobs.has(job.id)}
+              />
+            ))}
+          </AccordionDetails>
+        </Accordion>
+      )}
+
       {/* Empty State */}
-      {newJobs.length === 0 && last24hJobs.length === 0 && otherJobs.length === 0 && (
+      {jobValues.length === 0 && (
         <Box sx={{ textAlign: 'center', py: 6 }}>
           <Typography variant="h6" color="text.secondary" gutterBottom>
-            No jobs found
+            No jobs found from the last 24 hours
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Try running the Dublin job search script to populate your database
+            {allJobValues.length > 0 
+              ? `${allJobValues.length} total jobs in database, but none posted within 24 hours`
+              : 'Try running the Dublin job search script to populate your database'
+            }
           </Typography>
         </Box>
       )}
