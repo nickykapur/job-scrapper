@@ -24,6 +24,7 @@ import { JobCard } from './components/JobCard';
 import { StatsCards } from './components/StatsCards';
 import { FilterControls } from './components/FilterControls';
 import { JobLoadingInfo } from './components/JobLoadingInfo';
+import { JobSections } from './components/JobSections';
 import { jobApi } from './services/api';
 import { Job, JobStats, FilterState } from './types';
 
@@ -408,24 +409,12 @@ function App() {
           isSearching={isSearching}
         />
 
-        <Box>
-          {filteredJobs.length === 0 ? (
-            <Alert severity="info">
-              {Object.keys(jobs).length === 0
-                ? 'No jobs found. Run the job scraper first!'
-                : 'No jobs match your current filters.'}
-            </Alert>
-          ) : (
-            filteredJobs.map((job) => (
-              <JobCard
-                key={job.id}
-                job={job}
-                onToggleApplied={toggleJobApplied}
-                isUpdating={updatingJobs.has(job.id)}
-              />
-            ))
-          )}
-        </Box>
+        {/* Job Sections with Categories */}
+        <JobSections
+          jobs={jobs}
+          onToggleApplied={toggleJobApplied}
+          updatingJobs={updatingJobs}
+        />
       </Container>
 
       <Snackbar

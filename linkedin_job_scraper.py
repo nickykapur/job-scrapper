@@ -97,16 +97,29 @@ class LinkedInJobScraper:
                 print(f"Firefox not available: {firefox_error}")
                 raise Exception("Neither Chrome nor Firefox browser is available. Please install one of them.")
         
-    def search_jobs(self, keywords, location="", date_filter="7d"):
+    def search_jobs(self, keywords, location="", date_filter="24h"):
         if not self.driver:
             self.setup_driver()
             
         # LinkedIn job search URL with filters
         base_url = "https://www.linkedin.com/jobs/search"
+        
+        # Map date filters to LinkedIn time parameters
+        time_filters = {
+            "24h": "r86400",    # 24 hours (86400 seconds)
+            "1d": "r86400",     # 1 day 
+            "7d": "r604800",    # 7 days (604800 seconds)
+            "1w": "r604800",    # 1 week
+            "30d": "r2592000",  # 30 days (2592000 seconds)
+            "1m": "r2592000"    # 1 month
+        }
+        
+        f_tpr_value = time_filters.get(date_filter, "r86400")  # Default to 24h
+        
         params = {
             "keywords": keywords,
             "location": location,
-            "f_TPR": "r86400",  # 24 hours (86400 seconds)
+            "f_TPR": f_tpr_value,
             "position": "1",
             "pageNum": "0"
         }

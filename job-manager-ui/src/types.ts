@@ -8,6 +8,9 @@ export interface Job {
   scraped_at: string;
   applied: boolean;
   is_new: boolean;
+  category?: 'new' | 'last_24h' | 'existing';
+  first_seen?: string;
+  last_seen_24h?: string;
 }
 
 export interface JobStats {
