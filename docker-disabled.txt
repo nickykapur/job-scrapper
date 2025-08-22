@@ -1,0 +1,3 @@
+Docker build disabled for Railway deployment.
+Using Nixpacks auto-detection instead.
+This file replaces the problematic Dockerfile.

@@ -1,8 +1,12 @@
-Dockerfile
-Dockerfile.disabled
+Dockerfile*
+docker*
 venv/
 __pycache__/
 .env
 *.log
 node_modules/
 .git/
+.vscode/
+*.pyc
+*.pyo
+.pytest_cache/
