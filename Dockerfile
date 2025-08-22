@@ -5,7 +5,7 @@ WORKDIR /app/frontend
 
 # Copy package files
 COPY job-manager-ui/package*.json ./
-RUN npm ci --only=production --silent
+RUN npm ci --silent
 
 # Copy source code and build
 COPY job-manager-ui/ ./
