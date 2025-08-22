@@ -1,7 +1,10 @@
 import axios from 'axios';
 import { Job } from '../types';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+// In production (Railway), the API is served from the same domain
+// In development, use localhost:8000 (FastAPI default port)
+const API_BASE_URL = process.env.REACT_APP_API_URL || 
+  (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:8000');
 
 const api = axios.create({
   baseURL: API_BASE_URL,

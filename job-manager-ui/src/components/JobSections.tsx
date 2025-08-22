@@ -30,11 +30,14 @@ export const JobSections: React.FC<JobSectionsProps> = ({
   onToggleApplied,
   updatingJobs,
 }) => {
-  // Categorize jobs
-  const newJobs = Object.values(jobs).filter(job => job.category === 'new');
-  const last24hJobs = Object.values(jobs).filter(job => job.category === 'last_24h');
-  const otherJobs = Object.values(jobs).filter(job => !job.category || job.category === 'existing');
-  const dublinJobs = Object.values(jobs).filter(job => 
+  // Filter out metadata and categorize jobs
+  const jobEntries = Object.entries(jobs).filter(([key]) => !key.startsWith('_'));
+  const jobValues = jobEntries.map(([, job]) => job);
+  
+  const newJobs = jobValues.filter(job => job.category === 'new');
+  const last24hJobs = jobValues.filter(job => job.category === 'last_24h');
+  const otherJobs = jobValues.filter(job => !job.category || job.category === 'existing');
+  const dublinJobs = jobValues.filter(job => 
     job.location?.toLowerCase().includes('dublin')
   );
 

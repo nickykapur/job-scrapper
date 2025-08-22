@@ -141,7 +141,10 @@ function App() {
   const loadJobs = useCallback(async (silent = false) => {
     if (!silent) setIsRefreshing(true);
     try {
+      console.log('🔄 Loading jobs from API...');
       const jobsData = await jobApi.getJobs();
+      console.log('✅ Jobs loaded successfully:', Object.keys(jobsData).length, 'jobs');
+      
       const oldCount = Object.keys(jobs).length;
       const newCount = Object.keys(jobsData).length;
       
@@ -151,9 +154,20 @@ function App() {
       if (!silent && newCount > oldCount && oldCount > 0) {
         showNotification(`🎆 ${newCount - oldCount} new jobs loaded!`, 'success');
       }
-    } catch (err) {
-      setError('Failed to load jobs');
-      showNotification('Failed to load jobs', 'error');
+    } catch (err: any) {
+      console.error('❌ Failed to load jobs:', err);
+      
+      let errorMessage = 'Failed to load jobs';
+      if (err.response) {
+        errorMessage = `API Error: ${err.response.status} - ${err.response.statusText}`;
+      } else if (err.request) {
+        errorMessage = 'Network Error: Unable to connect to API';
+      } else {
+        errorMessage = `Error: ${err.message}`;
+      }
+      
+      setError(errorMessage);
+      showNotification(errorMessage, 'error');
     } finally {
       setLoading(false);
       if (!silent) setIsRefreshing(false);

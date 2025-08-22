@@ -31,10 +31,28 @@ JOBS_DATABASE_FILE = "jobs_database.json"
 @app.get("/api/health")
 async def health_check():
     """Health check endpoint"""
+    import os
+    current_dir = os.getcwd()
+    files_in_dir = os.listdir(current_dir)
+    jobs_file_exists = os.path.exists(JOBS_DATABASE_FILE)
+    
+    # Try to get file size if it exists
+    file_size = 0
+    if jobs_file_exists:
+        try:
+            file_size = os.path.getsize(JOBS_DATABASE_FILE)
+        except:
+            file_size = -1
+    
     return {
         "status": "healthy",
         "environment": os.environ.get("RAILWAY_ENVIRONMENT", "development"),
-        "jobs_database_exists": os.path.exists(JOBS_DATABASE_FILE)
+        "current_directory": current_dir,
+        "jobs_database_file": JOBS_DATABASE_FILE,
+        "jobs_database_exists": jobs_file_exists,
+        "jobs_database_size": file_size,
+        "files_in_directory": [f for f in files_in_dir if f.endswith('.json')],
+        "api_working": True
     }
 
 class JobUpdateRequest(BaseModel):
@@ -69,7 +87,19 @@ async def get_jobs():
                 data = json.load(f)
             return data
         else:
-            raise HTTPException(status_code=404, detail="Jobs database not found")
+            # Return empty database with helpful message if file doesn't exist
+            return {
+                "_metadata": {
+                    "status": "empty_database",
+                    "message": "No jobs database found. Run the Dublin job scraper to populate jobs.",
+                    "next_steps": [
+                        "Run: python daily_dublin_update.py",
+                        "Or manually add jobs to jobs_database.json"
+                    ]
+                }
+            }
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=500, detail=f"Invalid JSON in jobs database: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error loading jobs: {str(e)}")
 

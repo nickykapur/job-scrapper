@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+"""
+Daily Dublin Job Database Update Script
 Searches for Dublin jobs in the last 24 hours and categorizes them as:
 - New Jobs: Jobs that weren't in the database before
 - Last 24 Hours Jobs: Jobs that were already in the database but match 24h criteria
