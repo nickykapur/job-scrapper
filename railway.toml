@@ -3,7 +3,7 @@ builder = "nixpacks"
 buildCommand = "cd job-manager-ui && npm ci --only=production --silent && npm run build"
 
 [deploy]
-startCommand = "python simple_server.py"
+startCommand = "python fastapi_server.py"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
 

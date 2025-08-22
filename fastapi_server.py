@@ -16,7 +16,7 @@ app = FastAPI(title="LinkedIn Job Manager API", version="1.0.0")
 # Enable CORS for React frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],  # React dev server
+    allow_origins=["*"],  # Allow all origins for Railway deployment
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -24,7 +24,7 @@ app.add_middleware(
 
 # Serve React build files (in production)
 if os.path.exists("job-manager-ui/dist"):
-    app.mount("/static", StaticFiles(directory="job-manager-ui/dist/static"), name="static")
+    app.mount("/assets", StaticFiles(directory="job-manager-ui/dist/assets"), name="assets")
 
 JOBS_DATABASE_FILE = "jobs_database.json"
 
