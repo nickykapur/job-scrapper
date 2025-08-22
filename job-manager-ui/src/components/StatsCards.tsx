@@ -73,10 +73,10 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ stats }) => {
             >
               {item.icon}
             </Box>
-            <Typography variant=\"h4\" component=\"div\" color={item.color} fontWeight=\"bold\">
+            <Typography variant="h4" component="div" color={item.color} fontWeight="bold">
               {item.value}
             </Typography>
-            <Typography variant=\"body2\" color=\"text.secondary\" textAlign=\"center\">
+            <Typography variant="body2" color="text.secondary" textAlign="center">
               {item.label}
             </Typography>
           </Paper>
