@@ -1,9 +1,9 @@
 [build]
 builder = "nixpacks"
-buildCommand = "cd job-manager-ui && npm ci --only=production --silent && npm run build && cd .. && pip install --no-cache-dir -r requirements-railway.txt"
+buildCommand = "cd job-manager-ui && npm ci --only=production --silent && npm run build"
 
 [deploy]
-startCommand = "python fastapi_server.py"
+startCommand = "python simple_server.py"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
 
@@ -11,4 +11,3 @@ restartPolicyMaxRetries = 10
 NODE_ENV = "production"
 PYTHONPATH = "/app"
 PORT = "8000"
-RAILWAY_ENVIRONMENT = "production"
