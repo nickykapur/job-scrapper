@@ -26,6 +26,12 @@ class LinkedInJobScraper:
         self.storage_file = storage_file
         self.existing_jobs = self.load_existing_jobs()
         
+        # Company exclusion list
+        self.excluded_companies = [
+            'BENDING SPOONS',
+            'Bending Spoons'
+        ]
+        
     def generate_job_id(self, title, company, location):
         """Generate a unique ID for a job based on title, company, and location"""
         job_string = f"{title}|{company}|{location}".lower()
@@ -160,7 +166,7 @@ class LinkedInJobScraper:
         return self.scrape_job_listings()
     
     def scrape_job_listings(self):
-        jobs = []
+        jobs_dict = {}
         
         # Scroll to load more jobs
         self.scroll_to_load_jobs()
@@ -191,7 +197,7 @@ class LinkedInJobScraper:
                     else:
                         job_data['is_new'] = True
                     
-                    jobs.append(job_data)
+                    jobs_dict[job_data['id']] = job_data
                     extracted_count += 1
                     
                     # Update existing jobs database
@@ -203,45 +209,88 @@ class LinkedInJobScraper:
         
         print(f"Successfully extracted {extracted_count} jobs out of {len(job_cards)} found")
         
-        self.jobs_data = jobs
+        self.jobs_data = list(jobs_dict.values())
         # Save updated database
         self.save_jobs_database()
-        return jobs
+        return jobs_dict
     
     def is_software_related_job(self, title):
-        """Check if a job title is software/tech related"""
+        """Check if a job title is software/tech related - Updated to match your CV profile"""
         if not title:
             return False
             
         title_lower = title.lower()
         
-        # Software-related keywords (must contain at least one)
+        # Software-related keywords based on your CV skills
         software_keywords = [
-            'software', 'developer', 'engineer', 'programming', 'python', 'java', 
-            'javascript', 'react', 'angular', 'vue', 'node', 'backend', 'frontend',
-            'full stack', 'fullstack', 'devops', 'cloud', 'aws', 'azure', 'gcp',
-            'data engineer', 'machine learning', 'ai', 'artificial intelligence',
-            'mobile developer', 'ios developer', 'android developer', 'flutter',
-            'technical lead', 'tech lead', 'architect', 'principal engineer',
-            'senior engineer', 'junior engineer', 'intern developer', 'graduate developer',
-            'web developer', 'game developer', 'security engineer', 'qa engineer',
-            'test engineer', 'automation', 'ci/cd', 'database', 'sql', 'nosql'
+            # Core programming roles
+            'software', 'developer', 'engineer', 'programming', 'programmer', 
+            'development', 'coding', 'technical',
+            
+            # Languages you know: Python, R, Javascript, HTML, Typescript, C++, Java
+            'python', 'java', 'javascript', 'typescript', 'c++', 'html', 'css',
+            
+            # Frameworks you use: React, Angular, Express, NodeJS
+            'react', 'angular', 'vue', 'node', 'nodejs', 'express', 'frontend', 'backend',
+            'full stack', 'fullstack', 'full-stack',
+            
+            # Cloud platforms you know: AWS, Firebase, Azure
+            'cloud', 'aws', 'azure', 'firebase', 'lambda', 'devops', 'infrastructure',
+            
+            # Data skills: Data Science, Machine Learning, Analytics
+            'data', 'analytics', 'machine learning', 'ai', 'artificial intelligence',
+            'data science', 'data engineer', 'tableau', 'visualization',
+            
+            # Database: SQL, NoSQL
+            'database', 'sql', 'nosql', 'mysql', 'mongodb', 'oracle',
+            
+            # Mobile development: React Native mentioned in CV
+            'mobile', 'react native', 'ios', 'android',
+            
+            # Leadership roles you've held: Technical Lead
+            'technical lead', 'tech lead', 'lead developer', 'senior', 'principal',
+            'architect', 'staff engineer', 'team lead',
+            
+            # Testing experience from CV
+            'qa', 'quality assurance', 'test', 'testing', 'automation',
+            
+            # Other tech roles
+            'web developer', 'api', 'microservices', 'integration', 'platform',
+            'system', 'application', 'solution', 'product engineer'
         ]
         
-        # Exclude non-software roles (if title contains these, likely not software)
+        # More focused exclusions - only clear non-tech roles
         exclude_keywords = [
-            'account manager', 'sales', 'marketing', 'business development', 'hr',
-            'human resources', 'finance', 'accounting', 'legal', 'administrative',
-            'customer service', 'support specialist', 'office manager', 'receptionist',
-            'warehouse', 'logistics', 'construction', 'project manager', 'operations',
-            'business analyst', 'consultant', 'advisor', 'coordinator', 'assistant',
-            'clerk', 'executive assistant', 'admin', 'payroll', 'procurement',
-            'facilities', 'maintenance', 'security guard', 'driver', 'delivery'
+            # Sales/Marketing (unless technical)
+            'account manager', 'sales rep', 'marketing coordinator', 'business development rep',
+            
+            # Administrative
+            'hr', 'human resources', 'finance', 'accounting', 'legal', 'admin assistant',
+            'customer service rep', 'receptionist', 'office manager',
+            
+            # Manual labor
+            'warehouse', 'logistics coordinator', 'construction', 'driver', 'delivery',
+            'maintenance tech', 'security guard', 'cleaner', 'janitor',
+            
+            # Non-technical business roles
+            'consultant' # Be careful - some are technical consultants
         ]
         
-        # Check for exclusions first
+        # Special handling for borderline cases
+        borderline_positive = [
+            'marketing tools', 'finance automation', 'revenue', 'compiler', 
+            'infrastructure', 'operations', 'integration', 'reliability',
+            'workday', 'salesforce', 'data operations'
+        ]
+        
+        # Check if it contains borderline positive terms
+        for positive in borderline_positive:
+            if positive in title_lower:
+                return True
+        
+        # Check for hard exclusions
         for exclude in exclude_keywords:
-            if exclude in title_lower:
+            if exclude in title_lower and 'engineer' not in title_lower and 'developer' not in title_lower:
                 return False
         
         # Check for software keywords
@@ -250,6 +299,30 @@ class LinkedInJobScraper:
                 return True
                 
         return False
+
+    def is_excluded_company(self, company):
+        """Check if a company is in the exclusion list"""
+        if not company:
+            return False
+            
+        company_lower = company.lower().strip()
+        
+        for excluded in self.excluded_companies:
+            if excluded.lower() in company_lower:
+                return True
+                
+        return False
+
+    def preserve_applied_status(self, job_id, new_job_data):
+        """Preserve the applied status from existing jobs when updating"""
+        if job_id in self.existing_jobs:
+            existing_job = self.existing_jobs[job_id]
+            # Preserve applied status and any manual updates
+            new_job_data["applied"] = existing_job.get("applied", False)
+            # Also preserve any manual notes or custom fields
+            if "notes" in existing_job:
+                new_job_data["notes"] = existing_job["notes"]
+        return new_job_data
 
     def extract_job_data(self, card):
         try:
@@ -400,10 +473,16 @@ class LinkedInJobScraper:
                 print(f"Skipping non-software job: '{title}'")
                 return None
             
+            # Filter out excluded companies
+            if self.is_excluded_company(company):
+                print(f"Skipping excluded company: '{company}' - Job: '{title}'")
+                return None
+            
             # Generate unique job ID
             job_id = self.generate_job_id(title, company, location)
             
-            return {
+            # Create job data
+            job_data = {
                 "id": job_id,
                 "title": title,
                 "company": company or "Unknown Company",
@@ -414,6 +493,11 @@ class LinkedInJobScraper:
                 "applied": False,
                 "is_new": job_id not in self.existing_jobs
             }
+            
+            # Preserve applied status if job already exists
+            job_data = self.preserve_applied_status(job_id, job_data)
+            
+            return job_data
         except Exception as e:
             print(f"Error extracting job data: {e}")
             return None

@@ -4,6 +4,9 @@ uvicorn[standard]==0.24.0
 python-multipart==0.0.6
 pydantic==2.5.0
 
+# Database Requirements
+asyncpg==0.29.0  # PostgreSQL async driver
+
 # Existing scraper requirements
 selenium==4.15.2
 beautifulsoup4==4.12.2

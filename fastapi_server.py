@@ -10,8 +10,12 @@ import os
 import subprocess
 import sys
 from typing import Dict, Any, Optional
+from database_models import JobDatabase
 
 app = FastAPI(title="LinkedIn Job Manager API", version="1.0.0")
+
+# Initialize database
+db = JobDatabase()
 
 # Enable CORS for React frontend
 app.add_middleware(
@@ -26,7 +30,10 @@ app.add_middleware(
 if os.path.exists("job-manager-ui/dist"):
     app.mount("/assets", StaticFiles(directory="job-manager-ui/dist/assets"), name="assets")
 
-JOBS_DATABASE_FILE = "jobs_database.json"
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database on startup"""
+    await db.init_database()
 
 @app.get("/api/health")
 async def health_check():
@@ -66,6 +73,9 @@ class BulkUpdateRequest(BaseModel):
 class SearchRequest(BaseModel):
     keywords: str
 
+class SyncJobsRequest(BaseModel):
+    jobs_data: Dict[str, Any]
+
 @app.get("/")
 async def serve_react_app():
     """Serve the React app in production"""
@@ -80,26 +90,10 @@ async def health_check():
 
 @app.get("/jobs_database.json")
 async def get_jobs():
-    """Get all jobs from the database"""
+    """Get all jobs from the database (PostgreSQL or JSON fallback)"""
     try:
-        if os.path.exists(JOBS_DATABASE_FILE):
-            with open(JOBS_DATABASE_FILE, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            return data
-        else:
-            # Return empty database with helpful message if file doesn't exist
-            return {
-                "_metadata": {
-                    "status": "empty_database",
-                    "message": "No jobs database found. Run the Dublin job scraper to populate jobs.",
-                    "next_steps": [
-                        "Run: python daily_dublin_update.py",
-                        "Or manually add jobs to jobs_database.json"
-                    ]
-                }
-            }
-    except json.JSONDecodeError as e:
-        raise HTTPException(status_code=500, detail=f"Invalid JSON in jobs database: {str(e)}")
+        data = await db.get_all_jobs()
+        return data
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error loading jobs: {str(e)}")
 
@@ -107,22 +101,11 @@ async def get_jobs():
 async def update_job(request: JobUpdateRequest):
     """Update a single job's applied status"""
     try:
-        if not os.path.exists(JOBS_DATABASE_FILE):
-            raise HTTPException(status_code=404, detail="Jobs database not found")
-        
-        with open(JOBS_DATABASE_FILE, 'r', encoding='utf-8') as f:
-            jobs_data = json.load(f)
-        
-        if request.job_id not in jobs_data:
+        success = await db.update_job_applied_status(request.job_id, request.applied)
+        if success:
+            return {"success": True, "message": f"Job {request.job_id} updated"}
+        else:
             raise HTTPException(status_code=404, detail=f"Job {request.job_id} not found")
-        
-        jobs_data[request.job_id]['applied'] = request.applied
-        
-        with open(JOBS_DATABASE_FILE, 'w', encoding='utf-8') as f:
-            json.dump(jobs_data, f, indent=2, ensure_ascii=False)
-        
-        return {"success": True, "message": f"Job {request.job_id} updated"}
-    
     except HTTPException:
         raise
     except Exception as e:
@@ -184,6 +167,25 @@ async def search_jobs(request: SearchRequest):
         else:
             raise HTTPException(status_code=500, detail=f"Search failed: {result.stderr}")
     
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/sync_jobs")
+async def sync_jobs(request: SyncJobsRequest):
+    """Sync jobs from local scraper to database"""
+    try:
+        result = await db.sync_jobs_from_scraper(request.jobs_data)
+        if "error" in result:
+            raise HTTPException(status_code=500, detail=result["error"])
+        
+        return {
+            "success": True,
+            "message": f"Synced jobs successfully",
+            "new_jobs": result.get("new_jobs", 0),
+            "updated_jobs": result.get("updated_jobs", 0)
+        }
     except HTTPException:
         raise
     except Exception as e:
