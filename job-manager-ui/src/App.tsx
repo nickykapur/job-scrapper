@@ -12,6 +12,15 @@ import {
   Snackbar,
   IconButton,
   Chip,
+  Avatar,
+  Button,
+  Drawer,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Divider,
+  useMediaQuery,
 } from '@mui/material';
 import { 
   Work as WorkIcon, 
@@ -19,6 +28,12 @@ import {
   Brightness7 as LightIcon,
   CloudSync as SyncIcon,
   Storage as DatabaseIcon,
+  Dashboard as DashboardIcon,
+  BookmarkBorder as BookmarkIcon,
+  Settings as SettingsIcon,
+  Person as PersonIcon,
+  Menu as MenuIcon,
+  Search as SearchIcon,
 } from '@mui/icons-material';
 import { JobCard } from './components/JobCard';
 import { StatsCards } from './components/StatsCards';
@@ -32,46 +47,83 @@ const createAppTheme = (mode: 'light' | 'dark') => createTheme({
   palette: {
     mode,
     primary: {
-      main: mode === 'dark' ? '#0ea5e9' : '#0077b5',
+      main: mode === 'dark' ? '#1976d2' : '#0066cc',
+      light: mode === 'dark' ? '#42a5f5' : '#3399ff',
+      dark: mode === 'dark' ? '#115293' : '#004499',
     },
     secondary: {
-      main: '#10b981',
+      main: '#00bcd4',
+      light: '#4dd0e1',
+      dark: '#0097a7',
     },
     background: {
-      default: mode === 'dark' ? '#0f172a' : '#f8fafc',
-      paper: mode === 'dark' ? '#1e293b' : '#ffffff',
+      default: mode === 'dark' ? '#121212' : '#f5f7fa',
+      paper: mode === 'dark' ? '#1e1e1e' : '#ffffff',
     },
     text: {
-      primary: mode === 'dark' ? '#f8fafc' : '#1e293b',
-      secondary: mode === 'dark' ? '#cbd5e1' : '#64748b',
+      primary: mode === 'dark' ? '#ffffff' : '#2c3e50',
+      secondary: mode === 'dark' ? '#b0bec5' : '#546e7a',
     },
     success: {
-      main: '#10b981',
+      main: '#4caf50',
+      light: '#81c784',
+      dark: '#388e3c',
     },
     warning: {
-      main: '#f59e0b',
+      main: '#ff9800',
+      light: '#ffb74d',
+      dark: '#f57c00',
     },
     error: {
-      main: '#ef4444',
+      main: '#f44336',
+      light: '#ef5350',
+      dark: '#d32f2f',
     },
   },
   typography: {
     fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
     h4: {
+      fontWeight: 700,
+      fontSize: '2rem',
+    },
+    h5: {
       fontWeight: 600,
+      fontSize: '1.5rem',
     },
     h6: {
       fontWeight: 600,
+      fontSize: '1.25rem',
+    },
+    subtitle1: {
+      fontWeight: 500,
+      fontSize: '1.1rem',
+    },
+    body1: {
+      fontSize: '0.95rem',
+      lineHeight: 1.6,
+    },
+    body2: {
+      fontSize: '0.85rem',
+      lineHeight: 1.5,
     },
   },
   components: {
     MuiCard: {
       styleOverrides: {
         root: {
-          backgroundColor: mode === 'dark' ? '#1e293b' : '#ffffff',
-          borderRadius: 8,
-          border: mode === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0',
-          transition: 'all 0.2s ease-in-out',
+          backgroundColor: mode === 'dark' ? '#1e1e1e' : '#ffffff',
+          borderRadius: 12,
+          border: mode === 'dark' ? '1px solid #333333' : '1px solid #e0e0e0',
+          transition: 'all 0.3s ease-in-out',
+          boxShadow: mode === 'dark' 
+            ? '0 4px 20px rgba(0,0,0,0.3)' 
+            : '0 2px 12px rgba(0,0,0,0.08)',
+          '&:hover': {
+            transform: 'translateY(-2px)',
+            boxShadow: mode === 'dark'
+              ? '0 8px 32px rgba(0,0,0,0.4)'
+              : '0 4px 24px rgba(0,0,0,0.12)',
+          },
         },
       },
     },
@@ -85,20 +137,33 @@ const createAppTheme = (mode: 'light' | 'dark') => createTheme({
     MuiButton: {
       styleOverrides: {
         root: {
-          borderRadius: 6,
+          borderRadius: 8,
           fontWeight: 600,
           textTransform: 'none',
+          padding: '8px 16px',
+          boxShadow: 'none',
+          '&:hover': {
+            boxShadow: mode === 'dark' 
+              ? '0 4px 12px rgba(25,118,210,0.3)' 
+              : '0 4px 12px rgba(0,102,204,0.2)',
+          },
+        },
+        containedPrimary: {
+          background: mode === 'dark' 
+            ? 'linear-gradient(45deg, #1976d2, #42a5f5)' 
+            : 'linear-gradient(45deg, #0066cc, #3399ff)',
         },
       },
     },
     MuiAppBar: {
       styleOverrides: {
         root: {
-          backgroundColor: mode === 'dark' ? '#1e293b' : '#ffffff',
-          color: mode === 'dark' ? '#f8fafc' : '#1e293b',
+          backgroundColor: mode === 'dark' ? '#1e1e1e' : '#ffffff',
+          color: mode === 'dark' ? '#ffffff' : '#2c3e50',
           boxShadow: mode === 'dark' 
-            ? '0 1px 3px rgba(0, 0, 0, 0.3)' 
-            : '0 1px 3px rgba(0, 0, 0, 0.1)',
+            ? '0 2px 8px rgba(0, 0, 0, 0.4)' 
+            : '0 1px 4px rgba(0, 0, 0, 0.1)',
+          borderBottom: mode === 'dark' ? '1px solid #333333' : '1px solid #e0e0e0',
         },
       },
     },
@@ -116,6 +181,8 @@ const createAppTheme = (mode: 'light' | 'dark') => createTheme({
 const EXCLUDED_COMPANIES_KEY = 'excludedCompanies';
 const AUTO_REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
+const DRAWER_WIDTH = 280;
+
 function App() {
   const [darkMode, setDarkMode] = useState(true); // Default to dark mode
   const [jobs, setJobs] = useState<Record<string, Job>>({});
@@ -123,13 +190,14 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [updatingJobs, setUpdatingJobs] = useState<Set<string>>(new Set());
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [notification, setNotification] = useState<{
     message: string;
     severity: 'success' | 'error' | 'info';
   } | null>(null);
   
   const theme = useMemo(() => createAppTheme(darkMode ? 'dark' : 'light'), [darkMode]);
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   
   const [filters, setFilters] = useState<FilterState>({
     status: 'all',
@@ -239,18 +307,6 @@ function App() {
     }
   };
 
-  const searchJobs = async (keywords: string) => {
-    setIsSearching(true);
-    try {
-      const result = await jobApi.searchJobs(keywords);
-      showNotification(`🎆 Search completed! Found ${result.new_jobs || 0} new jobs`, 'success');
-      await loadJobs(true); // Refresh data silently
-    } catch (err) {
-      showNotification('❌ Search failed', 'error');
-    } finally {
-      setIsSearching(false);
-    }
-  };
 
   const markAllAsRead = () => {
     const newJobs = Object.values(jobs).filter(job => job.is_new);
@@ -365,103 +421,232 @@ function App() {
     );
   }
 
+  const drawerContent = (
+    <Box sx={{ width: DRAWER_WIDTH, height: '100%', bgcolor: 'background.paper' }}>
+      <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+          <Avatar sx={{ bgcolor: 'primary.main', mr: 2 }}>
+            <PersonIcon />
+          </Avatar>
+          <Box>
+            <Typography variant="subtitle1" fontWeight="600">
+              Job Hunter
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Software Engineer
+            </Typography>
+          </Box>
+        </Box>
+      </Box>
+
+      <List sx={{ py: 1 }}>
+        <ListItem button selected>
+          <ListItemIcon>
+            <DashboardIcon color="primary" />
+          </ListItemIcon>
+          <ListItemText 
+            primary="Dashboard" 
+            primaryTypographyProps={{ fontWeight: 600 }}
+          />
+        </ListItem>
+        
+        <ListItem button>
+          <ListItemIcon>
+            <WorkIcon />
+          </ListItemIcon>
+          <ListItemText primary="All Jobs" />
+          <Chip label={Object.keys(cleanJobs).length} size="small" />
+        </ListItem>
+        
+        <ListItem button>
+          <ListItemIcon>
+            <BookmarkIcon />
+          </ListItemIcon>
+          <ListItemText primary="Applied" />
+          <Chip label={stats.applied} size="small" color="success" />
+        </ListItem>
+        
+        <Divider sx={{ my: 1 }} />
+        
+        <ListItem button>
+          <ListItemIcon>
+            <SettingsIcon />
+          </ListItemIcon>
+          <ListItemText primary="Settings" />
+        </ListItem>
+      </List>
+    </Box>
+  );
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <AppBar position="static" elevation={0}>
-        <Toolbar>
-          <WorkIcon sx={{ mr: 2 }} />
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            📊 LinkedIn Job Manager
-          </Typography>
-          
-          {/* Job Loading Status */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mr: 2 }}>
-            <Chip
-              icon={<DatabaseIcon />}
-              label={`${Object.keys(jobs).length} Jobs Loaded`}
-              variant="outlined"
-              size="small"
-            />
-            <Chip
-              icon={<SyncIcon />}
-              label="Database Only"
-              color="info"
-              variant="outlined"
-              size="small"
-              title="Jobs loaded from existing database (scraping disabled on Railway)"
-            />
-          </Box>
-          
-          {/* Theme Toggle */}
-          <IconButton 
-            onClick={() => setDarkMode(!darkMode)} 
-            color="inherit"
-            title={`Switch to ${darkMode ? 'light' : 'dark'} mode`}
-          >
-            {darkMode ? <LightIcon /> : <DarkIcon />}
-          </IconButton>
-        </Toolbar>
-      </AppBar>
-
-      <Container maxWidth={false} sx={{ px: 3, py: 2, minHeight: 'calc(100vh - 64px)' }}>
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-
-        <StatsCards stats={stats} />
-
-        <JobLoadingInfo jobCount={Object.keys(jobs).length} />
-
-        {/* Debug Info - Remove in production */}
-        {process.env.NODE_ENV === 'development' && (
-          <Alert severity="info" sx={{ mb: 2 }}>
-            <Typography variant="body2">
-              Debug: {Object.keys(jobs).length} total entries, 
-              {Object.entries(jobs).filter(([key]) => !key.startsWith('_')).length} jobs,
-              API Base: {process.env.REACT_APP_API_URL || 'Same domain'}
-            </Typography>
-          </Alert>
-        )}
-
-        <FilterControls
-          filters={filters}
-          onFiltersChange={setFilters}
-          onRefresh={() => loadJobs()}
-          onExport={exportData}
-          onMarkAllRead={markAllAsRead}
-          onRemoveApplied={removeAppliedJobs}
-          onSearch={searchJobs}
-          onAddExcludedCompany={addExcludedCompany}
-          excludedCompanies={excludedCompanies}
-          onRemoveExcludedCompany={removeExcludedCompany}
-          isRefreshing={isRefreshing}
-          isSearching={isSearching}
-        />
-
-        {/* Job Sections with Categories */}
-        <JobSections
-          jobs={jobs}
-          onToggleApplied={toggleJobApplied}
-          updatingJobs={updatingJobs}
-        />
-      </Container>
-
-      <Snackbar
-        open={!!notification}
-        autoHideDuration={4000}
-        onClose={() => setNotification(null)}
-      >
-        <Alert
-          onClose={() => setNotification(null)}
-          severity={notification?.severity}
-          sx={{ width: '100%' }}
+      <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+        {/* Navigation Drawer */}
+        <Drawer
+          variant={isMobile ? 'temporary' : 'persistent'}
+          anchor="left"
+          open={isMobile ? drawerOpen : true}
+          onClose={() => setDrawerOpen(false)}
+          sx={{
+            width: isMobile ? 0 : DRAWER_WIDTH,
+            flexShrink: 0,
+            '& .MuiDrawer-paper': {
+              width: DRAWER_WIDTH,
+              boxSizing: 'border-box',
+              borderRight: '1px solid',
+              borderColor: 'divider',
+            },
+          }}
         >
-          {notification?.message}
-        </Alert>
-      </Snackbar>
+          {drawerContent}
+        </Drawer>
+
+        {/* Main Content */}
+        <Box
+          component="main"
+          sx={{
+            flexGrow: 1,
+            width: isMobile ? '100%' : `calc(100% - ${DRAWER_WIDTH}px)`,
+            minHeight: '100vh',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          {/* Top App Bar */}
+          <AppBar 
+            position="static" 
+            elevation={0}
+            sx={{ 
+              width: '100%',
+              zIndex: theme.zIndex.drawer - 1,
+            }}
+          >
+            <Toolbar sx={{ px: 3 }}>
+              {isMobile && (
+                <IconButton
+                  edge="start"
+                  color="inherit"
+                  onClick={() => setDrawerOpen(true)}
+                  sx={{ mr: 2 }}
+                >
+                  <MenuIcon />
+                </IconButton>
+              )}
+              
+              <Typography variant="h5" component="div" sx={{ flexGrow: 1, fontWeight: 700 }}>
+                JobHunter Pro
+              </Typography>
+              
+              {/* Status Indicators */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 2 }}>
+                <Chip
+                  icon={<DatabaseIcon />}
+                  label={`${Object.keys(cleanJobs).length} Active Jobs`}
+                  variant="outlined"
+                  size="small"
+                  color="primary"
+                />
+                <Chip
+                  icon={<SyncIcon />}
+                  label={stats.new > 0 ? `${stats.new} New` : 'Updated'}
+                  color={stats.new > 0 ? 'success' : 'info'}
+                  variant="outlined" 
+                  size="small"
+                />
+              </Box>
+              
+              {/* Theme Toggle */}
+              <IconButton 
+                onClick={() => setDarkMode(!darkMode)} 
+                color="inherit"
+                size="large"
+                title={`Switch to ${darkMode ? 'light' : 'dark'} mode`}
+                sx={{
+                  border: '1px solid',
+                  borderColor: 'rgba(255,255,255,0.2)',
+                  '&:hover': {
+                    borderColor: 'rgba(255,255,255,0.4)',
+                  }
+                }}
+              >
+                {darkMode ? <LightIcon /> : <DarkIcon />}
+              </IconButton>
+            </Toolbar>
+          </AppBar>
+
+          {/* Content Area */}
+          <Box sx={{ flexGrow: 1, bgcolor: 'background.default' }}>
+            <Container 
+              maxWidth="xl" 
+              sx={{ 
+                py: 3,
+                px: 3,
+                minHeight: 'calc(100vh - 64px)',
+              }}
+            >
+              {error && (
+                <Alert 
+                  severity="error" 
+                  sx={{ 
+                    mb: 3, 
+                    borderRadius: 2,
+                    boxShadow: '0 2px 8px rgba(244,67,54,0.15)'
+                  }}
+                >
+                  {error}
+                </Alert>
+              )}
+
+              {/* Stats Dashboard */}
+              <StatsCards stats={stats} />
+
+              {/* Filter Controls */}
+              <Box sx={{ mb: 3 }}>
+                <FilterControls
+                  filters={filters}
+                  onFiltersChange={setFilters}
+                  onRefresh={() => loadJobs()}
+                  onExport={exportData}
+                  onMarkAllRead={markAllAsRead}
+                  onRemoveApplied={removeAppliedJobs}
+                  onAddExcludedCompany={addExcludedCompany}
+                  excludedCompanies={excludedCompanies}
+                  onRemoveExcludedCompany={removeExcludedCompany}
+                  isRefreshing={isRefreshing}
+                />
+              </Box>
+
+              {/* Job Listings */}
+              <JobSections
+                jobs={jobs}
+                onToggleApplied={toggleJobApplied}
+                updatingJobs={updatingJobs}
+              />
+            </Container>
+          </Box>
+        </Box>
+
+        {/* Notification Snackbar */}
+        <Snackbar
+          open={!!notification}
+          autoHideDuration={4000}
+          onClose={() => setNotification(null)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        >
+          <Alert
+            onClose={() => setNotification(null)}
+            severity={notification?.severity}
+            sx={{ 
+              width: '100%',
+              borderRadius: 2,
+              boxShadow: '0 4px 16px rgba(0,0,0,0.15)'
+            }}
+          >
+            {notification?.message}
+          </Alert>
+        </Snackbar>
+      </Box>
     </ThemeProvider>
   );
 }

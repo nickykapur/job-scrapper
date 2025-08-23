@@ -14,14 +14,16 @@ import {
   DialogContent,
   DialogActions,
   Typography,
+  Stack,
+  Divider,
 } from '@mui/material';
 import {
   Refresh as RefreshIcon,
   Download as DownloadIcon,
   Visibility as VisibilityIcon,
   Delete as DeleteIcon,
-  Search as SearchIcon,
   Block as BlockIcon,
+  FilterList as FilterIcon,
 } from '@mui/icons-material';
 import { FilterState } from '../types';
 
@@ -32,12 +34,10 @@ interface FilterControlsProps {
   onExport: () => void;
   onMarkAllRead: () => void;
   onRemoveApplied: () => void;
-  onSearch: (keywords: string) => void;
   onAddExcludedCompany: (company: string) => void;
   excludedCompanies: string[];
   onRemoveExcludedCompany: (company: string) => void;
   isRefreshing?: boolean;
-  isSearching?: boolean;
 }
 
 export const FilterControls: React.FC<FilterControlsProps> = ({
@@ -47,196 +47,193 @@ export const FilterControls: React.FC<FilterControlsProps> = ({
   onExport,
   onMarkAllRead,
   onRemoveApplied,
-  onSearch,
   onAddExcludedCompany,
   excludedCompanies,
   onRemoveExcludedCompany,
   isRefreshing = false,
-  isSearching = false,
 }) => {
-  const [searchDialog, setSearchDialog] = useState(false);
-  const [excludeDialog, setExcludeDialog] = useState(false);
-  const [searchKeywords, setSearchKeywords] = useState('');
-  const [excludeCompany, setExcludeCompany] = useState('');
+  const [excludeCompanyDialog, setExcludeCompanyDialog] = useState(false);
+  const [newExcludedCompany, setNewExcludedCompany] = useState('');
 
-  const handleSearch = () => {
-    if (searchKeywords.trim()) {
-      onSearch(searchKeywords.trim());
-      setSearchDialog(false);
-      setSearchKeywords('');
-    }
-  };
-
-  const handleExclude = () => {
-    if (excludeCompany.trim()) {
-      onAddExcludedCompany(excludeCompany.trim());
-      setExcludeDialog(false);
-      setExcludeCompany('');
+  const handleAddExcludedCompany = () => {
+    if (newExcludedCompany.trim()) {
+      onAddExcludedCompany(newExcludedCompany.trim());
+      setNewExcludedCompany('');
+      setExcludeCompanyDialog(false);
     }
   };
 
   return (
     <>
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Box
-          display="flex"
-          gap={2}
-          flexWrap="wrap"
-          alignItems="center"
-          sx={{ mb: excludedCompanies.length > 0 ? 2 : 0 }}
-        >
-          <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel>Status</InputLabel>
-            <Select
-              value={filters.status}
-              label="Status"
-              onChange={(e) =>
-                onFiltersChange({ ...filters, status: e.target.value as any })
-              }
+      <Paper 
+        sx={{ 
+          p: 3, 
+          mb: 3, 
+          borderRadius: 3,
+          background: (theme) => theme.palette.mode === 'dark'
+            ? 'linear-gradient(135deg, #1e1e1e 0%, #2a2a2a 100%)'
+            : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+          border: '1px solid',
+          borderColor: 'divider',
+        }}
+      >
+        <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <FilterIcon color="primary" />
+          Job Management
+        </Typography>
+
+        <Stack spacing={3}>
+          {/* Filter Controls */}
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
+            <FormControl size="small" sx={{ minWidth: 140 }}>
+              <InputLabel>Filter by Status</InputLabel>
+              <Select
+                value={filters.status}
+                label="Filter by Status"
+                onChange={(e) => onFiltersChange({ ...filters, status: e.target.value as any })}
+              >
+                <MenuItem value="all">📋 All Jobs</MenuItem>
+                <MenuItem value="new">✨ New Only</MenuItem>
+                <MenuItem value="applied">✅ Applied</MenuItem>
+                <MenuItem value="not-applied">📝 Not Applied</MenuItem>
+              </Select>
+            </FormControl>
+
+            <TextField
+              size="small"
+              label="Filter by keyword..."
+              placeholder="e.g. React, Python, Senior"
+              value={filters.search}
+              onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
+              sx={{ minWidth: 250, flexGrow: 1, maxWidth: 400 }}
+            />
+
+            <FormControl size="small" sx={{ minWidth: 140 }}>
+              <InputLabel>Sort by</InputLabel>
+              <Select
+                value={filters.sort}
+                label="Sort by"
+                onChange={(e) => onFiltersChange({ ...filters, sort: e.target.value as any })}
+              >
+                <MenuItem value="newest">🕐 Newest First</MenuItem>
+                <MenuItem value="oldest">📅 Oldest First</MenuItem>
+                <MenuItem value="company">🏢 Company A-Z</MenuItem>
+              </Select>
+            </FormControl>
+          </Stack>
+
+          <Divider />
+
+          {/* Action Buttons */}
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems="center" flexWrap="wrap">
+            <Button
+              variant="contained"
+              startIcon={<RefreshIcon />}
+              onClick={onRefresh}
+              disabled={isRefreshing}
+              sx={{ minWidth: 140 }}
             >
-              <MenuItem value="all">All Jobs</MenuItem>
-              <MenuItem value="applied">Applied</MenuItem>
-              <MenuItem value="not-applied">Not Applied</MenuItem>
-              <MenuItem value="new">New Jobs</MenuItem>
-            </Select>
-          </FormControl>
+              {isRefreshing ? 'Refreshing...' : 'Refresh Jobs'}
+            </Button>
 
-          <FormControl size="small" sx={{ minWidth: 140 }}>
-            <InputLabel>Sort by</InputLabel>
-            <Select
-              value={filters.sort}
-              label="Sort by"
-              onChange={(e) =>
-                onFiltersChange({ ...filters, sort: e.target.value as any })
-              }
+            <Button
+              variant="outlined"
+              startIcon={<DownloadIcon />}
+              onClick={onExport}
+              sx={{ minWidth: 120 }}
             >
-              <MenuItem value="newest">Newest First</MenuItem>
-              <MenuItem value="oldest">Oldest First</MenuItem>
-              <MenuItem value="title">Title A-Z</MenuItem>
-              <MenuItem value="company">Company A-Z</MenuItem>
-            </Select>
-          </FormControl>
+              Export Data
+            </Button>
 
-          <TextField
-            size="small"
-            placeholder="Search jobs..."
-            value={filters.search}
-            onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
-            sx={{ minWidth: 200 }}
-          />
+            <Button
+              variant="outlined"
+              startIcon={<VisibilityIcon />}
+              onClick={onMarkAllRead}
+              sx={{ minWidth: 140 }}
+            >
+              Mark All Read
+            </Button>
 
-          <Button
-            variant="outlined"
-            startIcon={<RefreshIcon />}
-            onClick={onRefresh}
-            disabled={isRefreshing}
-          >
-            {isRefreshing ? 'Refreshing...' : 'Refresh'}
-          </Button>
+            <Button
+              variant="outlined"
+              startIcon={<DeleteIcon />}
+              onClick={onRemoveApplied}
+              color="error"
+              sx={{ minWidth: 160 }}
+            >
+              Remove Applied
+            </Button>
 
-          <Button variant="outlined" startIcon={<DownloadIcon />} onClick={onExport}>
-            Export
-          </Button>
+            <Button
+              variant="outlined"
+              startIcon={<BlockIcon />}
+              onClick={() => setExcludeCompanyDialog(true)}
+              sx={{ minWidth: 160 }}
+            >
+              Block Company
+            </Button>
+          </Stack>
 
-          <Button variant="outlined" startIcon={<VisibilityIcon />} onClick={onMarkAllRead}>
-            Mark All Read
-          </Button>
-
-          <Button
-            variant="outlined"
-            color="error"
-            startIcon={<DeleteIcon />}
-            onClick={onRemoveApplied}
-          >
-            Remove Applied
-          </Button>
-
-          <Button
-            variant="contained"
-            startIcon={<SearchIcon />}
-            onClick={() => setSearchDialog(true)}
-            disabled={isSearching}
-          >
-            {isSearching ? 'Searching...' : 'Search Jobs'}
-          </Button>
-
-          <Button
-            variant="outlined"
-            startIcon={<BlockIcon />}
-            onClick={() => setExcludeDialog(true)}
-          >
-            Exclude Company
-          </Button>
-        </Box>
-
-        {excludedCompanies.length > 0 && (
-          <Box>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              🚫 Excluded companies:
-            </Typography>
-            <Box display="flex" gap={1} flexWrap="wrap">
-              {excludedCompanies.map((company) => (
-                <Chip
-                  key={company}
-                  label={company}
-                  onDelete={() => onRemoveExcludedCompany(company)}
-                  color="error"
-                  variant="outlined"
-                  size="small"
-                />
-              ))}
+          {/* Blocked Companies */}
+          {excludedCompanies.length > 0 && (
+            <Box>
+              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1.5, fontWeight: 600 }}>
+                🚫 Blocked Companies ({excludedCompanies.length}):
+              </Typography>
+              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                {excludedCompanies.map((company) => (
+                  <Chip
+                    key={company}
+                    label={company}
+                    onDelete={() => onRemoveExcludedCompany(company)}
+                    color="error"
+                    variant="outlined"
+                    size="small"
+                    sx={{
+                      fontWeight: 500,
+                      '& .MuiChip-deleteIcon': {
+                        '&:hover': {
+                          color: 'error.dark',
+                        }
+                      }
+                    }}
+                  />
+                ))}
+              </Stack>
             </Box>
-          </Box>
-        )}
+          )}
+        </Stack>
       </Paper>
 
-      {/* Search Dialog */}
-      <Dialog open={searchDialog} onClose={() => setSearchDialog(false)}>
-        <DialogTitle>Search for New Jobs</DialogTitle>
+      {/* Block Company Dialog */}
+      <Dialog open={excludeCompanyDialog} onClose={() => setExcludeCompanyDialog(false)}>
+        <DialogTitle sx={{ fontWeight: 600 }}>
+          🚫 Block Company
+        </DialogTitle>
         <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Keywords"
-            placeholder="e.g., Python Developer"
-            fullWidth
-            variant="outlined"
-            value={searchKeywords}
-            onChange={(e) => setSearchKeywords(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setSearchDialog(false)}>Cancel</Button>
-          <Button onClick={handleSearch} variant="contained">
-            Search
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Exclude Company Dialog */}
-      <Dialog open={excludeDialog} onClose={() => setExcludeDialog(false)}>
-        <DialogTitle>Exclude Company</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Company Name"
-            placeholder="e.g., Company XYZ"
-            fullWidth
-            variant="outlined"
-            value={excludeCompany}
-            onChange={(e) => setExcludeCompany(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleExclude()}
-          />
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Jobs from this company will be hidden from the list.
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Block a company so their jobs won't appear in your list anymore.
           </Typography>
+          <TextField
+            autoFocus
+            fullWidth
+            label="Company Name"
+            placeholder="e.g. Bending Spoons"
+            value={newExcludedCompany}
+            onChange={(e) => setNewExcludedCompany(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleAddExcludedCompany()}
+            sx={{ mt: 1 }}
+          />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setExcludeDialog(false)}>Cancel</Button>
-          <Button onClick={handleExclude} variant="contained">
-            Exclude
+          <Button onClick={() => setExcludeCompanyDialog(false)}>Cancel</Button>
+          <Button 
+            onClick={handleAddExcludedCompany} 
+            variant="contained"
+            color="error"
+            disabled={!newExcludedCompany.trim()}
+          >
+            Block Company
           </Button>
         </DialogActions>
       </Dialog>
