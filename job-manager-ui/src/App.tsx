@@ -167,14 +167,6 @@ const createAppTheme = (mode: 'light' | 'dark') => createTheme({
         },
       },
     },
-    MuiContainer: {
-      styleOverrides: {
-        root: {
-          paddingLeft: '16px !important',
-          paddingRight: '16px !important',
-        },
-      },
-    },
   },
 });
 
@@ -481,7 +473,7 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+      <Box sx={{ display: 'flex', minHeight: '100vh', width: '100vw', overflow: 'hidden' }}>
         {/* Navigation Drawer */}
         <Drawer
           variant={isMobile ? 'temporary' : 'persistent'}
@@ -496,6 +488,9 @@ function App() {
               boxSizing: 'border-box',
               borderRight: '1px solid',
               borderColor: 'divider',
+              position: 'relative',
+              height: '100vh',
+              overflow: 'auto',
             },
           }}
         >
@@ -507,10 +502,11 @@ function App() {
           component="main"
           sx={{
             flexGrow: 1,
-            width: isMobile ? '100%' : `calc(100% - ${DRAWER_WIDTH}px)`,
+            width: isMobile ? '100%' : `calc(100vw - ${DRAWER_WIDTH}px)`,
             minHeight: '100vh',
             display: 'flex',
             flexDirection: 'column',
+            overflow: 'auto',
           }}
         >
           {/* Top App Bar */}
@@ -576,13 +572,14 @@ function App() {
           </AppBar>
 
           {/* Content Area */}
-          <Box sx={{ flexGrow: 1, bgcolor: 'background.default' }}>
-            <Container 
-              maxWidth="xl" 
+          <Box sx={{ flexGrow: 1, bgcolor: 'background.default', width: '100%' }}>
+            <Box
               sx={{ 
                 py: 3,
                 px: 3,
                 minHeight: 'calc(100vh - 64px)',
+                width: '100%',
+                maxWidth: 'none',
               }}
             >
               {error && (
@@ -623,7 +620,7 @@ function App() {
                 onToggleApplied={toggleJobApplied}
                 updatingJobs={updatingJobs}
               />
-            </Container>
+            </Box>
           </Box>
         </Box>
 

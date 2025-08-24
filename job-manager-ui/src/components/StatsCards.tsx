@@ -41,9 +41,9 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ stats }) => {
   ];
 
   return (
-    <Grid container spacing={2} sx={{ mb: 2 }}>
+    <Grid container spacing={2} sx={{ mb: 2, width: '100%' }}>
       {statItems.map((item) => (
-        <Grid item xs={6} sm={3} md={3} key={item.label}>
+        <Grid item xs={12} sm={6} md={3} key={item.label}>
           <Paper
             sx={{
               p: 2,
