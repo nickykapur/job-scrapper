@@ -43,7 +43,7 @@ const NEETCODE_ROADMAP: TrainingCategory[] = [
     id: 'arrays',
     name: 'Arrays & Hashing',
     description: 'Foundation problems for arrays and hash tables',
-    icon: '📊',
+    icon: 'A',
     items: [
       { id: 'contains-duplicate', title: 'Contains Duplicate', difficulty: 'Easy', completed: false },
       { id: 'valid-anagram', title: 'Valid Anagram', difficulty: 'Easy', completed: false },
@@ -60,7 +60,7 @@ const NEETCODE_ROADMAP: TrainingCategory[] = [
     id: 'two-pointers',
     name: 'Two Pointers',
     description: 'Efficient array traversal techniques',
-    icon: '👉',
+    icon: 'TP',
     items: [
       { id: 'valid-palindrome', title: 'Valid Palindrome', difficulty: 'Easy', completed: false },
       { id: 'two-sum-ii', title: 'Two Sum II - Input Array Is Sorted', difficulty: 'Medium', completed: false },
@@ -73,7 +73,7 @@ const NEETCODE_ROADMAP: TrainingCategory[] = [
     id: 'sliding-window',
     name: 'Sliding Window',
     description: 'Dynamic window problems for subarray optimization',
-    icon: '🪟',
+    icon: 'SW',
     items: [
       { id: 'best-time-stock', title: 'Best Time to Buy and Sell Stock', difficulty: 'Easy', completed: false },
       { id: 'longest-substring', title: 'Longest Substring Without Repeating Characters', difficulty: 'Medium', completed: false },
@@ -87,7 +87,7 @@ const NEETCODE_ROADMAP: TrainingCategory[] = [
     id: 'stack',
     name: 'Stack',
     description: 'LIFO data structure problems',
-    icon: '📚',
+    icon: 'S',
     items: [
       { id: 'valid-parentheses', title: 'Valid Parentheses', difficulty: 'Easy', completed: false },
       { id: 'min-stack', title: 'Min Stack', difficulty: 'Medium', completed: false },
@@ -102,7 +102,7 @@ const NEETCODE_ROADMAP: TrainingCategory[] = [
     id: 'binary-search',
     name: 'Binary Search',
     description: 'Efficient searching in sorted arrays',
-    icon: '🔍',
+    icon: 'BS',
     items: [
       { id: 'binary-search', title: 'Binary Search', difficulty: 'Easy', completed: false },
       { id: 'search-2d-matrix', title: 'Search a 2D Matrix', difficulty: 'Medium', completed: false },
@@ -117,7 +117,7 @@ const NEETCODE_ROADMAP: TrainingCategory[] = [
     id: 'linked-list',
     name: 'Linked List',
     description: 'Dynamic data structure manipulation',
-    icon: '⛓️',
+    icon: 'LL',
     items: [
       { id: 'reverse-linked-list', title: 'Reverse Linked List', difficulty: 'Easy', completed: false },
       { id: 'merge-two-lists', title: 'Merge Two Sorted Lists', difficulty: 'Easy', completed: false },
@@ -320,7 +320,22 @@ export const Training: React.FC = () => {
                   }}
                 >
                   <Stack direction="row" alignItems="center" spacing={2} sx={{ width: '100%', mr: 1 }}>
-                    <Typography sx={{ fontSize: '1.5rem' }}>{category.icon}</Typography>
+                    <Box
+                      sx={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 1,
+                        backgroundColor: 'primary.main',
+                        color: 'primary.contrastText',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 600,
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      {category.icon}
+                    </Box>
                     <Box sx={{ flexGrow: 1 }}>
                       <Typography variant="h6" fontWeight={600}>
                         {category.name}
