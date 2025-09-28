@@ -565,9 +565,9 @@ function App() {
           {/* Content Area */}
           <Box sx={{ flexGrow: 1, bgcolor: 'background.default', width: '100%' }}>
             <Box
-              sx={{ 
-                py: 3,
-                px: 3,
+              sx={{
+                py: 2,
+                px: 2,
                 minHeight: 'calc(100vh - 64px)',
                 width: '100%',
                 maxWidth: 'none',
