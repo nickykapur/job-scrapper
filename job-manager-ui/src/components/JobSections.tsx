@@ -112,7 +112,7 @@ export const JobSections: React.FC<JobSectionsProps> = ({
   const allDisplayJobs = [...newJobs, ...last24hJobs, ...otherJobs].filter(job => !job.rejected);
 
   return (
-    <Box sx={{ width: '100%', px: 1 }}>
+    <Box sx={{ width: '100%' }}>
       {allDisplayJobs.length > 0 ? (
         <>
           <SectionHeader title="Available Positions" count={allDisplayJobs.length} />

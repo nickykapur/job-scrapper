@@ -228,7 +228,7 @@ export const Training: React.FC = () => {
   const overallProgress = getOverallProgress();
 
   return (
-    <Box sx={{ width: '100%', px: 1 }}>
+    <Box sx={{ width: '100%' }}>
       {/* Header */}
       <Paper
         sx={{

@@ -35,6 +35,7 @@ import {
   Menu as MenuIcon,
   Search as SearchIcon,
   School as TrainingIcon,
+  Architecture as SystemDesignIcon,
 } from '@mui/icons-material';
 import { JobCard } from './components/JobCard';
 import { StatsCards } from './components/StatsCards';
@@ -42,6 +43,7 @@ import { FilterControls } from './components/FilterControls';
 import { JobLoadingInfo } from './components/JobLoadingInfo';
 import { JobSections } from './components/JobSections';
 import { Training } from './components/Training';
+import { SystemDesign } from './components/SystemDesign';
 import { jobApi } from './services/api';
 import type { Job, JobStats, FilterState } from './types';
 
@@ -194,7 +196,7 @@ function App() {
     message: string;
     severity: 'success' | 'error' | 'info';
   } | null>(null);
-  const [currentTab, setCurrentTab] = useState<'dashboard' | 'training'>('dashboard');
+  const [currentTab, setCurrentTab] = useState<'dashboard' | 'training' | 'system-design'>('dashboard');
   
   const theme = useMemo(() => createAppTheme(darkMode ? 'dark' : 'light'), [darkMode]);
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -489,7 +491,39 @@ function App() {
               <TrainingIcon />
             </ListItemIcon>
             <ListItemText
-              primary="Training"
+              primary="DSA Training"
+              primaryTypographyProps={{ fontWeight: 500, fontSize: '0.875rem' }}
+            />
+          </ListItem>
+
+          <ListItem
+            button
+            selected={currentTab === 'system-design'}
+            onClick={() => setCurrentTab('system-design')}
+            sx={{
+              borderRadius: 2,
+              mb: 0.5,
+              mx: 1,
+              '&.Mui-selected': {
+                bgcolor: 'primary.main',
+                color: 'primary.contrastText',
+                '&:hover': {
+                  bgcolor: 'primary.dark',
+                },
+                '& .MuiListItemIcon-root': {
+                  color: 'primary.contrastText',
+                },
+              },
+              '&:hover': {
+                bgcolor: 'action.hover',
+              },
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: 40 }}>
+              <SystemDesignIcon />
+            </ListItemIcon>
+            <ListItemText
+              primary="System Design"
               primaryTypographyProps={{ fontWeight: 500, fontSize: '0.875rem' }}
             />
           </ListItem>
@@ -552,7 +586,7 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Box sx={{ display: 'flex', minHeight: '100vh', width: '100vw', overflow: 'hidden' }}>
+      <Box sx={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden' }}>
         {/* Navigation Drawer */}
         <Drawer
           variant={isMobile ? 'temporary' : 'persistent'}
@@ -582,7 +616,7 @@ function App() {
           sx={{
             flexGrow: 1,
             width: isMobile ? '100%' : `calc(100vw - ${DRAWER_WIDTH}px)`,
-            minHeight: '100vh',
+            height: '100vh',
             display: 'flex',
             flexDirection: 'column',
             overflow: 'auto',
@@ -614,7 +648,8 @@ function App() {
               )}
 
               <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 600 }}>
-                {currentTab === 'dashboard' ? 'Job Dashboard' : 'Training Roadmap'}
+                {currentTab === 'dashboard' ? 'Job Dashboard' :
+                 currentTab === 'training' ? 'DSA Training' : 'System Design'}
               </Typography>
 
               {/* Status Indicators */}
@@ -668,8 +703,7 @@ function App() {
                 p: 3,
                 flex: 1,
                 width: '100%',
-                maxWidth: '1200px',
-                mx: 'auto',
+                height: '100%',
               }}
             >
               {error && (
@@ -702,6 +736,8 @@ function App() {
               )}
 
               {currentTab === 'training' && <Training />}
+
+              {currentTab === 'system-design' && <SystemDesign />}
             </Box>
           </Box>
         </Box>
