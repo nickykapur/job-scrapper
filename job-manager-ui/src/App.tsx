@@ -41,7 +41,7 @@ import { FilterControls } from './components/FilterControls';
 import { JobLoadingInfo } from './components/JobLoadingInfo';
 import { JobSections } from './components/JobSections';
 import { jobApi } from './services/api';
-import { Job, JobStats, FilterState } from './types';
+import type { Job, JobStats, FilterState } from './types';
 
 const createAppTheme = (mode: 'light' | 'dark') => createTheme({
   palette: {
@@ -242,30 +242,40 @@ function App() {
     }
   }, [jobs]);
 
-  const toggleJobApplied = async (jobId: string) => {
+  const applyAndOpenJob = async (jobId: string, jobUrl: string) => {
     const job = jobs[jobId];
     if (!job) return;
 
-    setUpdatingJobs(prev => new Set(prev).add(jobId));
-    
-    try {
-      await jobApi.updateJob(jobId, !job.applied);
+    // Open job URL in new tab
+    window.open(jobUrl, '_blank', 'noopener,noreferrer');
+
+    // Mark as applied if not already applied
+    if (!job.applied) {
+      setUpdatingJobs(prev => new Set(prev).add(jobId));
+
+      // Optimistic update - update UI immediately
       setJobs(prev => ({
         ...prev,
-        [jobId]: { ...prev[jobId], applied: !prev[jobId].applied },
+        [jobId]: { ...prev[jobId], applied: true },
       }));
-      showNotification(
-        `✅ Job marked as ${!job.applied ? 'applied' : 'not applied'}!`,
-        'success'
-      );
-    } catch (err) {
-      showNotification('Failed to update job status', 'error');
-    } finally {
-      setUpdatingJobs(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(jobId);
-        return newSet;
-      });
+
+      try {
+        await jobApi.updateJob(jobId, true);
+        showNotification('✅ Job marked as applied!', 'success');
+      } catch (err) {
+        // Revert the optimistic update on error
+        setJobs(prev => ({
+          ...prev,
+          [jobId]: { ...prev[jobId], applied: false },
+        }));
+        showNotification('Failed to update job status', 'error');
+      } finally {
+        setUpdatingJobs(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(jobId);
+          return newSet;
+        });
+      }
     }
   };
 
@@ -604,12 +614,7 @@ function App() {
                   filters={filters}
                   onFiltersChange={setFilters}
                   onRefresh={() => loadJobs()}
-                  onExport={exportData}
-                  onMarkAllRead={markAllAsRead}
                   onRemoveApplied={removeAppliedJobs}
-                  onAddExcludedCompany={addExcludedCompany}
-                  excludedCompanies={excludedCompanies}
-                  onRemoveExcludedCompany={removeExcludedCompany}
                   isRefreshing={isRefreshing}
                 />
               </Box>
@@ -617,7 +622,7 @@ function App() {
               {/* Job Listings */}
               <JobSections
                 jobs={jobs}
-                onToggleApplied={toggleJobApplied}
+                onApplyAndOpen={applyAndOpenJob}
                 updatingJobs={updatingJobs}
               />
             </Box>

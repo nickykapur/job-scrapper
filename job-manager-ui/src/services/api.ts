@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Job } from '../types';
+import type { Job } from '../types';
 
 // In production (Railway), the API is served from the same domain
 // In development, use localhost:8000 (FastAPI default port)
@@ -8,7 +8,7 @@ const API_BASE_URL = process.env.REACT_APP_API_URL ||
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000,
+  timeout: 10000,
 });
 
 export const jobApi = {

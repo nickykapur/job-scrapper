@@ -22,17 +22,17 @@ import {
   BookmarkBorder as BookmarkBorderIcon,
   Bookmark as BookmarkIcon,
 } from '@mui/icons-material';
-import { Job } from '../types';
+import type { Job } from '../types';
 
 interface JobCardProps {
   job: Job;
-  onToggleApplied: (jobId: string) => void;
+  onApplyAndOpen: (jobId: string, jobUrl: string) => void;
   isUpdating?: boolean;
 }
 
 export const JobCard: React.FC<JobCardProps> = ({
   job,
-  onToggleApplied,
+  onApplyAndOpen,
   isUpdating = false,
 }) => {
   const getCompanyInitials = (company: string) => {
@@ -202,45 +202,29 @@ export const JobCard: React.FC<JobCardProps> = ({
             />
           </Stack>
 
-          {/* Action Buttons */}
-          <Stack direction="row" spacing={1}>
-            <Button
-              variant={job.applied ? 'contained' : 'contained'}
-              color={job.applied ? 'success' : 'primary'}
-              size="medium"
-              onClick={() => onToggleApplied(job.id)}
-              disabled={isUpdating}
-              startIcon={job.applied ? <CheckIcon /> : <ScheduleIcon />}
-              sx={{
-                minWidth: 140,
-                borderRadius: 2,
-                fontWeight: 600,
-                textTransform: 'none',
-                px: 2,
-              }}
-            >
-              {isUpdating ? 'Updating...' : job.applied ? 'Applied ✓' : 'Apply Now'}
-            </Button>
-            
-            <Button
-              variant="outlined"
-              size="medium"
-              startIcon={<OpenInNewIcon />}
-              component={Link}
-              href={job.job_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              sx={{
-                borderRadius: 2,
-                fontWeight: 600,
-                textTransform: 'none',
-                minWidth: 120,
-                px: 2,
-              }}
-            >
-              View Details
-            </Button>
-          </Stack>
+          {/* Action Button */}
+          <Button
+            variant="contained"
+            color={job.applied ? 'success' : 'primary'}
+            size="medium"
+            onClick={() => onApplyAndOpen(job.id, job.job_url)}
+            disabled={isUpdating}
+            startIcon={job.applied ? <CheckIcon /> : <OpenInNewIcon />}
+            sx={{
+              minWidth: 160,
+              borderRadius: 2,
+              fontWeight: 600,
+              textTransform: 'none',
+              px: 3,
+              transition: 'all 0.2s ease-in-out',
+              '&:hover': {
+                transform: 'translateY(-1px)',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+              }
+            }}
+          >
+            {isUpdating ? 'Processing...' : job.applied ? 'Applied ✓' : 'Apply Now'}
+          </Button>
         </Box>
       </CardContent>
     </Card>

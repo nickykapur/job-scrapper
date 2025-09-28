@@ -16,18 +16,18 @@ import {
   Storage as AllIcon,
   LocationOn as LocationIcon,
 } from '@mui/icons-material';
-import { Job } from '../types';
+import type { Job } from '../types';
 import { JobCard } from './JobCard';
 
 interface JobSectionsProps {
   jobs: Record<string, Job>;
-  onToggleApplied: (jobId: string) => void;
+  onApplyAndOpen: (jobId: string, jobUrl: string) => void;
   updatingJobs: Set<string>;
 }
 
 export const JobSections: React.FC<JobSectionsProps> = ({
   jobs,
-  onToggleApplied,
+  onApplyAndOpen,
   updatingJobs,
 }) => {
   // Function to check if job was posted within last 24 hours
@@ -141,7 +141,7 @@ export const JobSections: React.FC<JobSectionsProps> = ({
               <JobCard
                 key={job.id}
                 job={job}
-                onToggleApplied={onToggleApplied}
+                onApplyAndOpen={onApplyAndOpen}
                 isUpdating={updatingJobs.has(job.id)}
               />
             ))}
@@ -176,7 +176,7 @@ export const JobSections: React.FC<JobSectionsProps> = ({
               <JobCard
                 key={job.id}
                 job={job}
-                onToggleApplied={onToggleApplied}
+                onApplyAndOpen={onApplyAndOpen}
                 isUpdating={updatingJobs.has(job.id)}
               />
             ))}
@@ -211,7 +211,7 @@ export const JobSections: React.FC<JobSectionsProps> = ({
               <JobCard
                 key={job.id}
                 job={job}
-                onToggleApplied={onToggleApplied}
+                onApplyAndOpen={onApplyAndOpen}
                 isUpdating={updatingJobs.has(job.id)}
               />
             ))}
@@ -247,7 +247,7 @@ export const JobSections: React.FC<JobSectionsProps> = ({
               <JobCard
                 key={job.id}
                 job={job}
-                onToggleApplied={onToggleApplied}
+                onApplyAndOpen={onApplyAndOpen}
                 isUpdating={updatingJobs.has(job.id)}
               />
             ))}

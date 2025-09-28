@@ -25,7 +25,7 @@ import {
   Block as BlockIcon,
   FilterList as FilterIcon,
 } from '@mui/icons-material';
-import { FilterState } from '../types';
+import type { FilterState } from '../types';
 
 interface FilterControlsProps {
   filters: FilterState;
