@@ -49,22 +49,22 @@ const createAppTheme = (mode: 'light' | 'dark') => createTheme({
   palette: {
     mode,
     primary: {
-      main: mode === 'dark' ? '#1976d2' : '#0066cc',
-      light: mode === 'dark' ? '#42a5f5' : '#3399ff',
-      dark: mode === 'dark' ? '#115293' : '#004499',
+      main: mode === 'dark' ? '#90caf9' : '#1976d2',
+      light: mode === 'dark' ? '#bbdefb' : '#42a5f5',
+      dark: mode === 'dark' ? '#64b5f6' : '#115293',
     },
     secondary: {
-      main: '#00bcd4',
-      light: '#4dd0e1',
-      dark: '#0097a7',
+      main: mode === 'dark' ? '#f48fb1' : '#9c27b0',
+      light: mode === 'dark' ? '#f8bbd9' : '#ba68c8',
+      dark: mode === 'dark' ? '#f06292' : '#7b1fa2',
     },
     background: {
-      default: mode === 'dark' ? '#121212' : '#f5f7fa',
+      default: mode === 'dark' ? '#121212' : '#fafafa',
       paper: mode === 'dark' ? '#1e1e1e' : '#ffffff',
     },
     text: {
-      primary: mode === 'dark' ? '#ffffff' : '#2c3e50',
-      secondary: mode === 'dark' ? '#b0bec5' : '#546e7a',
+      primary: mode === 'dark' ? '#ffffff' : '#212121',
+      secondary: mode === 'dark' ? '#aaaaaa' : '#757575',
     },
     success: {
       main: '#4caf50',
@@ -81,6 +81,12 @@ const createAppTheme = (mode: 'light' | 'dark') => createTheme({
       light: '#ef5350',
       dark: '#d32f2f',
     },
+    info: {
+      main: mode === 'dark' ? '#29b6f6' : '#0288d1',
+      light: mode === 'dark' ? '#4fc3f7' : '#03a9f4',
+      dark: mode === 'dark' ? '#0277bd' : '#01579b',
+    },
+    divider: mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)',
   },
   typography: {
     fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
@@ -113,26 +119,18 @@ const createAppTheme = (mode: 'light' | 'dark') => createTheme({
     MuiCard: {
       styleOverrides: {
         root: {
-          backgroundColor: mode === 'dark' ? '#1e1e1e' : '#ffffff',
-          borderRadius: 12,
-          border: mode === 'dark' ? '1px solid #333333' : '1px solid #e0e0e0',
-          transition: 'all 0.3s ease-in-out',
-          boxShadow: mode === 'dark' 
-            ? '0 4px 20px rgba(0,0,0,0.3)' 
-            : '0 2px 12px rgba(0,0,0,0.08)',
-          '&:hover': {
-            transform: 'translateY(-2px)',
-            boxShadow: mode === 'dark'
-              ? '0 8px 32px rgba(0,0,0,0.4)'
-              : '0 4px 24px rgba(0,0,0,0.12)',
-          },
+          borderRadius: 8,
+          transition: 'all 0.2s ease-in-out',
+          border: '1px solid',
+          borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)',
         },
       },
     },
-    MuiChip: {
+    MuiPaper: {
       styleOverrides: {
         root: {
-          fontWeight: 500,
+          borderRadius: 8,
+          backgroundImage: 'none',
         },
       },
     },
@@ -140,32 +138,40 @@ const createAppTheme = (mode: 'light' | 'dark') => createTheme({
       styleOverrides: {
         root: {
           borderRadius: 8,
-          fontWeight: 600,
+          fontWeight: 500,
           textTransform: 'none',
-          padding: '8px 16px',
           boxShadow: 'none',
           '&:hover': {
-            boxShadow: mode === 'dark' 
-              ? '0 4px 12px rgba(25,118,210,0.3)' 
-              : '0 4px 12px rgba(0,102,204,0.2)',
+            boxShadow: 'none',
           },
         },
-        containedPrimary: {
-          background: mode === 'dark' 
-            ? 'linear-gradient(45deg, #1976d2, #42a5f5)' 
-            : 'linear-gradient(45deg, #0066cc, #3399ff)',
+        contained: {
+          '&:hover': {
+            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+          },
         },
       },
     },
-    MuiAppBar: {
+    MuiChip: {
       styleOverrides: {
         root: {
-          backgroundColor: mode === 'dark' ? '#1e1e1e' : '#ffffff',
-          color: mode === 'dark' ? '#ffffff' : '#2c3e50',
-          boxShadow: mode === 'dark' 
-            ? '0 2px 8px rgba(0, 0, 0, 0.4)' 
-            : '0 1px 4px rgba(0, 0, 0, 0.1)',
-          borderBottom: mode === 'dark' ? '1px solid #333333' : '1px solid #e0e0e0',
+          borderRadius: 16,
+          fontWeight: 500,
+        },
+      },
+    },
+    MuiListItem: {
+      styleOverrides: {
+        root: {
+          borderRadius: 8,
+        },
+      },
+    },
+    MuiDrawer: {
+      styleOverrides: {
+        paper: {
+          borderRight: '1px solid',
+          borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)',
         },
       },
     },
@@ -406,71 +412,140 @@ function App() {
   }
 
   const drawerContent = (
-    <Box sx={{ width: DRAWER_WIDTH, height: '100%', bgcolor: 'background.paper' }}>
-      <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <Avatar sx={{ bgcolor: 'primary.main', mr: 2 }}>
-            <PersonIcon />
-          </Avatar>
-          <Box>
-            <Typography variant="subtitle1" fontWeight="600">
-              Professional
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Software Engineer
-            </Typography>
-          </Box>
-        </Box>
+    <Box sx={{ width: DRAWER_WIDTH, height: '100%', bgcolor: 'background.paper', display: 'flex', flexDirection: 'column' }}>
+      {/* Header */}
+      <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
+        <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main', mb: 0.5 }}>
+          Career Portal
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Job Management & Training
+        </Typography>
       </Box>
 
-      <List sx={{ py: 1 }}>
-        <ListItem button selected={currentTab === 'dashboard'} onClick={() => setCurrentTab('dashboard')}>
-          <ListItemIcon>
-            <DashboardIcon color={currentTab === 'dashboard' ? 'primary' : 'inherit'} />
+      {/* Navigation */}
+      <Box sx={{ flex: 1, py: 1 }}>
+        <Typography variant="overline" sx={{ px: 3, py: 1, color: 'text.secondary', fontWeight: 600, fontSize: '0.75rem' }}>
+          MAIN
+        </Typography>
+
+        <List sx={{ px: 1 }}>
+          <ListItem
+            button
+            selected={currentTab === 'dashboard'}
+            onClick={() => setCurrentTab('dashboard')}
+            sx={{
+              borderRadius: 2,
+              mb: 0.5,
+              mx: 1,
+              '&.Mui-selected': {
+                bgcolor: 'primary.main',
+                color: 'primary.contrastText',
+                '&:hover': {
+                  bgcolor: 'primary.dark',
+                },
+                '& .MuiListItemIcon-root': {
+                  color: 'primary.contrastText',
+                },
+              },
+              '&:hover': {
+                bgcolor: 'action.hover',
+              },
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: 40 }}>
+              <DashboardIcon />
+            </ListItemIcon>
+            <ListItemText
+              primary="Dashboard"
+              primaryTypographyProps={{ fontWeight: 500, fontSize: '0.875rem' }}
+            />
+          </ListItem>
+
+          <ListItem
+            button
+            selected={currentTab === 'training'}
+            onClick={() => setCurrentTab('training')}
+            sx={{
+              borderRadius: 2,
+              mb: 0.5,
+              mx: 1,
+              '&.Mui-selected': {
+                bgcolor: 'primary.main',
+                color: 'primary.contrastText',
+                '&:hover': {
+                  bgcolor: 'primary.dark',
+                },
+                '& .MuiListItemIcon-root': {
+                  color: 'primary.contrastText',
+                },
+              },
+              '&:hover': {
+                bgcolor: 'action.hover',
+              },
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: 40 }}>
+              <TrainingIcon />
+            </ListItemIcon>
+            <ListItemText
+              primary="Training"
+              primaryTypographyProps={{ fontWeight: 500, fontSize: '0.875rem' }}
+            />
+          </ListItem>
+        </List>
+
+        <Typography variant="overline" sx={{ px: 3, py: 1, color: 'text.secondary', fontWeight: 600, fontSize: '0.75rem', mt: 2 }}>
+          OVERVIEW
+        </Typography>
+
+        <List sx={{ px: 1 }}>
+          <ListItem sx={{ borderRadius: 2, mx: 1, py: 1 }}>
+            <ListItemIcon sx={{ minWidth: 40 }}>
+              <WorkIcon color="action" />
+            </ListItemIcon>
+            <ListItemText
+              primary="Total Jobs"
+              secondary={Object.keys(cleanJobs).length}
+              primaryTypographyProps={{ fontSize: '0.875rem' }}
+              secondaryTypographyProps={{ fontSize: '0.75rem', fontWeight: 600 }}
+            />
+          </ListItem>
+
+          <ListItem sx={{ borderRadius: 2, mx: 1, py: 1 }}>
+            <ListItemIcon sx={{ minWidth: 40 }}>
+              <BookmarkIcon color="success" />
+            </ListItemIcon>
+            <ListItemText
+              primary="Applied"
+              secondary={stats.applied}
+              primaryTypographyProps={{ fontSize: '0.875rem' }}
+              secondaryTypographyProps={{ fontSize: '0.75rem', fontWeight: 600, color: 'success.main' }}
+            />
+          </ListItem>
+        </List>
+      </Box>
+
+      {/* Footer */}
+      <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
+        <ListItem
+          button
+          sx={{
+            borderRadius: 2,
+            '&:hover': {
+              bgcolor: 'action.hover',
+            },
+          }}
+        >
+          <ListItemIcon sx={{ minWidth: 40 }}>
+            <SettingsIcon color="action" />
           </ListItemIcon>
           <ListItemText
-            primary="Dashboard"
-            primaryTypographyProps={{ fontWeight: currentTab === 'dashboard' ? 600 : 400 }}
+            primary="Settings"
+            primaryTypographyProps={{ fontSize: '0.875rem' }}
           />
         </ListItem>
-
-        <ListItem button selected={currentTab === 'training'} onClick={() => setCurrentTab('training')}>
-          <ListItemIcon>
-            <TrainingIcon color={currentTab === 'training' ? 'primary' : 'inherit'} />
-          </ListItemIcon>
-          <ListItemText
-            primary="Training"
-            primaryTypographyProps={{ fontWeight: currentTab === 'training' ? 600 : 400 }}
-          />
-        </ListItem>
-
-        <Divider sx={{ my: 1 }} />
-
-        <ListItem button>
-          <ListItemIcon>
-            <WorkIcon />
-          </ListItemIcon>
-          <ListItemText primary="All Jobs" />
-          <Chip label={Object.keys(cleanJobs).length} size="small" />
-        </ListItem>
-
-        <ListItem button>
-          <ListItemIcon>
-            <BookmarkIcon />
-          </ListItemIcon>
-          <ListItemText primary="Applied" />
-          <Chip label={stats.applied} size="small" color="success" />
-        </ListItem>
-
-        <Divider sx={{ my: 1 }} />
-
-        <ListItem button>
-          <ListItemIcon>
-            <SettingsIcon />
-          </ListItemIcon>
-          <ListItemText primary="Settings" />
-        </ListItem>
-      </List>
+      </Box>
     </Box>
   );
 
@@ -514,15 +589,19 @@ function App() {
           }}
         >
           {/* Top App Bar */}
-          <AppBar 
-            position="static" 
-            elevation={0}
-            sx={{ 
+          <AppBar
+            position="static"
+            elevation={1}
+            sx={{
               width: '100%',
               zIndex: theme.zIndex.drawer - 1,
+              bgcolor: 'background.paper',
+              color: 'text.primary',
+              borderBottom: 1,
+              borderColor: 'divider',
             }}
           >
-            <Toolbar sx={{ px: 3 }}>
+            <Toolbar sx={{ px: 3, py: 1 }}>
               {isMobile && (
                 <IconButton
                   edge="start"
@@ -533,57 +612,64 @@ function App() {
                   <MenuIcon />
                 </IconButton>
               )}
-              
-              <Typography variant="h5" component="div" sx={{ flexGrow: 1, fontWeight: 700 }}>
-                Career Portal
+
+              <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 600 }}>
+                {currentTab === 'dashboard' ? 'Job Dashboard' : 'Training Roadmap'}
               </Typography>
-              
+
               {/* Status Indicators */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 2 }}>
-                <Chip
-                  icon={<DatabaseIcon />}
-                  label={`${Object.keys(cleanJobs).length} Positions`}
-                  variant="outlined"
-                  size="small"
-                  color="primary"
-                />
-                <Chip
-                  icon={<SyncIcon />}
-                  label={stats.new > 0 ? `${stats.new} New` : 'Updated'}
-                  color={stats.new > 0 ? 'success' : 'info'}
-                  variant="outlined"
-                  size="small"
-                />
-              </Box>
-              
+              {currentTab === 'dashboard' && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 2 }}>
+                  <Chip
+                    icon={<DatabaseIcon />}
+                    label={`${Object.keys(cleanJobs).length}`}
+                    variant="outlined"
+                    size="small"
+                    sx={{ height: 24, fontSize: '0.75rem' }}
+                  />
+                  {stats.new > 0 && (
+                    <Chip
+                      icon={<SyncIcon />}
+                      label={`${stats.new} New`}
+                      color="success"
+                      variant="filled"
+                      size="small"
+                      sx={{ height: 24, fontSize: '0.75rem' }}
+                    />
+                  )}
+                </Box>
+              )}
+
               {/* Theme Toggle */}
-              <IconButton 
-                onClick={() => setDarkMode(!darkMode)} 
+              <IconButton
+                onClick={() => setDarkMode(!darkMode)}
                 color="inherit"
-                size="large"
+                size="medium"
                 title={`Switch to ${darkMode ? 'light' : 'dark'} mode`}
                 sx={{
-                  border: '1px solid',
-                  borderColor: 'rgba(255,255,255,0.2)',
+                  border: 1,
+                  borderColor: 'divider',
+                  borderRadius: 2,
                   '&:hover': {
-                    borderColor: 'rgba(255,255,255,0.4)',
-                  }
+                    bgcolor: 'action.hover',
+                    borderColor: 'primary.main',
+                  },
                 }}
               >
-                {darkMode ? <LightIcon /> : <DarkIcon />}
+                {darkMode ? <LightIcon fontSize="small" /> : <DarkIcon fontSize="small" />}
               </IconButton>
             </Toolbar>
           </AppBar>
 
           {/* Content Area */}
-          <Box sx={{ flexGrow: 1, bgcolor: 'background.default', width: '100%' }}>
+          <Box sx={{ flexGrow: 1, bgcolor: 'background.default', width: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box
               sx={{
-                py: 2,
-                px: 2,
-                minHeight: 'calc(100vh - 64px)',
+                p: 3,
+                flex: 1,
                 width: '100%',
-                maxWidth: 'none',
+                maxWidth: '1200px',
+                mx: 'auto',
               }}
             >
               {error && (
