@@ -7,6 +7,7 @@ export interface Job {
   job_url: string;
   scraped_at: string;
   applied: boolean;
+  rejected?: boolean;
   is_new: boolean;
   category?: 'new' | 'last_24h' | 'existing';
   first_seen?: string;
@@ -22,7 +23,7 @@ export interface JobStats {
 }
 
 export interface FilterState {
-  status: 'all' | 'applied' | 'not-applied' | 'new';
+  status: 'all' | 'applied' | 'not-applied' | 'rejected' | 'new';
   search: string;
   sort: 'newest' | 'oldest' | 'title' | 'company';
 }

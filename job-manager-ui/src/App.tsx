@@ -215,10 +215,10 @@ function App() {
       setError(null);
       
       if (!silent && newCount > oldCount && oldCount > 0) {
-        showNotification(`🎆 ${newCount - oldCount} new jobs loaded!`, 'success');
+        showNotification(`${newCount - oldCount} new jobs loaded!`, 'success');
       }
     } catch (err: any) {
-      console.error('❌ Failed to load jobs:', err);
+      console.error('Failed to load jobs:', err);
       
       let errorMessage = 'Failed to load jobs';
       if (err.response) {
@@ -251,12 +251,12 @@ function App() {
       // Optimistic update - update UI immediately
       setJobs(prev => ({
         ...prev,
-        [jobId]: { ...prev[jobId], applied: true },
+        [jobId]: { ...prev[jobId], applied: true, rejected: false },
       }));
 
       try {
         await jobApi.updateJob(jobId, true);
-        showNotification('✅ Job marked as applied!', 'success');
+        showNotification('Job marked as applied!', 'success');
       } catch (err) {
         // Revert the optimistic update on error
         setJobs(prev => ({
@@ -274,11 +274,42 @@ function App() {
     }
   };
 
+  const rejectJob = async (jobId: string) => {
+    const job = jobs[jobId];
+    if (!job) return;
+
+    setUpdatingJobs(prev => new Set(prev).add(jobId));
+
+    // Optimistic update - update UI immediately
+    setJobs(prev => ({
+      ...prev,
+      [jobId]: { ...prev[jobId], rejected: true, applied: false },
+    }));
+
+    try {
+      await jobApi.rejectJob(jobId);
+      showNotification('Job marked as rejected', 'info');
+    } catch (err) {
+      // Revert the optimistic update on error
+      setJobs(prev => ({
+        ...prev,
+        [jobId]: { ...prev[jobId], rejected: false },
+      }));
+      showNotification('Failed to reject job', 'error');
+    } finally {
+      setUpdatingJobs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(jobId);
+        return newSet;
+      });
+    }
+  };
+
   const removeAppliedJobs = async () => {
     const appliedJobs = Object.values(jobs).filter(job => job.applied);
     
     if (appliedJobs.length === 0) {
-      showNotification('📝 No applied jobs to remove', 'info');
+      showNotification('No applied jobs to remove', 'info');
       return;
     }
 
@@ -293,12 +324,12 @@ function App() {
     try {
       await jobApi.removeAppliedJobs(newJobsData);
       setJobs(newJobsData);
-      showNotification(`🗑️ Removed ${appliedJobs.length} applied jobs`, 'success');
+      showNotification(`Removed ${appliedJobs.length} applied jobs`, 'success');
     } catch (err) {
       // Update locally even if server fails
       setJobs(newJobsData);
       showNotification(
-        `🗑️ Removed ${appliedJobs.length} applied jobs (local only)`,
+        `Removed ${appliedJobs.length} applied jobs (local only)`,
         'success'
       );
     }
@@ -318,7 +349,8 @@ function App() {
         
         // Status filter
         if (filters.status === 'applied' && !job.applied) return false;
-        if (filters.status === 'not-applied' && job.applied) return false;
+        if (filters.status === 'not-applied' && (job.applied || job.rejected)) return false;
+        if (filters.status === 'rejected' && !job.rejected) return false;
         if (filters.status === 'new' && !job.is_new) return false;
 
         // Search filter
@@ -381,7 +413,7 @@ function App() {
           </Avatar>
           <Box>
             <Typography variant="subtitle1" fontWeight="600">
-              Job Hunter
+              Professional
             </Typography>
             <Typography variant="body2" color="text.secondary">
               Software Engineer
@@ -490,14 +522,14 @@ function App() {
               )}
               
               <Typography variant="h5" component="div" sx={{ flexGrow: 1, fontWeight: 700 }}>
-                JobHunter Pro
+                Career Portal
               </Typography>
               
               {/* Status Indicators */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 2 }}>
                 <Chip
                   icon={<DatabaseIcon />}
-                  label={`${Object.keys(cleanJobs).length} Active Jobs`}
+                  label={`${Object.keys(cleanJobs).length} Positions`}
                   variant="outlined"
                   size="small"
                   color="primary"
@@ -506,7 +538,7 @@ function App() {
                   icon={<SyncIcon />}
                   label={stats.new > 0 ? `${stats.new} New` : 'Updated'}
                   color={stats.new > 0 ? 'success' : 'info'}
-                  variant="outlined" 
+                  variant="outlined"
                   size="small"
                 />
               </Box>
@@ -557,21 +589,12 @@ function App() {
               {/* Stats Dashboard */}
               <StatsCards stats={stats} />
 
-              {/* Filter Controls */}
-              <Box sx={{ mb: 3 }}>
-                <FilterControls
-                  filters={filters}
-                  onFiltersChange={setFilters}
-                  onRefresh={() => loadJobs()}
-                  onRemoveApplied={removeAppliedJobs}
-                  isRefreshing={isRefreshing}
-                />
-              </Box>
 
               {/* Job Listings */}
               <JobSections
                 jobs={jobs}
                 onApplyAndOpen={applyAndOpenJob}
+                onRejectJob={rejectJob}
                 updatingJobs={updatingJobs}
               />
             </Box>

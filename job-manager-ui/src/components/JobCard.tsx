@@ -6,33 +6,31 @@ import {
   Box,
   Chip,
   Button,
-  IconButton,
-  Link,
-  Avatar,
   Stack,
-  Divider,
+  Avatar,
+  Fade,
 } from '@mui/material';
 import {
   OpenInNew as OpenInNewIcon,
   Check as CheckIcon,
-  Schedule as ScheduleIcon,
+  Close as RejectIcon,
   LocationOn as LocationIcon,
   AccessTime as TimeIcon,
   Business as CompanyIcon,
-  BookmarkBorder as BookmarkBorderIcon,
-  Bookmark as BookmarkIcon,
 } from '@mui/icons-material';
 import type { Job } from '../types';
 
 interface JobCardProps {
   job: Job;
   onApplyAndOpen: (jobId: string, jobUrl: string) => void;
+  onRejectJob: (jobId: string) => void;
   isUpdating?: boolean;
 }
 
 export const JobCard: React.FC<JobCardProps> = ({
   job,
   onApplyAndOpen,
+  onRejectJob,
   isUpdating = false,
 }) => {
   const getCompanyInitials = (company: string) => {
@@ -44,189 +42,254 @@ export const JobCard: React.FC<JobCardProps> = ({
       .toUpperCase();
   };
 
-  const getStatusColor = () => {
-    if (job.applied) return '#4caf50';
-    if (job.is_new) return '#2196f3';
-    return '#ff9800';
+  const getStatusConfig = () => {
+    if (job.applied) {
+      return {
+        color: '#10b981',
+        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+        label: 'Applied',
+        variant: 'filled' as const,
+      };
+    }
+    if (job.rejected) {
+      return {
+        color: '#ef4444',
+        background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+        label: 'Rejected',
+        variant: 'filled' as const,
+      };
+    }
+    if (job.is_new) {
+      return {
+        color: '#3b82f6',
+        background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+        label: 'New',
+        variant: 'filled' as const,
+      };
+    }
+    return {
+      color: '#64748b',
+      background: 'linear-gradient(135deg, #64748b 0%, #475569 100%)',
+      label: 'Open',
+      variant: 'outlined' as const,
+    };
   };
 
-  const formatDate = (dateString: string) => {
-    try {
-      return new Date(dateString).toLocaleDateString();
-    } catch {
-      return dateString;
-    }
-  };
+  const statusConfig = getStatusConfig();
 
   return (
-    <Card
-      sx={{
-        mb: 2,
-        position: 'relative',
-        overflow: 'visible',
-        '&:hover': {
-          transform: 'translateY(-4px)',
-          boxShadow: (theme) => theme.palette.mode === 'dark' 
-            ? '0 12px 40px rgba(0,0,0,0.4)' 
-            : '0 8px 32px rgba(0,0,0,0.12)',
-        },
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        borderRadius: 3,
-        background: (theme) => theme.palette.mode === 'dark'
-          ? 'linear-gradient(135deg, #1e1e1e 0%, #2a2a2a 100%)'
-          : 'linear-gradient(135deg, #ffffff 0%, #fafafa 100%)',
-        border: '1px solid',
-        borderColor: 'divider',
-      }}
-    >
-      {/* Status Indicator Bar */}
-      <Box
+    <Fade in timeout={300}>
+      <Card
         sx={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 4,
-          bgcolor: getStatusColor(),
-          borderRadius: '12px 12px 0 0',
+          mb: 3,
+          borderRadius: 4,
+          background: (theme) => theme.palette.mode === 'dark'
+            ? 'linear-gradient(145deg, #1a1a1a 0%, #2d2d2d 100%)'
+            : 'linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)',
+          border: '1px solid',
+          borderColor: (theme) => theme.palette.mode === 'dark' ? '#333' : '#e2e8f0',
+          boxShadow: (theme) => theme.palette.mode === 'dark'
+            ? '0 4px 24px rgba(0,0,0,0.4)'
+            : '0 4px 24px rgba(71,85,105,0.08)',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          position: 'relative',
+          overflow: 'hidden',
+          '&:hover': {
+            transform: 'translateY(-8px)',
+            boxShadow: (theme) => theme.palette.mode === 'dark'
+              ? '0 20px 40px rgba(0,0,0,0.6)'
+              : '0 20px 40px rgba(71,85,105,0.15)',
+            borderColor: statusConfig.color,
+          },
         }}
-      />
+      >
+        {/* Status Accent Bar */}
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 4,
+            background: statusConfig.background,
+            zIndex: 1,
+          }}
+        />
 
-      <CardContent sx={{ p: 3 }}>
-        {/* Header Section */}
-        <Box display="flex" alignItems="flex-start" mb={2}>
-          {/* Company Avatar */}
-          <Avatar
-            sx={{
-              bgcolor: 'primary.main',
-              width: 48,
-              height: 48,
-              mr: 2,
-              fontSize: '1rem',
-              fontWeight: 'bold',
-            }}
-          >
-            {getCompanyInitials(job.company)}
-          </Avatar>
-
-          {/* Job Info */}
-          <Box flex={1} minWidth={0}>
-            <Typography 
-              variant="h6" 
-              sx={{ 
-                fontWeight: 700,
-                fontSize: '1.25rem',
-                mb: 0.5,
-                color: 'text.primary',
-                lineHeight: 1.3,
-              }}
-            >
-              {job.title}
-            </Typography>
-            
-            <Box display="flex" alignItems="center" mb={1}>
-              <CompanyIcon sx={{ fontSize: 16, mr: 0.5, color: 'text.secondary' }} />
-              <Typography 
-                variant="subtitle1" 
-                color="text.secondary"
-                sx={{ fontWeight: 500 }}
+        <CardContent sx={{ p: 4, pt: 5 }}>
+          {/* Header */}
+          <Box display="flex" alignItems="flex-start" justifyContent="space-between" mb={3}>
+            <Box display="flex" alignItems="center" flex={1} minWidth={0}>
+              <Avatar
+                sx={{
+                  width: 56,
+                  height: 56,
+                  mr: 3,
+                  background: statusConfig.background,
+                  fontSize: '1.1rem',
+                  fontWeight: 700,
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                }}
               >
-                {job.company}
-              </Typography>
+                {getCompanyInitials(job.company)}
+              </Avatar>
+
+              <Box flex={1} minWidth={0}>
+                <Typography
+                  variant="h5"
+                  sx={{
+                    fontWeight: 700,
+                    fontSize: '1.5rem',
+                    mb: 1,
+                    color: 'text.primary',
+                    lineHeight: 1.2,
+                  }}
+                >
+                  {job.title}
+                </Typography>
+
+                <Box display="flex" alignItems="center" mb={1}>
+                  <CompanyIcon sx={{ fontSize: 18, mr: 1, color: 'text.secondary' }} />
+                  <Typography
+                    variant="subtitle1"
+                    color="text.secondary"
+                    sx={{ fontWeight: 600, fontSize: '1.1rem' }}
+                  >
+                    {job.company}
+                  </Typography>
+                </Box>
+              </Box>
             </Box>
 
-            {/* Location and Time */}
-            <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
-              <Box display="flex" alignItems="center">
-                <LocationIcon sx={{ fontSize: 16, mr: 0.5, color: 'text.secondary' }} />
-                <Typography variant="body2" color="text.secondary">
-                  {job.location}
-                </Typography>
-              </Box>
-              <Box display="flex" alignItems="center">
-                <TimeIcon sx={{ fontSize: 16, mr: 0.5, color: 'text.secondary' }} />
-                <Typography variant="body2" color="text.secondary">
-                  {job.posted_date}
-                </Typography>
-              </Box>
-            </Stack>
-          </Box>
-
-          {/* Bookmark Icon */}
-          <IconButton
-            size="small"
-            sx={{
-              color: job.applied ? 'success.main' : 'text.secondary',
-              '&:hover': {
-                bgcolor: job.applied ? 'success.light' + '20' : 'action.hover',
-              }
-            }}
-          >
-            {job.applied ? <BookmarkIcon /> : <BookmarkBorderIcon />}
-          </IconButton>
-        </Box>
-
-        <Divider sx={{ my: 2 }} />
-
-        {/* Footer Section */}
-        <Box display="flex" justifyContent="space-between" alignItems="center">
-          {/* Status Chips */}
-          <Stack direction="row" spacing={1}>
-            {job.is_new && (
-              <Chip
-                label="New"
-                size="small"
-                color="primary"
-                variant="filled"
-                sx={{
-                  height: 28,
-                  fontWeight: 600,
-                  '& .MuiChip-label': {
-                    px: 1.5,
-                  }
-                }}
-              />
-            )}
             <Chip
-              label={job.applied ? 'Applied' : 'Open'}
-              size="small"
-              color={job.applied ? 'success' : 'warning'}
-              variant={job.applied ? 'filled' : 'outlined'}
+              label={statusConfig.label}
+              variant={statusConfig.variant}
               sx={{
-                height: 28,
+                height: 32,
                 fontWeight: 600,
+                fontSize: '0.875rem',
+                borderRadius: 2,
+                background: statusConfig.variant === 'filled' ? statusConfig.background : 'transparent',
+                borderColor: statusConfig.color,
+                color: statusConfig.variant === 'filled' ? 'white' : statusConfig.color,
                 '& .MuiChip-label': {
-                  px: 1.5,
+                  px: 2,
                 }
               }}
             />
+          </Box>
+
+          {/* Job Details */}
+          <Stack direction="row" spacing={4} sx={{ mb: 4 }}>
+            <Box display="flex" alignItems="center">
+              <LocationIcon sx={{ fontSize: 18, mr: 1, color: 'text.secondary' }} />
+              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                {job.location}
+              </Typography>
+            </Box>
+            <Box display="flex" alignItems="center">
+              <TimeIcon sx={{ fontSize: 18, mr: 1, color: 'text.secondary' }} />
+              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                {job.posted_date}
+              </Typography>
+            </Box>
           </Stack>
 
-          {/* Action Button */}
-          <Button
-            variant="contained"
-            color={job.applied ? 'success' : 'primary'}
-            size="medium"
-            onClick={() => onApplyAndOpen(job.id, job.job_url)}
-            disabled={isUpdating}
-            startIcon={job.applied ? <CheckIcon /> : <OpenInNewIcon />}
-            sx={{
-              minWidth: 160,
-              borderRadius: 2,
-              fontWeight: 600,
-              textTransform: 'none',
-              px: 3,
-              transition: 'all 0.2s ease-in-out',
-              '&:hover': {
-                transform: 'translateY(-1px)',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-              }
-            }}
-          >
-            {isUpdating ? 'Processing...' : job.applied ? 'Applied ✓' : 'Apply Now'}
-          </Button>
-        </Box>
-      </CardContent>
-    </Card>
+          {/* Action Buttons */}
+          <Box display="flex" gap={2}>
+            {!job.applied && !job.rejected && (
+              <>
+                <Button
+                  variant="contained"
+                  size="large"
+                  onClick={() => onApplyAndOpen(job.id, job.job_url)}
+                  disabled={isUpdating}
+                  startIcon={<OpenInNewIcon />}
+                  sx={{
+                    flex: 1,
+                    borderRadius: 3,
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    py: 1.5,
+                    background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                    boxShadow: '0 4px 16px rgba(59,130,246,0.3)',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 8px 24px rgba(59,130,246,0.4)',
+                    },
+                  }}
+                >
+                  {isUpdating ? 'Processing...' : 'Apply Now'}
+                </Button>
+
+                <Button
+                  variant="outlined"
+                  size="large"
+                  onClick={() => onRejectJob(job.id)}
+                  disabled={isUpdating}
+                  startIcon={<RejectIcon />}
+                  sx={{
+                    flex: 1,
+                    borderRadius: 3,
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    py: 1.5,
+                    borderColor: '#ef4444',
+                    color: '#ef4444',
+                    '&:hover': {
+                      borderColor: '#dc2626',
+                      color: '#dc2626',
+                      backgroundColor: 'rgba(239,68,68,0.04)',
+                      transform: 'translateY(-2px)',
+                    },
+                  }}
+                >
+                  Not Suitable
+                </Button>
+              </>
+            )}
+
+            {job.applied && (
+              <Button
+                variant="contained"
+                size="large"
+                disabled
+                startIcon={<CheckIcon />}
+                sx={{
+                  flex: 1,
+                  borderRadius: 3,
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  py: 1.5,
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                }}
+              >
+                Applied
+              </Button>
+            )}
+
+            {job.rejected && (
+              <Button
+                variant="contained"
+                size="large"
+                disabled
+                startIcon={<RejectIcon />}
+                sx={{
+                  flex: 1,
+                  borderRadius: 3,
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  py: 1.5,
+                  background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                }}
+              >
+                Rejected
+              </Button>
+            )}
+          </Box>
+        </CardContent>
+      </Card>
+    </Fade>
   );
 };

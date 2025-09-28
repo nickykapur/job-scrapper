@@ -1,11 +1,258 @@
 {
   "_metadata": {
-    "last_updated": "2025-08-23T13:20:33.955730",
-    "last_dublin_search": "2025-08-23T13:20:33.955730",
-    "total_jobs": 113,
-    "dublin_jobs": 109,
-    "new_jobs_count": 81,
-    "last_24h_jobs_count": 0
+    "last_updated": "2025-09-28T17:26:11.815322",
+    "last_dublin_search": "2025-09-28T17:26:11.815322",
+    "total_jobs": 129,
+    "dublin_jobs": 125,
+    "new_jobs_count": 95,
+    "last_24h_jobs_count": 3
+  },
+  "056f7c8dbd63": {
+    "id": "056f7c8dbd63",
+    "title": "Software Engineer",
+    "company": "Health Innovation Labs",
+    "location": "Dublin, County Dublin, Ireland",
+    "posted_date": "3 hours ago",
+    "job_url": "https://ie.linkedin.com/jobs/view/software-engineer-at-health-innovation-labs-4202822948?position=1&pageNum=0&refId=k2WiYSpyi9gmX4fwdThLVg%3D%3D&trackingId=Jq%2BWGOgh1tHBzi2dsJpSzA%3D%3D",
+    "scraped_at": "2025-09-28T17:23:51.574351",
+    "applied": false,
+    "is_new": false,
+    "category": "last_24h",
+    "last_seen_24h": "2025-09-28T17:26:11.815046"
+  },
+  "93164c197c94": {
+    "id": "93164c197c94",
+    "title": "System Software Engineer - WSD",
+    "company": "Microsoft",
+    "location": "Dublin, County Dublin, Ireland",
+    "posted_date": "2 hours ago",
+    "job_url": "https://ie.linkedin.com/jobs/view/system-software-engineer-wsd-at-microsoft-4275647718?position=2&pageNum=0&refId=k2WiYSpyi9gmX4fwdThLVg%3D%3D&trackingId=bbNEvxd8K%2Bao%2FcfvDNo3Xg%3D%3D",
+    "scraped_at": "2025-09-28T17:23:51.755127",
+    "applied": false,
+    "is_new": true,
+    "category": "new",
+    "first_seen": "2025-09-28T17:26:11.815063"
+  },
+  "18c3f027c701": {
+    "id": "18c3f027c701",
+    "title": "Data Engineer, People Solutions",
+    "company": "Stripe",
+    "location": "Dublin, County Dublin, Ireland",
+    "posted_date": "2 hours ago",
+    "job_url": "https://ie.linkedin.com/jobs/view/data-engineer-people-solutions-at-stripe-4287477082?position=3&pageNum=0&refId=k2WiYSpyi9gmX4fwdThLVg%3D%3D&trackingId=nP1WQKv1LI6X4vGj3N%2B6CQ%3D%3D",
+    "scraped_at": "2025-09-28T17:23:51.946118",
+    "applied": false,
+    "is_new": true,
+    "category": "new",
+    "first_seen": "2025-09-28T17:26:11.815069"
+  },
+  "3c31cd3683d3": {
+    "id": "3c31cd3683d3",
+    "title": "Manager, Software Engineer - Security",
+    "company": "Sony Interactive Entertainment",
+    "location": "Dublin, County Dublin, Ireland",
+    "posted_date": "5 hours ago",
+    "job_url": "https://ie.linkedin.com/jobs/view/manager-software-engineer-security-at-sony-interactive-entertainment-4248119817?position=4&pageNum=0&refId=k2WiYSpyi9gmX4fwdThLVg%3D%3D&trackingId=BkiVe%2BlCBxODnTYdIrpfxA%3D%3D",
+    "scraped_at": "2025-09-28T17:23:52.138371",
+    "applied": false,
+    "is_new": true,
+    "category": "new",
+    "first_seen": "2025-09-28T17:26:11.815073"
+  },
+  "081499e05894": {
+    "id": "081499e05894",
+    "title": "Staff Engineer",
+    "company": "KKR",
+    "location": "Dublin, County Dublin, Ireland",
+    "posted_date": "4 hours ago",
+    "job_url": "https://ie.linkedin.com/jobs/view/staff-engineer-at-kkr-4248871476?position=5&pageNum=0&refId=k2WiYSpyi9gmX4fwdThLVg%3D%3D&trackingId=acSsyaBMek3Mezv1zpr4vA%3D%3D",
+    "scraped_at": "2025-09-28T17:23:52.333586",
+    "applied": false,
+    "is_new": true,
+    "category": "new",
+    "first_seen": "2025-09-28T17:26:11.815077"
+  },
+  "b05044c3deb0": {
+    "id": "b05044c3deb0",
+    "title": "Software Engineer III",
+    "company": "SiriusXM",
+    "location": "Dublin, County Dublin, Ireland",
+    "posted_date": "2 hours ago",
+    "job_url": "https://ie.linkedin.com/jobs/view/software-engineer-iii-at-siriusxm-4283630291?position=6&pageNum=0&refId=k2WiYSpyi9gmX4fwdThLVg%3D%3D&trackingId=EwbUEW7sRgZU%2FPvEDJ8cRw%3D%3D",
+    "scraped_at": "2025-09-28T17:23:52.533399",
+    "applied": false,
+    "is_new": true,
+    "category": "new",
+    "first_seen": "2025-09-28T17:26:11.815079"
+  },
+  "728cdd5c4095": {
+    "id": "728cdd5c4095",
+    "title": "Software Development Engineer, AVM Visibility Expansions (VisXP)",
+    "company": "Amazon",
+    "location": "Dublin, County Dublin, Ireland",
+    "posted_date": "13 hours ago",
+    "job_url": "https://ie.linkedin.com/jobs/view/software-development-engineer-avm-visibility-expansions-visxp-at-amazon-4307151363?position=7&pageNum=0&refId=k2WiYSpyi9gmX4fwdThLVg%3D%3D&trackingId=lxiC3EZnsCm5vCTwTCtl1w%3D%3D",
+    "scraped_at": "2025-09-28T17:23:52.735035",
+    "applied": false,
+    "is_new": true,
+    "category": "new",
+    "first_seen": "2025-09-28T17:26:11.815082"
+  },
+  "701d0694e8f4": {
+    "id": "701d0694e8f4",
+    "title": "Quantitative Engineer - Fixed Income",
+    "company": "KKR",
+    "location": "Dublin, County Dublin, Ireland",
+    "posted_date": "3 hours ago",
+    "job_url": "https://ie.linkedin.com/jobs/view/quantitative-engineer-fixed-income-at-kkr-4295274775?position=8&pageNum=0&refId=k2WiYSpyi9gmX4fwdThLVg%3D%3D&trackingId=YgL61guykhHhGMyjHFO4QA%3D%3D",
+    "scraped_at": "2025-09-28T17:23:52.914672",
+    "applied": false,
+    "is_new": true,
+    "category": "new",
+    "first_seen": "2025-09-28T17:26:11.815086"
+  },
+  "0e6b6fe85134": {
+    "id": "0e6b6fe85134",
+    "title": "Academic Developer: Artificial Intelligence Specialist Ref: 272a/2025",
+    "company": "Technological University Dublin",
+    "location": "Dublin, County Dublin, Ireland",
+    "posted_date": "7 hours ago",
+    "job_url": "https://ie.linkedin.com/jobs/view/academic-developer-artificial-intelligence-specialist-ref-272a-2025-at-technological-university-dublin-4306304157?position=10&pageNum=0&refId=k2WiYSpyi9gmX4fwdThLVg%3D%3D&trackingId=nRBlKQNs%2BlBV7O%2FGoTa4Ig%3D%3D",
+    "scraped_at": "2025-09-28T17:23:53.280700",
+    "applied": false,
+    "is_new": true,
+    "category": "new",
+    "first_seen": "2025-09-28T17:26:11.815090"
+  },
+  "2de3eae262b3": {
+    "id": "2de3eae262b3",
+    "title": "Software Engineer Cloud EOS Team",
+    "company": "Arista Networks",
+    "location": "Dublin, County Dublin, Ireland",
+    "posted_date": "2 hours ago",
+    "job_url": "https://ie.linkedin.com/jobs/view/software-engineer-cloud-eos-team-at-arista-networks-4303768314?position=11&pageNum=0&refId=k2WiYSpyi9gmX4fwdThLVg%3D%3D&trackingId=%2FnHIlXzNAeZrJOrbO6K9pA%3D%3D",
+    "scraped_at": "2025-09-28T17:23:53.467117",
+    "applied": false,
+    "is_new": false,
+    "category": "last_24h",
+    "last_seen_24h": "2025-09-28T17:26:11.815119"
+  },
+  "fd0749a7b301": {
+    "id": "fd0749a7b301",
+    "title": "Senior Python Developer",
+    "company": "Version 1",
+    "location": "Dublin, County Dublin, Ireland",
+    "posted_date": "6 hours ago",
+    "job_url": "https://ie.linkedin.com/jobs/view/senior-python-developer-at-version-1-4283292770?position=12&pageNum=0&refId=k2WiYSpyi9gmX4fwdThLVg%3D%3D&trackingId=MJSthH432MPOhK01SWjoSQ%3D%3D",
+    "scraped_at": "2025-09-28T17:23:53.649617",
+    "applied": false,
+    "is_new": true,
+    "category": "new",
+    "first_seen": "2025-09-28T17:26:11.815126"
+  },
+  "0d5c34975381": {
+    "id": "0d5c34975381",
+    "title": "React Native Engineer",
+    "company": "Oliver James",
+    "location": "Dublin 1, County Dublin, Ireland",
+    "posted_date": "21 hours ago",
+    "job_url": "https://ie.linkedin.com/jobs/view/react-native-engineer-at-oliver-james-4305574589?position=13&pageNum=0&refId=k2WiYSpyi9gmX4fwdThLVg%3D%3D&trackingId=91Go%2FzW54A7OejBbIW7CRQ%3D%3D",
+    "scraped_at": "2025-09-28T17:23:53.831034",
+    "applied": false,
+    "is_new": true,
+    "category": "new",
+    "first_seen": "2025-09-28T17:26:11.815143"
+  },
+  "e26520fc3f2c": {
+    "id": "e26520fc3f2c",
+    "title": "Tech Lead - Software Engineering",
+    "company": "Toast",
+    "location": "Dublin, County Dublin, Ireland",
+    "posted_date": "6 hours ago",
+    "job_url": "https://ie.linkedin.com/jobs/view/tech-lead-software-engineering-at-toast-4286945060?position=14&pageNum=0&refId=k2WiYSpyi9gmX4fwdThLVg%3D%3D&trackingId=sg25LxuXcCgEYDhNdYgXnA%3D%3D",
+    "scraped_at": "2025-09-28T17:23:54.014435",
+    "applied": false,
+    "is_new": true,
+    "category": "new",
+    "first_seen": "2025-09-28T17:26:11.815146"
+  },
+  "98ed354d9949": {
+    "id": "98ed354d9949",
+    "title": "Principal Machine Learning Engineer",
+    "company": "Red Hat",
+    "location": "Dublin, County Dublin, Ireland",
+    "posted_date": "7 hours ago",
+    "job_url": "https://ie.linkedin.com/jobs/view/principal-machine-learning-engineer-at-red-hat-4286539132?position=15&pageNum=0&refId=k2WiYSpyi9gmX4fwdThLVg%3D%3D&trackingId=Tknn2WiIJ932FxyyL1KAtw%3D%3D",
+    "scraped_at": "2025-09-28T17:23:54.196770",
+    "applied": false,
+    "is_new": true,
+    "category": "new",
+    "first_seen": "2025-09-28T17:26:11.815150"
+  },
+  "31fdf0a2b320": {
+    "id": "31fdf0a2b320",
+    "title": "Data Operations Engineer",
+    "company": "Valsoft Corporation",
+    "location": "Dublin, County Dublin, Ireland",
+    "posted_date": "3 hours ago",
+    "job_url": "https://ie.linkedin.com/jobs/view/data-operations-engineer-at-valsoft-corporation-4295684428?position=16&pageNum=0&refId=k2WiYSpyi9gmX4fwdThLVg%3D%3D&trackingId=UDFv3brmKlpP%2BnLHlHGJKg%3D%3D",
+    "scraped_at": "2025-09-28T17:23:54.382341",
+    "applied": false,
+    "is_new": false,
+    "category": "last_24h",
+    "last_seen_24h": "2025-09-28T17:26:11.815154"
+  },
+  "e86f93d47c2d": {
+    "id": "e86f93d47c2d",
+    "title": "Cloud and AI - Apps Solution Engineer - German Speaking",
+    "company": "Microsoft",
+    "location": "Dublin, County Dublin, Ireland",
+    "posted_date": "2 hours ago",
+    "job_url": "https://ie.linkedin.com/jobs/view/cloud-and-ai-apps-solution-engineer-german-speaking-at-microsoft-4275652008?position=17&pageNum=0&refId=k2WiYSpyi9gmX4fwdThLVg%3D%3D&trackingId=aAgrjEwnfs6yW17MPOuzng%3D%3D",
+    "scraped_at": "2025-09-28T17:23:54.564733",
+    "applied": false,
+    "is_new": true,
+    "category": "new",
+    "first_seen": "2025-09-28T17:26:11.815157"
+  },
+  "fe311e9fd79a": {
+    "id": "fe311e9fd79a",
+    "title": "Software Developer Specialising Flutter & PHP",
+    "company": "Artemee Web Services",
+    "location": "Dublin, County Dublin, Ireland",
+    "posted_date": "1 hour ago",
+    "job_url": "https://ie.linkedin.com/jobs/view/software-developer-specialising-flutter-php-at-artemee-web-services-4307810843?position=18&pageNum=0&refId=k2WiYSpyi9gmX4fwdThLVg%3D%3D&trackingId=HszKMR1BlsX%2FLyw7sf48tg%3D%3D",
+    "scraped_at": "2025-09-28T17:23:54.758195",
+    "applied": false,
+    "is_new": true,
+    "category": "new",
+    "first_seen": "2025-09-28T17:26:11.815161"
+  },
+  "1b642b861b9d": {
+    "id": "1b642b861b9d",
+    "title": "Power App Platform Functional Lead - SME",
+    "company": "Version 1",
+    "location": "Dublin, County Dublin, Ireland",
+    "posted_date": "6 hours ago",
+    "job_url": "https://ie.linkedin.com/jobs/view/power-app-platform-functional-lead-sme-at-version-1-4247928577?position=19&pageNum=0&refId=k2WiYSpyi9gmX4fwdThLVg%3D%3D&trackingId=48cWE7fw2w1wOkd%2BFHlliQ%3D%3D",
+    "scraped_at": "2025-09-28T17:23:54.940106",
+    "applied": false,
+    "is_new": true,
+    "category": "new",
+    "first_seen": "2025-09-28T17:26:11.815165"
+  },
+  "1f767a8cd813": {
+    "id": "1f767a8cd813",
+    "title": "Senior Microsoft Dynamics 365 Developer",
+    "company": "Version 1",
+    "location": "Dublin, County Dublin, Ireland",
+    "posted_date": "6 hours ago",
+    "job_url": "https://ie.linkedin.com/jobs/view/senior-microsoft-dynamics-365-developer-at-version-1-4248455700?position=20&pageNum=0&refId=k2WiYSpyi9gmX4fwdThLVg%3D%3D&trackingId=XarZGIGQCG0vamRNz1%2Bkag%3D%3D",
+    "scraped_at": "2025-09-28T17:23:55.118410",
+    "applied": false,
+    "is_new": true,
+    "category": "new",
+    "first_seen": "2025-09-28T17:26:11.815169"
   },
   "181d90800eeb": {
     "id": "181d90800eeb",
@@ -17,7 +264,7 @@
     "scraped_at": "2025-08-23T13:18:14.401141",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955492"
   },
   "66438792bb17": {
@@ -30,7 +277,7 @@
     "scraped_at": "2025-08-23T13:18:14.550997",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955510"
   },
   "09f36a986074": {
@@ -43,7 +290,7 @@
     "scraped_at": "2025-08-23T13:18:14.700638",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955513"
   },
   "cdcd64b18e04": {
@@ -56,7 +303,7 @@
     "scraped_at": "2025-08-23T13:18:14.847471",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955515"
   },
   "0f918c06e341": {
@@ -69,7 +316,7 @@
     "scraped_at": "2025-08-23T13:18:15.138294",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955517"
   },
   "1cf3deeefb76": {
@@ -82,7 +329,7 @@
     "scraped_at": "2025-08-23T13:18:15.282993",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955519"
   },
   "1a2fc82e1138": {
@@ -95,7 +342,7 @@
     "scraped_at": "2025-08-23T13:18:15.431376",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955521"
   },
   "9b47682c6819": {
@@ -108,7 +355,7 @@
     "scraped_at": "2025-08-23T13:18:15.738727",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955522"
   },
   "b0cd375d81b2": {
@@ -121,7 +368,7 @@
     "scraped_at": "2025-08-23T13:18:15.886192",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955524"
   },
   "fe8cafe6cf38": {
@@ -134,7 +381,7 @@
     "scraped_at": "2025-08-23T13:18:16.028409",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955526"
   },
   "46c84b52946c": {
@@ -147,7 +394,7 @@
     "scraped_at": "2025-08-23T13:18:16.177875",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955529"
   },
   "8ec78ae7c726": {
@@ -160,7 +407,7 @@
     "scraped_at": "2025-08-23T13:18:16.326980",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955531"
   },
   "32ea59f86889": {
@@ -173,7 +420,7 @@
     "scraped_at": "2025-08-23T13:18:16.480118",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955534"
   },
   "27bca5cfde5b": {
@@ -186,7 +433,7 @@
     "scraped_at": "2025-08-23T13:18:16.635965",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955537"
   },
   "d36264acdf2d": {
@@ -199,7 +446,7 @@
     "scraped_at": "2025-08-23T13:18:16.776272",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955539"
   },
   "9f144cfac052": {
@@ -212,7 +459,7 @@
     "scraped_at": "2025-08-23T13:18:16.919468",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955542"
   },
   "f2b6d4a650af": {
@@ -225,7 +472,7 @@
     "scraped_at": "2025-08-23T13:18:17.066229",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955544"
   },
   "99856ccee69e": {
@@ -238,7 +485,7 @@
     "scraped_at": "2025-08-23T13:18:17.209498",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955574"
   },
   "1e2e59dd0960": {
@@ -251,7 +498,7 @@
     "scraped_at": "2025-08-23T13:18:17.353084",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955578"
   },
   "5d905d55f62b": {
@@ -264,7 +511,7 @@
     "scraped_at": "2025-08-23T13:18:17.498092",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955580"
   },
   "0e34915443d4": {
@@ -277,7 +524,7 @@
     "scraped_at": "2025-08-23T13:18:17.634379",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955582"
   },
   "aaa5c4838b98": {
@@ -290,7 +537,7 @@
     "scraped_at": "2025-08-23T13:18:17.783202",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955584"
   },
   "b6d87335c822": {
@@ -303,7 +550,7 @@
     "scraped_at": "2025-08-23T13:18:17.924503",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955586"
   },
   "d9568e24ccbf": {
@@ -316,7 +563,7 @@
     "scraped_at": "2025-08-23T13:18:23.230854",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955588"
   },
   "e00e239e016f": {
@@ -329,7 +576,7 @@
     "scraped_at": "2025-08-23T13:18:23.379775",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955589"
   },
   "df65a676651a": {
@@ -342,7 +589,7 @@
     "scraped_at": "2025-08-23T13:18:23.847928",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955591"
   },
   "824cbcd6a957": {
@@ -355,7 +602,7 @@
     "scraped_at": "2025-08-23T13:18:23.696608",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955593"
   },
   "1037605a5935": {
@@ -368,7 +615,7 @@
     "scraped_at": "2025-08-23T13:18:23.995772",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955595"
   },
   "470f7ccbb4da": {
@@ -381,7 +628,7 @@
     "scraped_at": "2025-08-23T13:18:24.138953",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955597"
   },
   "895686f33b37": {
@@ -394,7 +641,7 @@
     "scraped_at": "2025-08-23T13:18:24.283776",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955599"
   },
   "e2bc8304067b": {
@@ -407,7 +654,7 @@
     "scraped_at": "2025-08-23T13:18:24.568191",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955600"
   },
   "801a943a767a": {
@@ -420,7 +667,7 @@
     "scraped_at": "2025-08-23T13:18:19.546207",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955602"
   },
   "3cd509e7fc7a": {
@@ -433,21 +680,8 @@
     "scraped_at": "2025-08-23T13:18:19.698958",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955604"
-  },
-  "2de3eae262b3": {
-    "id": "2de3eae262b3",
-    "title": "Software Engineer Cloud EOS Team",
-    "company": "Arista Networks",
-    "location": "Dublin, County Dublin, Ireland",
-    "posted_date": "1 day ago",
-    "job_url": "https://ie.linkedin.com/jobs/view/software-engineer-cloud-eos-team-at-arista-networks-4287109831?position=38&pageNum=0&refId=UQIAPdlFEeFBlbTWdtSAtg%3D%3D&trackingId=SWzI2sqyJFUgDuaSu0lECQ%3D%3D",
-    "scraped_at": "2025-08-23T13:18:19.828561",
-    "applied": false,
-    "is_new": true,
-    "category": "new",
-    "first_seen": "2025-08-23T13:20:33.955606"
   },
   "bac2415f8522": {
     "id": "bac2415f8522",
@@ -459,7 +693,7 @@
     "scraped_at": "2025-08-23T13:18:19.976526",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955607"
   },
   "89d4ae57d122": {
@@ -472,7 +706,7 @@
     "scraped_at": "2025-08-23T13:18:20.129105",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955609"
   },
   "4f01876b90b4": {
@@ -485,7 +719,7 @@
     "scraped_at": "2025-08-23T13:18:20.280573",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955611"
   },
   "9f1265e5165c": {
@@ -498,7 +732,7 @@
     "scraped_at": "2025-08-23T13:18:20.428124",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955612"
   },
   "17257a337098": {
@@ -511,7 +745,7 @@
     "scraped_at": "2025-08-23T13:18:20.583701",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955622"
   },
   "6cbe28fe481b": {
@@ -524,7 +758,7 @@
     "scraped_at": "2025-08-23T13:18:20.729470",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955624"
   },
   "451b686e8163": {
@@ -537,7 +771,7 @@
     "scraped_at": "2025-08-23T13:18:20.875858",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955626"
   },
   "b1e5d0a81868": {
@@ -550,7 +784,7 @@
     "scraped_at": "2025-08-23T13:18:21.019697",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955628"
   },
   "e12d6d4131e4": {
@@ -563,7 +797,7 @@
     "scraped_at": "2025-08-23T13:18:21.161233",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955630"
   },
   "209d033d96ac": {
@@ -576,7 +810,7 @@
     "scraped_at": "2025-08-23T13:18:21.306918",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955632"
   },
   "83ebcdcc55f1": {
@@ -589,7 +823,7 @@
     "scraped_at": "2025-08-23T13:18:21.443673",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955635"
   },
   "8fad6c13fa29": {
@@ -602,7 +836,7 @@
     "scraped_at": "2025-08-23T13:18:21.590723",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955638"
   },
   "40a6dc92f958": {
@@ -615,7 +849,7 @@
     "scraped_at": "2025-08-23T13:18:24.719411",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955641"
   },
   "b3c520d8db71": {
@@ -628,21 +862,8 @@
     "scraped_at": "2025-08-23T13:18:24.849094",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955643"
-  },
-  "31fdf0a2b320": {
-    "id": "31fdf0a2b320",
-    "title": "Data Operations Engineer",
-    "company": "Valsoft Corporation",
-    "location": "Dublin, County Dublin, Ireland",
-    "posted_date": "2 hours ago",
-    "job_url": "https://ie.linkedin.com/jobs/view/data-operations-engineer-at-valsoft-corporation-4253155920?position=3&pageNum=5&refId=CgbrTwzwXZykC9crDbEYpA%3D%3D&trackingId=RxOtc5mbe4BvZvKMPkizcw%3D%3D",
-    "scraped_at": "2025-08-23T13:18:24.990449",
-    "applied": false,
-    "is_new": true,
-    "category": "new",
-    "first_seen": "2025-08-23T13:20:33.955648"
   },
   "c007b9ca7829": {
     "id": "c007b9ca7829",
@@ -654,7 +875,7 @@
     "scraped_at": "2025-08-23T13:18:25.137878",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955651"
   },
   "16e4e1c7ae53": {
@@ -667,7 +888,7 @@
     "scraped_at": "2025-08-23T13:18:25.281410",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955654"
   },
   "cf20e2120178": {
@@ -680,7 +901,7 @@
     "scraped_at": "2025-08-23T13:18:25.429730",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955656"
   },
   "296c8245cc1a": {
@@ -693,7 +914,7 @@
     "scraped_at": "2025-08-23T13:18:25.722283",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955659"
   },
   "898c49acb355": {
@@ -706,7 +927,7 @@
     "scraped_at": "2025-08-23T13:18:25.868708",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955662"
   },
   "074558a40057": {
@@ -719,7 +940,7 @@
     "scraped_at": "2025-08-23T13:18:26.010447",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955664"
   },
   "de5284307fa7": {
@@ -732,7 +953,7 @@
     "scraped_at": "2025-08-23T13:18:26.154061",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955666"
   },
   "67ba4a6b489a": {
@@ -745,7 +966,7 @@
     "scraped_at": "2025-08-23T13:18:26.308903",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955668"
   },
   "3b850bf77fee": {
@@ -758,7 +979,7 @@
     "scraped_at": "2025-08-23T13:18:26.455608",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955670"
   },
   "9fdbe7c85b38": {
@@ -771,7 +992,7 @@
     "scraped_at": "2025-08-23T13:18:26.593694",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955673"
   },
   "48ae8ee2fc35": {
@@ -784,7 +1005,7 @@
     "scraped_at": "2025-08-23T13:18:27.024920",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955675"
   },
   "fc1d4c30b663": {
@@ -797,7 +1018,7 @@
     "scraped_at": "2025-08-23T13:18:26.881271",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955676"
   },
   "bc40733cc819": {
@@ -810,7 +1031,7 @@
     "scraped_at": "2025-08-23T13:18:27.164502",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955678"
   },
   "7b7de2f03e74": {
@@ -823,7 +1044,7 @@
     "scraped_at": "2025-08-23T13:18:27.305454",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955680"
   },
   "9c5d69e3377e": {
@@ -836,7 +1057,7 @@
     "scraped_at": "2025-08-23T13:18:27.455364",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955681"
   },
   "c06c1dc48607": {
@@ -849,7 +1070,7 @@
     "scraped_at": "2025-08-23T13:18:39.439478",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955683"
   },
   "76b65a9a7b05": {
@@ -862,7 +1083,7 @@
     "scraped_at": "2025-08-23T13:18:50.882041",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955684"
   },
   "7ec4e6d770b8": {
@@ -875,7 +1096,7 @@
     "scraped_at": "2025-08-23T13:19:58.946730",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955686"
   },
   "c21de52e70b3": {
@@ -888,7 +1109,7 @@
     "scraped_at": "2025-08-23T13:19:59.442364",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955687"
   },
   "11549678a6fd": {
@@ -901,7 +1122,7 @@
     "scraped_at": "2025-08-23T13:20:01.764077",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955689"
   },
   "9137debf6315": {
@@ -914,7 +1135,7 @@
     "scraped_at": "2025-08-23T13:20:01.936651",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955691"
   },
   "370510d4101a": {
@@ -927,7 +1148,7 @@
     "scraped_at": "2025-08-23T13:20:02.105902",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955693"
   },
   "fab2653fee72": {
@@ -940,7 +1161,7 @@
     "scraped_at": "2025-08-23T13:20:02.452048",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955694"
   },
   "ca6c1471da75": {
@@ -953,7 +1174,7 @@
     "scraped_at": "2025-08-23T13:20:23.367095",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955696"
   },
   "39b7ba38e9e6": {
@@ -966,7 +1187,7 @@
     "scraped_at": "2025-08-23T13:20:25.574745",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955697"
   },
   "9a861d46f26b": {
@@ -979,7 +1200,7 @@
     "scraped_at": "2025-08-23T13:20:31.810020",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955699"
   },
   "49faaef1a972": {
@@ -992,7 +1213,7 @@
     "scraped_at": "2025-08-23T13:20:32.458965",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955700"
   },
   "d57ab0401b1f": {
@@ -1005,7 +1226,7 @@
     "scraped_at": "2025-08-23T13:20:33.281487",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955702"
   },
   "2f4cc3fa5f2a": {
@@ -1018,7 +1239,7 @@
     "scraped_at": "2025-08-23T13:20:33.948347",
     "applied": false,
     "is_new": true,
-    "category": "new",
+    "category": "existing",
     "first_seen": "2025-08-23T13:20:33.955704"
   },
   "4bae4e5feb1c": {
@@ -1029,17 +1250,6 @@
     "posted_date": "2 days ago",
     "job_url": "https://ie.linkedin.com/jobs/view/software-engineer-at-vectra-ai-4288632215?position=4&pageNum=0&refId=cltQqCFJorglKIl5aW5rYA%3D%3D&trackingId=kPEbAcfEIDwBZCwxbkbu2A%3D%3D",
     "scraped_at": "2025-08-22T13:07:02.911662",
-    "applied": false,
-    "is_new": false
-  },
-  "056f7c8dbd63": {
-    "id": "056f7c8dbd63",
-    "title": "Software Engineer",
-    "company": "Health Innovation Labs",
-    "location": "Dublin, County Dublin, Ireland",
-    "posted_date": "6 days ago",
-    "job_url": "https://ie.linkedin.com/jobs/view/software-engineer-at-health-innovation-labs-4202822948?position=40&pageNum=0&refId=cltQqCFJorglKIl5aW5rYA%3D%3D&trackingId=nRW6sy01xT7KNk%2B%2BeXAHNg%3D%3D",
-    "scraped_at": "2025-08-22T13:07:07.656606",
     "applied": false,
     "is_new": false
   },

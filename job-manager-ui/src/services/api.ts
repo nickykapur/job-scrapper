@@ -26,6 +26,14 @@ export const jobApi = {
     });
   },
 
+  // Reject job
+  rejectJob: async (jobId: string): Promise<void> => {
+    await api.post('/reject_job', {
+      job_id: jobId,
+      rejected: true,
+    });
+  },
+
   // Remove applied jobs
   removeAppliedJobs: async (jobsData: Record<string, Job>): Promise<void> => {
     await api.post('/bulk_update', {

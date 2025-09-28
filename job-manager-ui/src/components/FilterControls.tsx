@@ -66,6 +66,7 @@ export const FilterControls: React.FC<FilterControlsProps> = ({
               <MenuItem value="new">✨ New Only</MenuItem>
               <MenuItem value="applied">✅ Applied</MenuItem>
               <MenuItem value="not-applied">📝 Not Applied</MenuItem>
+              <MenuItem value="rejected">🚫 Rejected</MenuItem>
             </Select>
           </FormControl>
 

@@ -2,50 +2,43 @@ import React from 'react';
 import {
   Box,
   Typography,
-  Chip,
-  Divider,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Badge,
+  Container,
+  Grid,
+  Paper,
+  Stack,
 } from '@mui/material';
-import {
-  ExpandMore as ExpandIcon,
-  FiberNew as NewIcon,
-  Schedule as ClockIcon,
-  Storage as AllIcon,
-  LocationOn as LocationIcon,
-} from '@mui/icons-material';
 import type { Job } from '../types';
 import { JobCard } from './JobCard';
 
 interface JobSectionsProps {
   jobs: Record<string, Job>;
   onApplyAndOpen: (jobId: string, jobUrl: string) => void;
+  onRejectJob: (jobId: string) => void;
   updatingJobs: Set<string>;
 }
 
 export const JobSections: React.FC<JobSectionsProps> = ({
   jobs,
   onApplyAndOpen,
+  onRejectJob,
   updatingJobs,
 }) => {
   // Function to check if job was posted within last 24 hours
   const isWithin24Hours = (postedDate: string): boolean => {
     if (!postedDate) return false;
-    
+
     const normalizedDate = postedDate.toLowerCase().trim();
-    
+
     // Handle "X hours ago" - these are definitely within 24 hours
     if (normalizedDate.includes('hour') && normalizedDate.includes('ago')) {
       return true;
     }
-    
+
     // Handle "1 day ago" - this is exactly 24 hours
     if (normalizedDate === '1 day ago') {
       return true;
     }
-    
+
     // Handle "X days ago" - anything more than 1 day is outside 24 hours
     if (normalizedDate.includes('day') && normalizedDate.includes('ago')) {
       const match = normalizedDate.match(/(\d+)\s+days?\s+ago/);
@@ -54,12 +47,12 @@ export const JobSections: React.FC<JobSectionsProps> = ({
         return days <= 1;
       }
     }
-    
+
     // Handle "today" or similar
     if (normalizedDate.includes('today') || normalizedDate.includes('now')) {
       return true;
     }
-    
+
     // Default to false for unparseable dates
     return false;
   };
@@ -67,208 +60,139 @@ export const JobSections: React.FC<JobSectionsProps> = ({
   // Filter out metadata and categorize jobs, then filter by 24 hours
   const jobEntries = Object.entries(jobs).filter(([key]) => !key.startsWith('_'));
   const allJobValues = jobEntries.map(([, job]) => job);
-  
+
   // Filter to show only jobs posted in last 24 hours
   const jobValues = allJobValues.filter(job => isWithin24Hours(job.posted_date));
-  
+
   const newJobs = jobValues.filter(job => job.category === 'new');
   const last24hJobs = jobValues.filter(job => job.category === 'last_24h');
   const otherJobs = jobValues.filter(job => !job.category || job.category === 'existing');
-  const dublinJobs = jobValues.filter(job => 
-    job.location?.toLowerCase().includes('dublin')
+
+  const SectionHeader = ({ title, count }: { title: string; count: number }) => (
+    <Paper
+      sx={{
+        p: 3,
+        mb: 4,
+        borderRadius: 3,
+        background: (theme) => theme.palette.mode === 'dark'
+          ? 'linear-gradient(135deg, #1e293b 0%, #334155 100%)'
+          : 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)',
+        border: '1px solid',
+        borderColor: (theme) => theme.palette.mode === 'dark' ? '#475569' : '#cbd5e1',
+      }}
+    >
+      <Stack direction="row" alignItems="center" justifyContent="space-between">
+        <Typography
+          variant="h4"
+          sx={{
+            fontWeight: 700,
+            color: 'text.primary',
+            fontSize: '1.75rem',
+          }}
+        >
+          {title}
+        </Typography>
+        <Box
+          sx={{
+            px: 2,
+            py: 1,
+            borderRadius: 2,
+            background: (theme) => theme.palette.mode === 'dark'
+              ? 'rgba(59,130,246,0.2)'
+              : 'rgba(59,130,246,0.1)',
+            color: '#3b82f6',
+            fontWeight: 600,
+            fontSize: '0.875rem',
+          }}
+        >
+          {count} {count === 1 ? 'position' : 'positions'}
+        </Box>
+      </Stack>
+    </Paper>
+  );
+
+  const renderJobGrid = (jobList: Job[]) => (
+    <Grid container spacing={3}>
+      {jobList.map((job) => (
+        <Grid item xs={12} key={job.id}>
+          <JobCard
+            job={job}
+            onApplyAndOpen={onApplyAndOpen}
+            onRejectJob={onRejectJob}
+            isUpdating={updatingJobs.has(job.id)}
+          />
+        </Grid>
+      ))}
+    </Grid>
   );
 
   return (
-    <Box>
-      {/* Dublin Jobs Summary */}
-      {dublinJobs.length > 0 && (
-        <Box sx={{ mb: 3, p: 2, backgroundColor: 'background.paper', borderRadius: 2, border: '1px solid', borderColor: 'primary.main' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-            <LocationIcon color="primary" />
-            <Typography variant="h6" color="primary">
-              Dublin Jobs Summary
-            </Typography>
-          </Box>
-          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-            <Chip
-              label={`${dublinJobs.length} Total Dublin Jobs`}
-              color="primary"
-              variant="outlined"
-            />
-            <Chip
-              label={`${dublinJobs.filter(j => j.category === 'new').length} New`}
-              color="success"
-              variant="outlined"
-            />
-            <Chip
-              label={`${dublinJobs.filter(j => j.category === 'last_24h').length} Last 24h`}
-              color="info"
-              variant="outlined"
-            />
-            <Chip
-              label={`${dublinJobs.filter(j => j.applied).length} Applied`}
-              color="secondary"
-              variant="outlined"
-            />
-          </Box>
-        </Box>
-      )}
-
+    <Container maxWidth="lg" sx={{ py: 2 }}>
       {/* New Jobs Section */}
       {newJobs.length > 0 && (
-        <Accordion defaultExpanded sx={{ mb: 2 }}>
-          <AccordionSummary expandIcon={<ExpandIcon />}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
-              <Badge badgeContent={newJobs.length} color="success">
-                <NewIcon color="success" />
-              </Badge>
-              <Typography variant="h6" sx={{ flexGrow: 1 }}>
-                🆕 New Jobs
-              </Typography>
-              <Chip
-                label={`${newJobs.length} jobs`}
-                color="success"
-                size="small"
-                variant="outlined"
-              />
-            </Box>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Jobs that weren't in your database before the last search
-            </Typography>
-            {newJobs.map((job) => (
-              <JobCard
-                key={job.id}
-                job={job}
-                onApplyAndOpen={onApplyAndOpen}
-                isUpdating={updatingJobs.has(job.id)}
-              />
-            ))}
-          </AccordionDetails>
-        </Accordion>
+        <Box sx={{ mb: 6 }}>
+          <SectionHeader title="New Positions" count={newJobs.length} />
+          {renderJobGrid(newJobs)}
+        </Box>
       )}
 
       {/* Last 24 Hours Jobs Section */}
       {last24hJobs.length > 0 && (
-        <Accordion defaultExpanded sx={{ mb: 2 }}>
-          <AccordionSummary expandIcon={<ExpandIcon />}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
-              <Badge badgeContent={last24hJobs.length} color="info">
-                <ClockIcon color="info" />
-              </Badge>
-              <Typography variant="h6" sx={{ flexGrow: 1 }}>
-                🕐 Last 24 Hours Jobs
-              </Typography>
-              <Chip
-                label={`${last24hJobs.length} jobs`}
-                color="info"
-                size="small"
-                variant="outlined"
-              />
-            </Box>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Jobs that were already in your database but appeared in the last 24 hours search
-            </Typography>
-            {last24hJobs.map((job) => (
-              <JobCard
-                key={job.id}
-                job={job}
-                onApplyAndOpen={onApplyAndOpen}
-                isUpdating={updatingJobs.has(job.id)}
-              />
-            ))}
-          </AccordionDetails>
-        </Accordion>
+        <Box sx={{ mb: 6 }}>
+          <SectionHeader title="Recent Listings" count={last24hJobs.length} />
+          {renderJobGrid(last24hJobs)}
+        </Box>
       )}
 
       {/* All Other Jobs Section */}
       {otherJobs.length > 0 && (
-        <Accordion sx={{ mb: 2 }}>
-          <AccordionSummary expandIcon={<ExpandIcon />}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
-              <Badge badgeContent={otherJobs.length} color="default">
-                <AllIcon />
-              </Badge>
-              <Typography variant="h6" sx={{ flexGrow: 1 }}>
-                📋 All Other Jobs
-              </Typography>
-              <Chip
-                label={`${otherJobs.length} jobs`}
-                color="default"
-                size="small"
-                variant="outlined"
-              />
-            </Box>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Previously saved jobs from your database
-            </Typography>
-            {otherJobs.map((job) => (
-              <JobCard
-                key={job.id}
-                job={job}
-                onApplyAndOpen={onApplyAndOpen}
-                isUpdating={updatingJobs.has(job.id)}
-              />
-            ))}
-          </AccordionDetails>
-        </Accordion>
+        <Box sx={{ mb: 6 }}>
+          <SectionHeader title="Available Positions" count={otherJobs.length} />
+          {renderJobGrid(otherJobs)}
+        </Box>
       )}
 
       {/* Fallback: Show All Jobs if No Categories */}
       {newJobs.length === 0 && last24hJobs.length === 0 && otherJobs.length === 0 && jobValues.length > 0 && (
-        <Accordion defaultExpanded sx={{ mb: 2 }}>
-          <AccordionSummary expandIcon={<ExpandIcon />}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
-              <Badge badgeContent={jobValues.length} color="primary">
-                <AllIcon color="primary" />
-              </Badge>
-              <Typography variant="h6" sx={{ flexGrow: 1 }}>
-                📋 Jobs (Last 24 Hours)
-              </Typography>
-              <Chip
-                label={`${jobValues.length} jobs`}
-                color="primary"
-                size="small"
-                variant="outlined"
-              />
-            </Box>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Jobs posted in the last 24 hours from your database
-              {allJobValues.length > jobValues.length && ` (${allJobValues.length - jobValues.length} older jobs hidden)`}
-            </Typography>
-            {jobValues.map((job) => (
-              <JobCard
-                key={job.id}
-                job={job}
-                onApplyAndOpen={onApplyAndOpen}
-                isUpdating={updatingJobs.has(job.id)}
-              />
-            ))}
-          </AccordionDetails>
-        </Accordion>
+        <Box sx={{ mb: 6 }}>
+          <SectionHeader title="Job Opportunities" count={jobValues.length} />
+          <Typography
+            variant="body1"
+            color="text.secondary"
+            sx={{ mb: 4, textAlign: 'center' }}
+          >
+            Recent positions posted in the last 24 hours
+            {allJobValues.length > jobValues.length && ` (${allJobValues.length - jobValues.length} older positions available)`}
+          </Typography>
+          {renderJobGrid(jobValues)}
+        </Box>
       )}
 
       {/* Empty State */}
       {jobValues.length === 0 && (
-        <Box sx={{ textAlign: 'center', py: 6 }}>
-          <Typography variant="h6" color="text.secondary" gutterBottom>
-            No jobs found from the last 24 hours
+        <Paper
+          sx={{
+            p: 8,
+            textAlign: 'center',
+            borderRadius: 4,
+            background: (theme) => theme.palette.mode === 'dark'
+              ? 'linear-gradient(135deg, #1e293b 0%, #334155 100%)'
+              : 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)',
+            border: '2px dashed',
+            borderColor: (theme) => theme.palette.mode === 'dark' ? '#475569' : '#cbd5e1',
+          }}
+        >
+          <Typography variant="h5" color="text.secondary" gutterBottom sx={{ fontWeight: 600 }}>
+            No Recent Positions Found
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {allJobValues.length > 0 
-              ? `${allJobValues.length} total jobs in database, but none posted within 24 hours`
-              : 'Try running the Dublin job search script to populate your database'
+          <Typography variant="body1" color="text.secondary">
+            {allJobValues.length > 0
+              ? `${allJobValues.length} total positions in database, but none posted within 24 hours`
+              : 'No job listings available. Try running the job search to populate your database.'
             }
           </Typography>
-        </Box>
+        </Paper>
       )}
-    </Box>
+    </Container>
   );
 };
