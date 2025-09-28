@@ -22,8 +22,8 @@ import {
   Divider,
   useMediaQuery,
 } from '@mui/material';
-import { 
-  Work as WorkIcon, 
+import {
+  Work as WorkIcon,
   Brightness4 as DarkIcon,
   Brightness7 as LightIcon,
   CloudSync as SyncIcon,
@@ -34,12 +34,14 @@ import {
   Person as PersonIcon,
   Menu as MenuIcon,
   Search as SearchIcon,
+  School as TrainingIcon,
 } from '@mui/icons-material';
 import { JobCard } from './components/JobCard';
 import { StatsCards } from './components/StatsCards';
 import { FilterControls } from './components/FilterControls';
 import { JobLoadingInfo } from './components/JobLoadingInfo';
 import { JobSections } from './components/JobSections';
+import { Training } from './components/Training';
 import { jobApi } from './services/api';
 import type { Job, JobStats, FilterState } from './types';
 
@@ -186,6 +188,7 @@ function App() {
     message: string;
     severity: 'success' | 'error' | 'info';
   } | null>(null);
+  const [currentTab, setCurrentTab] = useState<'dashboard' | 'training'>('dashboard');
   
   const theme = useMemo(() => createAppTheme(darkMode ? 'dark' : 'light'), [darkMode]);
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -421,16 +424,28 @@ function App() {
       </Box>
 
       <List sx={{ py: 1 }}>
-        <ListItem button selected>
+        <ListItem button selected={currentTab === 'dashboard'} onClick={() => setCurrentTab('dashboard')}>
           <ListItemIcon>
-            <DashboardIcon color="primary" />
+            <DashboardIcon color={currentTab === 'dashboard' ? 'primary' : 'inherit'} />
           </ListItemIcon>
-          <ListItemText 
-            primary="Dashboard" 
-            primaryTypographyProps={{ fontWeight: 600 }}
+          <ListItemText
+            primary="Dashboard"
+            primaryTypographyProps={{ fontWeight: currentTab === 'dashboard' ? 600 : 400 }}
           />
         </ListItem>
-        
+
+        <ListItem button selected={currentTab === 'training'} onClick={() => setCurrentTab('training')}>
+          <ListItemIcon>
+            <TrainingIcon color={currentTab === 'training' ? 'primary' : 'inherit'} />
+          </ListItemIcon>
+          <ListItemText
+            primary="Training"
+            primaryTypographyProps={{ fontWeight: currentTab === 'training' ? 600 : 400 }}
+          />
+        </ListItem>
+
+        <Divider sx={{ my: 1 }} />
+
         <ListItem button>
           <ListItemIcon>
             <WorkIcon />
@@ -438,7 +453,7 @@ function App() {
           <ListItemText primary="All Jobs" />
           <Chip label={Object.keys(cleanJobs).length} size="small" />
         </ListItem>
-        
+
         <ListItem button>
           <ListItemIcon>
             <BookmarkIcon />
@@ -446,9 +461,9 @@ function App() {
           <ListItemText primary="Applied" />
           <Chip label={stats.applied} size="small" color="success" />
         </ListItem>
-        
+
         <Divider sx={{ my: 1 }} />
-        
+
         <ListItem button>
           <ListItemIcon>
             <SettingsIcon />
@@ -572,10 +587,10 @@ function App() {
               }}
             >
               {error && (
-                <Alert 
-                  severity="error" 
-                  sx={{ 
-                    mb: 3, 
+                <Alert
+                  severity="error"
+                  sx={{
+                    mb: 3,
                     borderRadius: 2,
                     boxShadow: '0 2px 8px rgba(244,67,54,0.15)'
                   }}
@@ -584,17 +599,23 @@ function App() {
                 </Alert>
               )}
 
-              {/* Stats Dashboard */}
-              <StatsCards stats={stats} />
+              {/* Conditional Content Based on Current Tab */}
+              {currentTab === 'dashboard' && (
+                <>
+                  {/* Stats Dashboard */}
+                  <StatsCards stats={stats} />
 
+                  {/* Job Listings */}
+                  <JobSections
+                    jobs={jobs}
+                    onApplyAndOpen={applyAndOpenJob}
+                    onRejectJob={rejectJob}
+                    updatingJobs={updatingJobs}
+                  />
+                </>
+              )}
 
-              {/* Job Listings */}
-              <JobSections
-                jobs={jobs}
-                onApplyAndOpen={applyAndOpenJob}
-                onRejectJob={rejectJob}
-                updatingJobs={updatingJobs}
-              />
+              {currentTab === 'training' && <Training />}
             </Box>
           </Box>
         </Box>
