@@ -27,6 +27,11 @@ import {
   Security as SecurityIcon,
   Speed as PerformanceIcon,
   AccountTree as MicroservicesIcon,
+  OpenInNew as OpenInNewIcon,
+  Article as ArticleIcon,
+  VideoLibrary as VideoIcon,
+  Code as GitHubIcon,
+  School as TutorialIcon,
 } from '@mui/icons-material';
 
 interface SystemDesignItem {
@@ -36,6 +41,12 @@ interface SystemDesignItem {
   difficulty: 'Foundation' | 'Intermediate' | 'Advanced';
   completed: boolean;
   category: 'concept' | 'practice' | 'deep-dive';
+  resources: {
+    articles?: string[];
+    videos?: string[];
+    github?: string[];
+    tutorials?: string[];
+  };
 }
 
 interface SystemDesignLevel {
@@ -63,6 +74,15 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         difficulty: 'Foundation',
         completed: false,
         category: 'concept',
+        resources: {
+          articles: [
+            'https://github.com/donnemartin/system-design-primer',
+            'https://www.educative.io/guide/complete-guide-to-system-design'
+          ],
+          tutorials: [
+            'https://www.geeksforgeeks.org/system-design/system-design-tutorial/'
+          ]
+        }
       },
       {
         id: 'expectations-by-level',
@@ -71,6 +91,12 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         difficulty: 'Foundation',
         completed: false,
         category: 'concept',
+        resources: {
+          articles: [
+            'https://www.designgurus.io/blog/system-design-interview-fundamentals',
+            'https://blog.algomaster.io/p/30-system-design-concepts'
+          ]
+        }
       },
       {
         id: 'requirement-collection',
@@ -79,6 +105,14 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         difficulty: 'Foundation',
         completed: false,
         category: 'concept',
+        resources: {
+          articles: [
+            'https://algomaster.io/learn/system-design/what-is-system-design'
+          ],
+          tutorials: [
+            'https://www.geeksforgeeks.org/system-design/getting-started-with-system-design/'
+          ]
+        }
       },
       {
         id: 'cap-theorem',
@@ -87,6 +121,16 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         difficulty: 'Foundation',
         completed: false,
         category: 'concept',
+        resources: {
+          articles: [
+            'https://dev.to/karanpratapsingh/system-design-cap-theorem-2n9j',
+            'https://www.geeksforgeeks.org/system-design/cap-theorem-in-system-design/'
+          ],
+          github: [
+            'https://github.com/Devinterview-io/cap-theorem-interview-questions',
+            'https://github.com/Jeevan-kumar-Raj/Grokking-System-Design/blob/master/basics/cap-theorem.md'
+          ]
+        }
       },
       {
         id: 'client-server-basics',
@@ -95,6 +139,14 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         difficulty: 'Foundation',
         completed: false,
         category: 'concept',
+        resources: {
+          tutorials: [
+            'https://www.geeksforgeeks.org/system-design/getting-started-with-system-design/'
+          ],
+          github: [
+            'https://github.com/karanpratapsingh/system-design'
+          ]
+        }
       },
     ],
   },
@@ -112,6 +164,7 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         difficulty: 'Intermediate',
         completed: false,
         category: 'concept',
+        resources: {},
       },
       {
         id: 'distributed-communication',
@@ -120,6 +173,7 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         difficulty: 'Intermediate',
         completed: false,
         category: 'concept',
+        resources: {},
       },
       {
         id: 'api-design',
@@ -128,6 +182,7 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         difficulty: 'Intermediate',
         completed: false,
         category: 'concept',
+        resources: {},
       },
       {
         id: 'entity-design',
@@ -136,6 +191,7 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         difficulty: 'Intermediate',
         completed: false,
         category: 'concept',
+        resources: {},
       },
       {
         id: 'database-overview',
@@ -144,6 +200,7 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         difficulty: 'Intermediate',
         completed: false,
         category: 'concept',
+        resources: {},
       },
       {
         id: 'high-level-design',
@@ -152,6 +209,7 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         difficulty: 'Intermediate',
         completed: false,
         category: 'concept',
+        resources: {},
       },
       {
         id: 'load-balancing',
@@ -160,6 +218,7 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         difficulty: 'Intermediate',
         completed: false,
         category: 'concept',
+        resources: {},
       },
       {
         id: 'caching-strategies',
@@ -168,6 +227,14 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         difficulty: 'Intermediate',
         completed: false,
         category: 'concept',
+        resources: {
+          articles: [
+            'https://www.geeksforgeeks.org/caching-system-design-concept-for-beginners/'
+          ],
+          github: [
+            'https://github.com/ashishps1/awesome-system-design-resources'
+          ]
+        },
       },
       {
         id: 'scaling-patterns',
@@ -176,6 +243,7 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         difficulty: 'Intermediate',
         completed: false,
         category: 'concept',
+        resources: {},
       },
     ],
   },
@@ -193,6 +261,7 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         difficulty: 'Advanced',
         completed: false,
         category: 'deep-dive',
+        resources: {},
       },
       {
         id: 'deep-dive',
@@ -201,6 +270,7 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         difficulty: 'Advanced',
         completed: false,
         category: 'deep-dive',
+        resources: {},
       },
       {
         id: 'workflow-engines',
@@ -209,6 +279,7 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         difficulty: 'Advanced',
         completed: false,
         category: 'deep-dive',
+        resources: {},
       },
       {
         id: 'consistency-patterns',
@@ -217,6 +288,7 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         difficulty: 'Advanced',
         completed: false,
         category: 'deep-dive',
+        resources: {},
       },
       {
         id: 'fault-tolerance',
@@ -225,6 +297,7 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         difficulty: 'Advanced',
         completed: false,
         category: 'deep-dive',
+        resources: {},
       },
       {
         id: 'data-partitioning',
@@ -233,6 +306,7 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         difficulty: 'Advanced',
         completed: false,
         category: 'deep-dive',
+        resources: {},
       },
       {
         id: 'event-driven-architecture',
@@ -241,6 +315,7 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         difficulty: 'Advanced',
         completed: false,
         category: 'deep-dive',
+        resources: {},
       },
       {
         id: 'security-design',
@@ -249,6 +324,7 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         difficulty: 'Advanced',
         completed: false,
         category: 'deep-dive',
+        resources: {},
       },
       {
         id: 'monitoring-observability',
@@ -257,6 +333,7 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         difficulty: 'Advanced',
         completed: false,
         category: 'deep-dive',
+        resources: {},
       },
     ],
   },
@@ -274,6 +351,12 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         difficulty: 'Advanced',
         completed: false,
         category: 'practice',
+        resources: {
+          github: [
+            'https://github.com/donnemartin/system-design-primer#design-the-twitter-timeline-and-search',
+            'https://github.com/karanpratapsingh/system-design'
+          ]
+        },
       },
       {
         id: 'design-netflix',
@@ -282,6 +365,7 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         difficulty: 'Advanced',
         completed: false,
         category: 'practice',
+        resources: {},
       },
       {
         id: 'design-amazon',
@@ -290,6 +374,7 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         difficulty: 'Advanced',
         completed: false,
         category: 'practice',
+        resources: {},
       },
       {
         id: 'design-google-search',
@@ -298,6 +383,7 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         difficulty: 'Advanced',
         completed: false,
         category: 'practice',
+        resources: {},
       },
       {
         id: 'design-youtube',
@@ -306,6 +392,7 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         difficulty: 'Advanced',
         completed: false,
         category: 'practice',
+        resources: {},
       },
       {
         id: 'design-uber',
@@ -314,6 +401,7 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         difficulty: 'Advanced',
         completed: false,
         category: 'practice',
+        resources: {},
       },
       {
         id: 'design-whatsapp',
@@ -322,6 +410,7 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         difficulty: 'Advanced',
         completed: false,
         category: 'practice',
+        resources: {},
       },
       {
         id: 'design-rate-limiter',
@@ -448,6 +537,26 @@ export const SystemDesign: React.FC = () => {
       case 'practice': return <CloudIcon fontSize="small" />;
       case 'deep-dive': return <SecurityIcon fontSize="small" />;
       default: return <ArchitectureIcon fontSize="small" />;
+    }
+  };
+
+  const getResourceIcon = (type: string) => {
+    switch (type) {
+      case 'articles': return <ArticleIcon fontSize="small" />;
+      case 'videos': return <VideoIcon fontSize="small" />;
+      case 'github': return <GitHubIcon fontSize="small" />;
+      case 'tutorials': return <TutorialIcon fontSize="small" />;
+      default: return <OpenInNewIcon fontSize="small" />;
+    }
+  };
+
+  const getResourceLabel = (type: string) => {
+    switch (type) {
+      case 'articles': return 'Articles';
+      case 'videos': return 'Videos';
+      case 'github': return 'GitHub';
+      case 'tutorials': return 'Tutorials';
+      default: return 'Resources';
     }
   };
 
@@ -633,9 +742,45 @@ export const SystemDesign: React.FC = () => {
                             </Stack>
                           }
                           secondary={
-                            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                              {item.description}
-                            </Typography>
+                            <Box sx={{ mt: 0.5 }}>
+                              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                {item.description}
+                              </Typography>
+                              {/* Learning Resources */}
+                              {Object.entries(item.resources).map(([type, links]) =>
+                                links && links.length > 0 && (
+                                  <Box key={type} sx={{ mb: 1 }}>
+                                    <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 0.5 }}>
+                                      {getResourceIcon(type)}
+                                      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                        {getResourceLabel(type)}:
+                                      </Typography>
+                                    </Stack>
+                                    <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                                      {links.map((link, index) => (
+                                        <Chip
+                                          key={index}
+                                          label={`Link ${index + 1}`}
+                                          size="small"
+                                          variant="outlined"
+                                          onClick={() => window.open(link, '_blank')}
+                                          icon={<OpenInNewIcon fontSize="small" />}
+                                          sx={{
+                                            fontSize: '0.7rem',
+                                            height: 20,
+                                            cursor: 'pointer',
+                                            '&:hover': {
+                                              backgroundColor: 'primary.light',
+                                              color: 'primary.contrastText'
+                                            }
+                                          }}
+                                        />
+                                      ))}
+                                    </Stack>
+                                  </Box>
+                                )
+                              )}
+                            </Box>
                           }
                         />
                         <ListItemSecondaryAction>
