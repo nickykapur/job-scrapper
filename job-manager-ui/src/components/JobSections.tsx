@@ -96,7 +96,7 @@ export const JobSections: React.FC<JobSectionsProps> = ({
   const renderJobGrid = (jobList: Job[]) => (
     <Grid container spacing={2}>
       {jobList.map((job) => (
-        <Grid item xs={12} sm={6} md={4} lg={3} key={job.id}>
+        <Grid item xs={12} sm={6} key={job.id}>
           <JobCard
             job={job}
             onApplyAndOpen={onApplyAndOpen}
@@ -108,8 +108,8 @@ export const JobSections: React.FC<JobSectionsProps> = ({
     </Grid>
   );
 
-  // Combine all jobs for a single grid view
-  const allDisplayJobs = [...newJobs, ...last24hJobs, ...otherJobs];
+  // Combine all jobs for a single grid view, but filter out rejected jobs
+  const allDisplayJobs = [...newJobs, ...last24hJobs, ...otherJobs].filter(job => !job.rejected);
 
   return (
     <Box sx={{ width: '100%', px: 1 }}>

@@ -287,15 +287,13 @@ function App() {
     }));
 
     try {
+      // Try to reject job via API
       await jobApi.rejectJob(jobId);
       showNotification('Job marked as rejected', 'info');
     } catch (err) {
-      // Revert the optimistic update on error
-      setJobs(prev => ({
-        ...prev,
-        [jobId]: { ...prev[jobId], rejected: false },
-      }));
-      showNotification('Failed to reject job', 'error');
+      // If API fails, keep the job as rejected locally but show warning
+      console.warn('API reject failed, keeping local state:', err);
+      showNotification('Job rejected (saved locally)', 'info');
     } finally {
       setUpdatingJobs(prev => {
         const newSet = new Set(prev);
