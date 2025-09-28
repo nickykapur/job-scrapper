@@ -170,7 +170,6 @@ const createAppTheme = (mode: 'light' | 'dark') => createTheme({
   },
 });
 
-const EXCLUDED_COMPANIES_KEY = 'excludedCompanies';
 const AUTO_REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
 const DRAWER_WIDTH = 280;
@@ -197,10 +196,6 @@ function App() {
     sort: 'newest',
   });
 
-  const [excludedCompanies, setExcludedCompanies] = useState<string[]>(() => {
-    const saved = localStorage.getItem(EXCLUDED_COMPANIES_KEY);
-    return saved ? JSON.parse(saved) : [];
-  });
 
   const showNotification = (message: string, severity: 'success' | 'error' | 'info' = 'info') => {
     setNotification({ message, severity });
@@ -310,50 +305,6 @@ function App() {
   };
 
 
-  const markAllAsRead = () => {
-    const newJobs = Object.values(jobs).filter(job => job.is_new);
-    if (newJobs.length === 0) {
-      showNotification('📝 No new jobs to mark as read', 'info');
-      return;
-    }
-
-    const updatedJobs = { ...jobs };
-    Object.keys(updatedJobs).forEach(id => {
-      if (updatedJobs[id].is_new) {
-        updatedJobs[id].is_new = false;
-      }
-    });
-
-    setJobs(updatedJobs);
-    showNotification(`👁️ Marked ${newJobs.length} jobs as read`, 'success');
-  };
-
-  const exportData = () => {
-    const dataStr = JSON.stringify(jobs, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'jobs_database_export.json';
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const addExcludedCompany = (company: string) => {
-    if (!excludedCompanies.includes(company)) {
-      const updated = [...excludedCompanies, company];
-      setExcludedCompanies(updated);
-      localStorage.setItem(EXCLUDED_COMPANIES_KEY, JSON.stringify(updated));
-      showNotification(`🚫 Excluded company: ${company}`, 'success');
-    }
-  };
-
-  const removeExcludedCompany = (company: string) => {
-    const updated = excludedCompanies.filter(c => c !== company);
-    setExcludedCompanies(updated);
-    localStorage.setItem(EXCLUDED_COMPANIES_KEY, JSON.stringify(updated));
-    showNotification(`✅ Removed exclusion for: ${company}`, 'success');
-  };
 
   // Filter out metadata and create clean jobs object
   const cleanJobs = useMemo(() => {
@@ -377,15 +328,13 @@ function App() {
           if (!searchFields.includes(searchTerm)) return false;
         }
 
-        // Company exclusion filter
-        if (excludedCompanies.includes(job.company)) return false;
 
         return true;
       })
     );
     
     return filtered;
-  }, [jobs, filters, excludedCompanies]);
+  }, [jobs, filters]);
 
   const stats: JobStats = useMemo(() => {
     const allJobs = Object.values(jobs);
