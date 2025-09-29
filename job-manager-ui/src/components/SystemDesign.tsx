@@ -419,6 +419,7 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         difficulty: 'Intermediate',
         completed: false,
         category: 'practice',
+        resources: {},
       },
       {
         id: 'design-autocomplete',
@@ -427,6 +428,7 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         difficulty: 'Intermediate',
         completed: false,
         category: 'practice',
+        resources: {},
       },
       {
         id: 'design-url-shortener',
@@ -435,6 +437,7 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         difficulty: 'Intermediate',
         completed: false,
         category: 'practice',
+        resources: {},
       },
     ],
   },
@@ -443,7 +446,16 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
 const LOCAL_STORAGE_KEY = 'system-design-progress';
 
 export const SystemDesign: React.FC = () => {
-  const [levels, setLevels] = useState<SystemDesignLevel[]>(SYSTEM_DESIGN_ROADMAP);
+  // Ensure all items have resources property
+  const initializedRoadmap = SYSTEM_DESIGN_ROADMAP.map(level => ({
+    ...level,
+    items: level.items.map(item => ({
+      ...item,
+      resources: item.resources || {}
+    }))
+  }));
+
+  const [levels, setLevels] = useState<SystemDesignLevel[]>(initializedRoadmap);
   const [expandedLevels, setExpandedLevels] = useState<Set<string>>(new Set(['foundation']));
 
   // Load progress from localStorage on component mount
@@ -458,6 +470,7 @@ export const SystemDesign: React.FC = () => {
             items: level.items.map(item => ({
               ...item,
               completed: progress[item.id] || false,
+              resources: item.resources || {}, // Ensure resources property exists
             })),
           }))
         );
@@ -747,7 +760,7 @@ export const SystemDesign: React.FC = () => {
                                 {item.description}
                               </Typography>
                               {/* Learning Resources */}
-                              {Object.entries(item.resources).map(([type, links]) =>
+                              {item.resources && Object.entries(item.resources).map(([type, links]) =>
                                 links && links.length > 0 && (
                                   <Box key={type} sx={{ mb: 1 }}>
                                     <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 0.5 }}>
