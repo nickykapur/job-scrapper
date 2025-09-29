@@ -17,10 +17,12 @@ import {
   Schedule as TimeViewIcon,
   Public as CountryViewIcon,
   TableChart as TableViewIcon,
+  Tab as TabViewIcon,
 } from '@mui/icons-material';
 import type { Job } from '../types';
 import { JobCard } from './JobCard';
 import JobTable from './JobTable';
+import CountryJobTabs from './CountryJobTabs';
 
 interface JobSectionsProps {
   jobs: Record<string, Job>;
@@ -29,7 +31,7 @@ interface JobSectionsProps {
   updatingJobs: Set<string>;
 }
 
-type ViewMode = 'table' | 'grid' | 'list' | 'compact';
+type ViewMode = 'tabs' | 'table' | 'grid' | 'list' | 'compact';
 type OrganizationMode = 'time' | 'country';
 
 export const JobSections: React.FC<JobSectionsProps> = ({
@@ -38,7 +40,7 @@ export const JobSections: React.FC<JobSectionsProps> = ({
   onRejectJob,
   updatingJobs,
 }) => {
-  const [viewMode, setViewMode] = useState<ViewMode>('table');
+  const [viewMode, setViewMode] = useState<ViewMode>('tabs');
   const [organizationMode, setOrganizationMode] = useState<OrganizationMode>('time');
   // Function to check if job was posted within last 24 hours
   const isWithin24Hours = (postedDate: string): boolean => {
@@ -115,6 +117,8 @@ export const JobSections: React.FC<JobSectionsProps> = ({
 
   const getGridProps = () => {
     switch (viewMode) {
+      case 'tabs':
+        return { xs: 12 }; // Not used in tabs view
       case 'table':
         return { xs: 12 }; // Not used in table view
       case 'grid':
@@ -242,6 +246,9 @@ export const JobSections: React.FC<JobSectionsProps> = ({
                 size="small"
                 sx={{ bgcolor: 'background.paper', boxShadow: 1 }}
               >
+                <ToggleButton value="tabs" aria-label="country tabs view">
+                  <TabViewIcon fontSize="small" />
+                </ToggleButton>
                 <ToggleButton value="table" aria-label="table view">
                   <TableViewIcon fontSize="small" />
                 </ToggleButton>
@@ -258,7 +265,15 @@ export const JobSections: React.FC<JobSectionsProps> = ({
             </Box>
           </Box>
 
-          {viewMode === 'table' ? (
+          {viewMode === 'tabs' ? (
+            /* Country Tabs View - organized by country with statistics */
+            <CountryJobTabs
+              jobs={jobs}
+              onApplyAndOpen={onApplyAndOpen}
+              onRejectJob={onRejectJob}
+              updatingJobs={updatingJobs}
+            />
+          ) : viewMode === 'table' ? (
             /* Table View - shows all jobs with built-in filtering */
             <JobTable
               jobs={jobs}
