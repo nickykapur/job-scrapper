@@ -1,11 +1,22 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
   Grid,
   Paper,
   Stack,
+  Chip,
+  ToggleButton,
+  ToggleButtonGroup,
+  Divider,
 } from '@mui/material';
+import {
+  ViewList as ListViewIcon,
+  ViewModule as GridViewIcon,
+  TableRows as CompactViewIcon,
+  Schedule as TimeViewIcon,
+  Public as CountryViewIcon,
+} from '@mui/icons-material';
 import type { Job } from '../types';
 import { JobCard } from './JobCard';
 
@@ -16,12 +27,17 @@ interface JobSectionsProps {
   updatingJobs: Set<string>;
 }
 
+type ViewMode = 'grid' | 'list' | 'compact';
+type OrganizationMode = 'time' | 'country';
+
 export const JobSections: React.FC<JobSectionsProps> = ({
   jobs,
   onApplyAndOpen,
   onRejectJob,
   updatingJobs,
 }) => {
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [organizationMode, setOrganizationMode] = useState<OrganizationMode>('time');
   // Function to check if job was posted within last 24 hours
   const isWithin24Hours = (postedDate: string): boolean => {
     if (!postedDate) return false;
@@ -67,36 +83,51 @@ export const JobSections: React.FC<JobSectionsProps> = ({
   const last24hJobs = jobValues.filter(job => job.category === 'last_24h');
   const otherJobs = jobValues.filter(job => !job.category || job.category === 'existing');
 
-  const SectionHeader = ({ title, count }: { title: string; count: number }) => (
-    <Box sx={{ mb: 3 }}>
+  const SectionHeader = ({ title, count, color = '#2196F3' }: { title: string; count: number; color?: string }) => (
+    <Box sx={{ mb: 2 }}>
       <Stack direction="row" alignItems="center" justifyContent="space-between">
-        <Typography
-          variant="h4"
-          sx={{
-            fontWeight: 700,
-            color: 'text.primary',
-            fontSize: '1.75rem',
-          }}
-        >
-          {title}
-        </Typography>
-        <Typography
-          variant="body2"
-          sx={{
-            color: 'text.secondary',
-            fontWeight: 500,
-          }}
-        >
-          {count} {count === 1 ? 'position' : 'positions'}
-        </Typography>
+        <Stack direction="row" alignItems="center" spacing={2}>
+          <Typography
+            variant="h5"
+            sx={{
+              fontWeight: 700,
+              color: 'text.primary',
+              fontSize: '1.25rem',
+            }}
+          >
+            {title}
+          </Typography>
+          <Chip
+            label={`${count} ${count === 1 ? 'job' : 'jobs'}`}
+            size="small"
+            sx={{
+              bgcolor: `${color}20`,
+              color: color,
+              fontWeight: 600
+            }}
+          />
+        </Stack>
       </Stack>
     </Box>
   );
 
+  const getGridProps = () => {
+    switch (viewMode) {
+      case 'grid':
+        return { xs: 12, sm: 6, lg: 4 };
+      case 'list':
+        return { xs: 12 };
+      case 'compact':
+        return { xs: 12, sm: 6, md: 4, lg: 3 };
+      default:
+        return { xs: 12, sm: 6 };
+    }
+  };
+
   const renderJobGrid = (jobList: Job[]) => (
-    <Grid container spacing={2}>
+    <Grid container spacing={viewMode === 'compact' ? 1.5 : 2}>
       {jobList.map((job) => (
-        <Grid item xs={12} sm={6} key={job.id}>
+        <Grid item {...getGridProps()} key={job.id}>
           <JobCard
             job={job}
             onApplyAndOpen={onApplyAndOpen}
@@ -108,15 +139,161 @@ export const JobSections: React.FC<JobSectionsProps> = ({
     </Grid>
   );
 
-  // Combine all jobs for a single grid view, but filter out rejected jobs
-  const allDisplayJobs = [...newJobs, ...last24hJobs, ...otherJobs].filter(job => !job.rejected);
+  // Filter out rejected jobs from all categories
+  const displayNewJobs = newJobs.filter(job => !job.rejected);
+  const displayLast24hJobs = last24hJobs.filter(job => !job.rejected);
+  const displayOtherJobs = otherJobs.filter(job => !job.rejected);
+  const allDisplayJobs = [...displayNewJobs, ...displayLast24hJobs, ...displayOtherJobs];
+
+  // Organize jobs by country
+  const jobsByCountry = allDisplayJobs.reduce((acc, job) => {
+    const country = job.country || 'Unknown';
+    if (!acc[country]) {
+      acc[country] = [];
+    }
+    acc[country].push(job);
+    return acc;
+  }, {} as Record<string, Job[]>);
+
+  // Country flag mapping
+  const countryFlags: Record<string, string> = {
+    'Ireland': '🇮🇪',
+    'Spain': '🇪🇸',
+    'Germany': '🇩🇪',
+    'Switzerland': '🇨🇭',
+    'United Kingdom': '🇬🇧',
+    'Netherlands': '🇳🇱',
+    'France': '🇫🇷',
+    'Italy': '🇮🇹',
+    'Unknown': '🌍'
+  };
+
+  // Country colors
+  const countryColors: Record<string, string> = {
+    'Ireland': '#4CAF50',
+    'Spain': '#FF9800',
+    'Germany': '#2196F3',
+    'Switzerland': '#E91E63',
+    'United Kingdom': '#9C27B0',
+    'Netherlands': '#FF5722',
+    'France': '#3F51B5',
+    'Italy': '#795548',
+    'Unknown': '#607D8B'
+  };
+
+  const handleViewModeChange = (_: React.MouseEvent<HTMLElement>, newMode: ViewMode) => {
+    if (newMode !== null) {
+      setViewMode(newMode);
+    }
+  };
+
+  const handleOrganizationModeChange = (_: React.MouseEvent<HTMLElement>, newMode: OrganizationMode) => {
+    if (newMode !== null) {
+      setOrganizationMode(newMode);
+    }
+  };
 
   return (
     <Box sx={{ width: '100%' }}>
       {allDisplayJobs.length > 0 ? (
         <>
-          <SectionHeader title="Available Positions" count={allDisplayJobs.length} />
-          {renderJobGrid(allDisplayJobs)}
+          {/* Header with View Controls */}
+          <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+            <Typography
+              variant="h4"
+              sx={{
+                fontWeight: 700,
+                background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                fontSize: '1.75rem',
+              }}
+            >
+              Job Listings
+            </Typography>
+
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+              {/* Organization Mode Toggle */}
+              <ToggleButtonGroup
+                value={organizationMode}
+                exclusive
+                onChange={handleOrganizationModeChange}
+                size="small"
+                sx={{ bgcolor: 'background.paper', boxShadow: 1 }}
+              >
+                <ToggleButton value="time" aria-label="organize by time">
+                  <TimeViewIcon fontSize="small" />
+                </ToggleButton>
+                <ToggleButton value="country" aria-label="organize by country">
+                  <CountryViewIcon fontSize="small" />
+                </ToggleButton>
+              </ToggleButtonGroup>
+
+              {/* View Mode Toggle */}
+              <ToggleButtonGroup
+                value={viewMode}
+                exclusive
+                onChange={handleViewModeChange}
+                size="small"
+                sx={{ bgcolor: 'background.paper', boxShadow: 1 }}
+              >
+                <ToggleButton value="grid" aria-label="grid view">
+                  <GridViewIcon fontSize="small" />
+                </ToggleButton>
+                <ToggleButton value="list" aria-label="list view">
+                  <ListViewIcon fontSize="small" />
+                </ToggleButton>
+                <ToggleButton value="compact" aria-label="compact view">
+                  <CompactViewIcon fontSize="small" />
+                </ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
+          </Box>
+
+          <Stack spacing={4}>
+            {organizationMode === 'time' ? (
+              <>
+                {/* Time-based organization */}
+                {displayNewJobs.length > 0 && (
+                  <Box>
+                    <SectionHeader title="🆕 New Jobs" count={displayNewJobs.length} color="#4CAF50" />
+                    {renderJobGrid(displayNewJobs)}
+                  </Box>
+                )}
+
+                {displayLast24hJobs.length > 0 && (
+                  <Box>
+                    <SectionHeader title="⏰ Posted Today" count={displayLast24hJobs.length} color="#FF9800" />
+                    {renderJobGrid(displayLast24hJobs)}
+                  </Box>
+                )}
+
+                {displayOtherJobs.length > 0 && (
+                  <Box>
+                    <SectionHeader title="📋 Other Positions" count={displayOtherJobs.length} color="#9C27B0" />
+                    {renderJobGrid(displayOtherJobs)}
+                  </Box>
+                )}
+              </>
+            ) : (
+              <>
+                {/* Country-based organization */}
+                {Object.entries(jobsByCountry)
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([country, countryJobs]) => (
+                    <Box key={country}>
+                      <SectionHeader
+                        title={`${countryFlags[country] || '🌍'} ${country}`}
+                        count={countryJobs.length}
+                        color={countryColors[country] || '#607D8B'}
+                      />
+                      {renderJobGrid(countryJobs)}
+                    </Box>
+                  ))}
+              </>
+            )}
+          </Stack>
         </>
       ) : (
         /* Empty State */

@@ -45,6 +45,8 @@ import { JobLoadingInfo } from './components/JobLoadingInfo';
 import { JobSections } from './components/JobSections';
 import { Training } from './components/Training';
 import { SystemDesign } from './components/SystemDesign';
+import JobSearch from './components/JobSearch';
+import CountryStats from './components/CountryStats';
 import { jobApi } from './services/api';
 import type { Job, JobStats, FilterState } from './types';
 
@@ -830,8 +832,23 @@ function App() {
               {/* Conditional Content Based on Current Tab */}
               {currentTab === 'dashboard' && (
                 <>
+                  {/* Job Search */}
+                  <JobSearch onSearchComplete={(newJobs) => {
+                    if (newJobs > 0) {
+                      // Refresh jobs after successful search
+                      fetchJobs();
+                      setNotification({
+                        message: `Found ${newJobs} new jobs! Refreshing list...`,
+                        severity: 'success'
+                      });
+                    }
+                  }} />
+
                   {/* Stats Dashboard */}
                   <StatsCards stats={stats} />
+
+                  {/* Country Statistics */}
+                  <CountryStats jobs={jobs} />
 
                   {/* Job Listings */}
                   <JobSections

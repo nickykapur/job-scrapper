@@ -43,9 +43,10 @@ export const jobApi = {
   },
 
   // Search for new jobs
-  searchJobs: async (keywords: string): Promise<{ success: boolean; new_jobs: number }> => {
+  searchJobs: async (keywords: string, location?: string): Promise<{ success: boolean; new_jobs: number }> => {
     const response = await api.post('/search_jobs', {
       keywords: keywords,
+      location: location || "Dublin, County Dublin, Ireland",
     });
     return response.data;
   },

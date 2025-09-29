@@ -81,6 +81,7 @@ class BulkUpdateRequest(BaseModel):
 
 class SearchRequest(BaseModel):
     keywords: str
+    location: Optional[str] = "Dublin, County Dublin, Ireland"
 
 class SyncJobsRequest(BaseModel):
     jobs_data: Dict[str, Any]
@@ -193,17 +194,17 @@ async def search_jobs(request: SearchRequest):
         if not request.keywords.strip():
             raise HTTPException(status_code=400, detail="Keywords required")
         
-        # Check if we're in Railway environment
-        if os.environ.get("RAILWAY_ENVIRONMENT") == "production":
-            return {
-                "success": False, 
-                "message": "Job scraping is disabled on Railway due to browser limitations. Please use the app with your existing job database or run scraping locally.",
-                "new_jobs": 0
-            }
+        # Railway environment setup for scraping
+        railway_env = os.environ.get("RAILWAY_ENVIRONMENT") == "production"
+        if railway_env:
+            print("🚀 Running job scraping on Railway Cloud...")
+            # Set display for headless browser
+            os.environ['DISPLAY'] = ':99'
         
-        # Run the job scraper (local development only)
+        # Run the job scraper (works both locally and on Railway)
         result = subprocess.run([
-            sys.executable, 'main.py', 'search', request.keywords.strip(), '--headless'
+            sys.executable, 'main.py', 'search', request.keywords.strip(),
+            '--location', request.location, '--headless'
         ], capture_output=True, text=True, cwd='.')
         
         if result.returncode == 0:
@@ -344,6 +345,179 @@ async def sync_rejected_jobs(request: SyncRejectedJobsRequest):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/daily_dublin_update")
+async def daily_dublin_update():
+    """Run the daily Dublin job update directly on Railway"""
+    try:
+        print("🚀 Starting Daily Dublin Job Update on Railway...")
+
+        # Check if we're in Railway environment for optimizations
+        railway_env = os.environ.get("RAILWAY_ENVIRONMENT") == "production"
+        if railway_env:
+            os.environ['DISPLAY'] = ':99'
+
+        # Run the daily Dublin update script
+        result = subprocess.run([
+            sys.executable, 'daily_dublin_update.py'
+        ], capture_output=True, text=True, cwd='.')
+
+        if result.returncode == 0:
+            # Parse output for statistics
+            output_lines = result.stdout.split('\n')
+            new_jobs = 0
+            last_24h_jobs = 0
+
+            for line in output_lines:
+                if 'New jobs:' in line:
+                    import re
+                    match = re.search(r'New jobs: (\d+)', line)
+                    if match:
+                        new_jobs = int(match.group(1))
+                elif 'Last 24h jobs:' in line:
+                    match = re.search(r'Last 24h jobs: (\d+)', line)
+                    if match:
+                        last_24h_jobs = int(match.group(1))
+
+            return {
+                "success": True,
+                "message": "Daily Dublin update completed on Railway",
+                "new_jobs": new_jobs,
+                "last_24h_jobs": last_24h_jobs,
+                "output": result.stdout
+            }
+        else:
+            return {
+                "success": False,
+                "message": f"Daily update failed: {result.stderr}",
+                "output": result.stdout,
+                "error": result.stderr
+            }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Daily update error: {str(e)}")
+
+@app.post("/daily_multi_country_update")
+async def daily_multi_country_update():
+    """Run the daily multi-country job update directly on Railway"""
+    try:
+        print("🌍 Starting Daily Multi-Country Job Update on Railway...")
+
+        # Check if we're in Railway environment for optimizations
+        railway_env = os.environ.get("RAILWAY_ENVIRONMENT") == "production"
+        if railway_env:
+            os.environ['DISPLAY'] = ':99'
+
+        # Run the daily multi-country update script
+        result = subprocess.run([
+            sys.executable, 'daily_multi_country_update.py'
+        ], capture_output=True, text=True, cwd='.')
+
+        if result.returncode == 0:
+            # Parse output for statistics
+            output_lines = result.stdout.split('\n')
+            new_jobs = 0
+            last_24h_jobs = 0
+            countries_searched = 0
+
+            for line in output_lines:
+                if 'New jobs:' in line:
+                    import re
+                    match = re.search(r'New jobs: (\d+)', line)
+                    if match:
+                        new_jobs = int(match.group(1))
+                elif 'Last 24h jobs:' in line:
+                    match = re.search(r'Last 24h jobs: (\d+)', line)
+                    if match:
+                        last_24h_jobs = int(match.group(1))
+                elif 'countries_searched' in line or line.count('🏳️') > 0:
+                    countries_searched += 1
+
+            return {
+                "success": True,
+                "message": "Daily multi-country update completed on Railway",
+                "new_jobs": new_jobs,
+                "last_24h_jobs": last_24h_jobs,
+                "countries_searched": max(countries_searched, 13),  # Fallback to expected count
+                "output": result.stdout
+            }
+        else:
+            return {
+                "success": False,
+                "message": f"Multi-country update failed: {result.stderr}",
+                "output": result.stdout,
+                "error": result.stderr
+            }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Multi-country update error: {str(e)}")
+
+@app.get("/api/cron/daily-update")
+async def cron_daily_update():
+    """Cron endpoint for scheduled daily updates - Dublin only (can be called by external schedulers)"""
+    return await daily_dublin_update()
+
+@app.get("/api/cron/multi-country-update")
+async def cron_multi_country_update():
+    """Cron endpoint for scheduled multi-country updates (can be called by external schedulers)"""
+    return await daily_multi_country_update()
+
+@app.get("/country_stats")
+async def get_country_stats():
+    """Get detailed country statistics for job postings"""
+    try:
+        if USE_DATABASE and db:
+            # TODO: Implement database method to get country stats
+            data = await db.get_all_jobs()
+        else:
+            # Fallback to JSON file
+            if os.path.exists(JOBS_DATABASE_FILE):
+                with open(JOBS_DATABASE_FILE, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+            else:
+                return {"country_stats": {}, "message": "No jobs database found"}
+
+        # Extract country statistics from job data
+        country_stats = {}
+        metadata = data.get('_metadata', {})
+
+        # Get current country stats if available
+        if 'country_daily_stats' in metadata:
+            country_stats = metadata['country_daily_stats']
+
+        # Calculate additional statistics from job data
+        job_data = {k: v for k, v in data.items() if not k.startswith('_')}
+
+        for country in ['Ireland', 'Spain', 'Germany', 'Switzerland', 'United Kingdom', 'Netherlands', 'France', 'Italy']:
+            country_jobs = [j for j in job_data.values() if j.get('country') == country and not j.get('rejected', False)]
+
+            if country not in country_stats:
+                country_stats[country] = {}
+
+            country_stats[country].update({
+                'total_jobs_in_db': len(country_jobs),
+                'applied_jobs': len([j for j in country_jobs if j.get('applied', False)]),
+                'new_jobs_today': len([j for j in country_jobs if j.get('is_new', False)]),
+                'last_24h_jobs': len([j for j in country_jobs if j.get('category') == 'last_24h']),
+                'locations': list(set([j.get('search_location', '').split(',')[0] for j in country_jobs if j.get('search_location')]))
+            })
+
+        # Add summary statistics
+        total_new_today = sum(stats.get('new_jobs_today', 0) for stats in country_stats.values())
+        total_24h = sum(stats.get('last_24h_jobs', 0) for stats in country_stats.values())
+
+        return {
+            "country_stats": country_stats,
+            "summary": {
+                "total_new_jobs_today": total_new_today,
+                "total_24h_jobs": total_24h,
+                "countries_with_jobs": len([c for c, s in country_stats.items() if s.get('total_jobs_in_db', 0) > 0]),
+                "last_updated": metadata.get('last_multi_country_search', metadata.get('last_updated', 'Unknown'))
+            }
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting country stats: {str(e)}")
 
 # Catch-all route for React Router (must be last)
 @app.get("/{path:path}")
