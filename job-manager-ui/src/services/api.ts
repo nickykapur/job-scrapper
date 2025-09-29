@@ -49,6 +49,20 @@ export const jobApi = {
     });
     return response.data;
   },
+
+  // Sync locally rejected jobs to cloud
+  syncRejectedJobs: async (rejectedJobIds: string[]): Promise<{ success: boolean; synced_count: number }> => {
+    const response = await api.post('/sync_rejected_jobs', {
+      rejected_job_ids: rejectedJobIds,
+    });
+    return response.data;
+  },
+
+  // Get rejected jobs from cloud
+  getRejectedJobs: async (): Promise<string[]> => {
+    const response = await api.get('/rejected_jobs');
+    return response.data.rejected_job_ids || [];
+  },
 };
 
 export default api;

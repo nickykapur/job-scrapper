@@ -36,6 +36,7 @@ import {
   Search as SearchIcon,
   School as TrainingIcon,
   Architecture as SystemDesignIcon,
+  CloudUpload as CloudUploadIcon,
 } from '@mui/icons-material';
 import { JobCard } from './components/JobCard';
 import { StatsCards } from './components/StatsCards';
@@ -192,6 +193,7 @@ function App() {
   const [updatingJobs, setUpdatingJobs] = useState<Set<string>>(new Set());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [localRejectedCount, setLocalRejectedCount] = useState(0);
   const [notification, setNotification] = useState<{
     message: string;
     severity: 'success' | 'error' | 'info';
@@ -298,13 +300,24 @@ function App() {
     }));
 
     try {
-      // Try to reject job via API
+      // Try to reject job via cloud API first
       await jobApi.rejectJob(jobId);
-      showNotification('Job marked as rejected', 'info');
+      showNotification('Job rejected and saved to cloud', 'success');
     } catch (err) {
-      // If API fails, keep the job as rejected locally but show warning
-      console.warn('API reject failed, keeping local state:', err);
-      showNotification('Job rejected (saved locally)', 'info');
+      // If cloud API fails, store locally for later sync
+      console.warn('Cloud API reject failed, storing locally:', err);
+
+      // Get existing locally rejected jobs
+      const localRejectedJobs = JSON.parse(localStorage.getItem('locally-rejected-jobs') || '[]');
+
+      // Add this job to local storage if not already there
+      if (!localRejectedJobs.includes(jobId)) {
+        localRejectedJobs.push(jobId);
+        localStorage.setItem('locally-rejected-jobs', JSON.stringify(localRejectedJobs));
+        updateLocalRejectedCount();
+      }
+
+      showNotification('Job rejected (saved locally, will sync when online)', 'warning');
     } finally {
       setUpdatingJobs(prev => {
         const newSet = new Set(prev);
@@ -388,10 +401,79 @@ function App() {
     };
   }, [jobs]);
 
-  // Load jobs on component mount
+  // Update local rejected count
+  const updateLocalRejectedCount = () => {
+    const localRejectedJobs = JSON.parse(localStorage.getItem('locally-rejected-jobs') || '[]');
+    setLocalRejectedCount(localRejectedJobs.length);
+  };
+
+  // Manual sync function
+  const manualSyncRejectedJobs = async () => {
+    const localRejectedJobs = JSON.parse(localStorage.getItem('locally-rejected-jobs') || '[]');
+    if (localRejectedJobs.length === 0) {
+      showNotification('No local rejected jobs to sync', 'info');
+      return;
+    }
+
+    try {
+      await jobApi.syncRejectedJobs(localRejectedJobs);
+      localStorage.removeItem('locally-rejected-jobs');
+      updateLocalRejectedCount();
+      showNotification(`Synced ${localRejectedJobs.length} rejected jobs to cloud`, 'success');
+    } catch (error) {
+      showNotification('Failed to sync rejected jobs to cloud', 'error');
+    }
+  };
+
+  // Load jobs and sync rejected jobs on component mount
   useEffect(() => {
     loadJobs();
+    syncRejectedJobsFromCloud();
+    updateLocalRejectedCount();
   }, []);
+
+  // Sync rejected jobs from cloud and merge with local storage
+  const syncRejectedJobsFromCloud = async () => {
+    try {
+      // Get rejected jobs from cloud
+      const cloudRejectedJobs = await jobApi.getRejectedJobs();
+
+      // Get locally stored rejected jobs
+      const localRejectedJobs = JSON.parse(localStorage.getItem('locally-rejected-jobs') || '[]');
+
+      // Merge cloud and local rejected jobs
+      const allRejectedJobs = [...new Set([...cloudRejectedJobs, ...localRejectedJobs])];
+
+      // If we have locally rejected jobs that aren't in the cloud, sync them
+      const localOnlyJobs = localRejectedJobs.filter((jobId: string) => !cloudRejectedJobs.includes(jobId));
+      if (localOnlyJobs.length > 0) {
+        try {
+          await jobApi.syncRejectedJobs(localOnlyJobs);
+          // Clear local storage since they're now in the cloud
+          localStorage.removeItem('locally-rejected-jobs');
+          updateLocalRejectedCount();
+          showNotification(`Synced ${localOnlyJobs.length} locally rejected jobs to cloud`, 'success');
+        } catch (error) {
+          console.warn('Failed to sync local rejected jobs to cloud:', error);
+        }
+      }
+
+      // Update jobs state to reflect rejected status
+      if (allRejectedJobs.length > 0) {
+        setJobs(prevJobs => {
+          const updatedJobs = { ...prevJobs };
+          allRejectedJobs.forEach(jobId => {
+            if (updatedJobs[jobId]) {
+              updatedJobs[jobId] = { ...updatedJobs[jobId], rejected: true };
+            }
+          });
+          return updatedJobs;
+        });
+      }
+    } catch (error) {
+      console.warn('Failed to sync rejected jobs from cloud:', error);
+    }
+  };
 
   // Auto-refresh jobs
   useEffect(() => {
@@ -562,6 +644,32 @@ function App() {
 
       {/* Footer */}
       <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
+        {/* Sync Button - only show if there are local rejected jobs */}
+        {localRejectedCount > 0 && (
+          <ListItem
+            button
+            onClick={manualSyncRejectedJobs}
+            sx={{
+              borderRadius: 2,
+              mb: 1,
+              bgcolor: 'warning.light',
+              '&:hover': {
+                bgcolor: 'warning.main',
+              },
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: 40 }}>
+              <CloudUploadIcon color="warning" />
+            </ListItemIcon>
+            <ListItemText
+              primary={`Sync ${localRejectedCount} Local Jobs`}
+              primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 600 }}
+              secondary="Tap to sync to cloud"
+              secondaryTypographyProps={{ fontSize: '0.75rem' }}
+            />
+          </ListItem>
+        )}
+
         <ListItem
           button
           sx={{
