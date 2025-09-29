@@ -760,55 +760,46 @@ export const SystemDesign: React.FC = () => {
                                 {item.description}
                               </Typography>
                               {/* Learning Resources */}
-                              {(() => {
-                                const resources = item.resources || {};
-                                const hasResources = Object.keys(resources).some(type =>
-                                  resources[type as keyof typeof resources] &&
-                                  resources[type as keyof typeof resources]!.length > 0
-                                );
+                              {item.resources && typeof item.resources === 'object' && (
+                                <Box sx={{ mt: 1 }}>
+                                  {['articles', 'videos', 'github', 'tutorials'].map(type => {
+                                    const links = item.resources[type as keyof typeof item.resources];
+                                    if (!links || !Array.isArray(links) || links.length === 0) return null;
 
-                                if (!hasResources) return null;
-
-                                return (
-                                  <Box sx={{ mt: 1 }}>
-                                    {Object.entries(resources).map(([type, links]) => {
-                                      if (!links || !Array.isArray(links) || links.length === 0) return null;
-
-                                      return (
-                                        <Box key={type} sx={{ mb: 1 }}>
-                                          <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 0.5 }}>
-                                            {getResourceIcon(type)}
-                                            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-                                              {getResourceLabel(type)}:
-                                            </Typography>
-                                          </Stack>
-                                          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                                            {links.map((link, index) => (
-                                              <Chip
-                                                key={index}
-                                                label={`Link ${index + 1}`}
-                                                size="small"
-                                                variant="outlined"
-                                                onClick={() => window.open(link, '_blank')}
-                                                icon={<OpenInNewIcon fontSize="small" />}
-                                                sx={{
-                                                  fontSize: '0.7rem',
-                                                  height: 20,
-                                                  cursor: 'pointer',
-                                                  '&:hover': {
-                                                    backgroundColor: 'primary.light',
-                                                    color: 'primary.contrastText'
-                                                  }
-                                                }}
-                                              />
-                                            ))}
-                                          </Stack>
-                                        </Box>
-                                      );
-                                    })}
-                                  </Box>
-                                );
-                              })()}
+                                    return (
+                                      <Box key={type} sx={{ mb: 1 }}>
+                                        <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 0.5 }}>
+                                          {getResourceIcon(type)}
+                                          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                            {getResourceLabel(type)}:
+                                          </Typography>
+                                        </Stack>
+                                        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                                          {links.map((link, index) => (
+                                            <Chip
+                                              key={index}
+                                              label={`Link ${index + 1}`}
+                                              size="small"
+                                              variant="outlined"
+                                              onClick={() => window.open(link, '_blank')}
+                                              icon={<OpenInNewIcon fontSize="small" />}
+                                              sx={{
+                                                fontSize: '0.7rem',
+                                                height: 20,
+                                                cursor: 'pointer',
+                                                '&:hover': {
+                                                  backgroundColor: 'primary.light',
+                                                  color: 'primary.contrastText'
+                                                }
+                                              }}
+                                            />
+                                          ))}
+                                        </Stack>
+                                      </Box>
+                                    );
+                                  })}
+                                </Box>
+                              )}
                             </Box>
                           }
                         />

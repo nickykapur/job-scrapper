@@ -26,9 +26,9 @@ export const jobApi = {
     });
   },
 
-  // Reject job
+  // Reject job - using update_job endpoint since reject_job doesn't exist
   rejectJob: async (jobId: string): Promise<void> => {
-    await api.post('/reject_job', {
+    await api.post('/update_job', {
       job_id: jobId,
       rejected: true,
     });

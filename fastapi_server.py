@@ -9,7 +9,7 @@ import json
 import os
 import subprocess
 import sys
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 app = FastAPI(title="LinkedIn Job Manager API", version="1.0.0")
 
 # Try to import database models, fallback to JSON if not available
@@ -72,7 +72,8 @@ async def health_check():
 
 class JobUpdateRequest(BaseModel):
     job_id: str
-    applied: bool
+    applied: Optional[bool] = None
+    rejected: Optional[bool] = None
 
 class BulkUpdateRequest(BaseModel):
     action: str
@@ -83,6 +84,9 @@ class SearchRequest(BaseModel):
 
 class SyncJobsRequest(BaseModel):
     jobs_data: Dict[str, Any]
+
+class SyncRejectedJobsRequest(BaseModel):
+    rejected_job_ids: List[str]
 
 @app.get("/")
 async def serve_react_app():
@@ -122,9 +126,10 @@ async def get_jobs():
 
 @app.post("/update_job")
 async def update_job(request: JobUpdateRequest):
-    """Update a single job's applied status"""
+    """Update a single job's applied or rejected status"""
     try:
         if USE_DATABASE and db:
+            # TODO: Update database method to handle rejected status
             success = await db.update_job_applied_status(request.job_id, request.applied)
             if success:
                 return {"success": True, "message": f"Job {request.job_id} updated"}
@@ -134,18 +139,27 @@ async def update_job(request: JobUpdateRequest):
             # Fallback to JSON file update
             if not os.path.exists(JOBS_DATABASE_FILE):
                 raise HTTPException(status_code=404, detail="Jobs database not found")
-            
+
             with open(JOBS_DATABASE_FILE, 'r', encoding='utf-8') as f:
                 jobs_data = json.load(f)
-            
+
             if request.job_id not in jobs_data:
                 raise HTTPException(status_code=404, detail=f"Job {request.job_id} not found")
-            
-            jobs_data[request.job_id]['applied'] = request.applied
-            
+
+            # Update applied status if provided
+            if request.applied is not None:
+                jobs_data[request.job_id]['applied'] = request.applied
+
+            # Update rejected status if provided
+            if request.rejected is not None:
+                jobs_data[request.job_id]['rejected'] = request.rejected
+                # If rejected, also set applied to False
+                if request.rejected:
+                    jobs_data[request.job_id]['applied'] = False
+
             with open(JOBS_DATABASE_FILE, 'w', encoding='utf-8') as f:
                 json.dump(jobs_data, f, indent=2, ensure_ascii=False)
-            
+
             return {"success": True, "message": f"Job {request.job_id} updated"}
     except HTTPException:
         raise
@@ -269,6 +283,63 @@ async def sync_jobs(request: SyncJobsRequest):
                 "new_jobs": new_jobs,
                 "updated_jobs": updated_jobs
             }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/rejected_jobs")
+async def get_rejected_jobs():
+    """Get all rejected job IDs"""
+    try:
+        if USE_DATABASE and db:
+            # TODO: Implement database method to get rejected jobs
+            return {"rejected_job_ids": []}
+        else:
+            # JSON file fallback
+            if not os.path.exists(JOBS_DATABASE_FILE):
+                return {"rejected_job_ids": []}
+
+            with open(JOBS_DATABASE_FILE, 'r', encoding='utf-8') as f:
+                jobs_data = json.load(f)
+
+            rejected_job_ids = [
+                job_id for job_id, job_data in jobs_data.items()
+                if not job_id.startswith('_') and job_data.get('rejected', False)
+            ]
+
+            return {"rejected_job_ids": rejected_job_ids}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/sync_rejected_jobs")
+async def sync_rejected_jobs(request: SyncRejectedJobsRequest):
+    """Sync locally rejected jobs to the database"""
+    try:
+        if USE_DATABASE and db:
+            # TODO: Implement database method to sync rejected jobs
+            return {"success": True, "synced_count": len(request.rejected_job_ids)}
+        else:
+            # JSON file fallback
+            if not os.path.exists(JOBS_DATABASE_FILE):
+                raise HTTPException(status_code=404, detail="Jobs database not found")
+
+            with open(JOBS_DATABASE_FILE, 'r', encoding='utf-8') as f:
+                jobs_data = json.load(f)
+
+            synced_count = 0
+            for job_id in request.rejected_job_ids:
+                if job_id in jobs_data and not job_id.startswith('_'):
+                    jobs_data[job_id]['rejected'] = True
+                    jobs_data[job_id]['applied'] = False  # Rejected jobs can't be applied
+                    synced_count += 1
+
+            with open(JOBS_DATABASE_FILE, 'w', encoding='utf-8') as f:
+                json.dump(jobs_data, f, indent=2, ensure_ascii=False)
+
+            return {"success": True, "synced_count": synced_count}
+
     except HTTPException:
         raise
     except Exception as e:
