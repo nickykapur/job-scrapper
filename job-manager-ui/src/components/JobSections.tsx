@@ -16,9 +16,11 @@ import {
   TableRows as CompactViewIcon,
   Schedule as TimeViewIcon,
   Public as CountryViewIcon,
+  TableChart as TableViewIcon,
 } from '@mui/icons-material';
 import type { Job } from '../types';
 import { JobCard } from './JobCard';
+import JobTable from './JobTable';
 
 interface JobSectionsProps {
   jobs: Record<string, Job>;
@@ -27,7 +29,7 @@ interface JobSectionsProps {
   updatingJobs: Set<string>;
 }
 
-type ViewMode = 'grid' | 'list' | 'compact';
+type ViewMode = 'table' | 'grid' | 'list' | 'compact';
 type OrganizationMode = 'time' | 'country';
 
 export const JobSections: React.FC<JobSectionsProps> = ({
@@ -36,7 +38,7 @@ export const JobSections: React.FC<JobSectionsProps> = ({
   onRejectJob,
   updatingJobs,
 }) => {
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [organizationMode, setOrganizationMode] = useState<OrganizationMode>('time');
   // Function to check if job was posted within last 24 hours
   const isWithin24Hours = (postedDate: string): boolean => {
@@ -113,6 +115,8 @@ export const JobSections: React.FC<JobSectionsProps> = ({
 
   const getGridProps = () => {
     switch (viewMode) {
+      case 'table':
+        return { xs: 12 }; // Not used in table view
       case 'grid':
         return { xs: 12, sm: 6, lg: 4 };
       case 'list':
@@ -238,6 +242,9 @@ export const JobSections: React.FC<JobSectionsProps> = ({
                 size="small"
                 sx={{ bgcolor: 'background.paper', boxShadow: 1 }}
               >
+                <ToggleButton value="table" aria-label="table view">
+                  <TableViewIcon fontSize="small" />
+                </ToggleButton>
                 <ToggleButton value="grid" aria-label="grid view">
                   <GridViewIcon fontSize="small" />
                 </ToggleButton>
@@ -251,49 +258,60 @@ export const JobSections: React.FC<JobSectionsProps> = ({
             </Box>
           </Box>
 
-          <Stack spacing={4}>
-            {organizationMode === 'time' ? (
-              <>
-                {/* Time-based organization */}
-                {displayNewJobs.length > 0 && (
-                  <Box>
-                    <SectionHeader title="🆕 New Jobs" count={displayNewJobs.length} color="#4CAF50" />
-                    {renderJobGrid(displayNewJobs)}
-                  </Box>
-                )}
-
-                {displayLast24hJobs.length > 0 && (
-                  <Box>
-                    <SectionHeader title="⏰ Posted Today" count={displayLast24hJobs.length} color="#FF9800" />
-                    {renderJobGrid(displayLast24hJobs)}
-                  </Box>
-                )}
-
-                {displayOtherJobs.length > 0 && (
-                  <Box>
-                    <SectionHeader title="📋 Other Positions" count={displayOtherJobs.length} color="#9C27B0" />
-                    {renderJobGrid(displayOtherJobs)}
-                  </Box>
-                )}
-              </>
-            ) : (
-              <>
-                {/* Country-based organization */}
-                {Object.entries(jobsByCountry)
-                  .sort(([a], [b]) => a.localeCompare(b))
-                  .map(([country, countryJobs]) => (
-                    <Box key={country}>
-                      <SectionHeader
-                        title={`${countryFlags[country] || '🌍'} ${country}`}
-                        count={countryJobs.length}
-                        color={countryColors[country] || '#607D8B'}
-                      />
-                      {renderJobGrid(countryJobs)}
+          {viewMode === 'table' ? (
+            /* Table View - shows all jobs with built-in filtering */
+            <JobTable
+              jobs={jobs}
+              onApplyAndOpen={onApplyAndOpen}
+              onRejectJob={onRejectJob}
+              updatingJobs={updatingJobs}
+            />
+          ) : (
+            /* Card Views - organized by time or country */
+            <Stack spacing={4}>
+              {organizationMode === 'time' ? (
+                <>
+                  {/* Time-based organization */}
+                  {displayNewJobs.length > 0 && (
+                    <Box>
+                      <SectionHeader title="🆕 New Jobs" count={displayNewJobs.length} color="#4CAF50" />
+                      {renderJobGrid(displayNewJobs)}
                     </Box>
-                  ))}
-              </>
-            )}
-          </Stack>
+                  )}
+
+                  {displayLast24hJobs.length > 0 && (
+                    <Box>
+                      <SectionHeader title="⏰ Posted Today" count={displayLast24hJobs.length} color="#FF9800" />
+                      {renderJobGrid(displayLast24hJobs)}
+                    </Box>
+                  )}
+
+                  {displayOtherJobs.length > 0 && (
+                    <Box>
+                      <SectionHeader title="📋 Other Positions" count={displayOtherJobs.length} color="#9C27B0" />
+                      {renderJobGrid(displayOtherJobs)}
+                    </Box>
+                  )}
+                </>
+              ) : (
+                <>
+                  {/* Country-based organization */}
+                  {Object.entries(jobsByCountry)
+                    .sort(([a], [b]) => a.localeCompare(b))
+                    .map(([country, countryJobs]) => (
+                      <Box key={country}>
+                        <SectionHeader
+                          title={`${countryFlags[country] || '🌍'} ${country}`}
+                          count={countryJobs.length}
+                          color={countryColors[country] || '#607D8B'}
+                        />
+                        {renderJobGrid(countryJobs)}
+                      </Box>
+                    ))}
+                </>
+              )}
+            </Stack>
+          )}
         </>
       ) : (
         /* Empty State */
