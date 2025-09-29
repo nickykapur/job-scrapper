@@ -16,6 +16,7 @@ import {
   Business as CompanyIcon,
 } from '@mui/icons-material';
 import type { Job } from '../types';
+import { getCountryFromLocation, getCountryFlag } from '../utils/countryUtils';
 
 interface JobCardProps {
   job: Job;
@@ -30,20 +31,8 @@ export const JobCard: React.FC<JobCardProps> = ({
   onRejectJob,
   isUpdating = false,
 }) => {
-  // Country flag mapping
-  const getCountryFlag = (country: string): string => {
-    const flags: Record<string, string> = {
-      'Ireland': '🇮🇪',
-      'Spain': '🇪🇸',
-      'Germany': '🇩🇪',
-      'Switzerland': '🇨🇭',
-      'United Kingdom': '🇬🇧',
-      'Netherlands': '🇳🇱',
-      'France': '🇫🇷',
-      'Italy': '🇮🇹',
-    };
-    return flags[country] || '🏳️';
-  };
+  // Extract country from location since API doesn't provide country field
+  const extractedCountry = job.country || getCountryFromLocation(job.location);
   return (
     <Card
       sx={{
@@ -107,10 +96,16 @@ export const JobCard: React.FC<JobCardProps> = ({
               {job.location}
             </Typography>
           </Box>
-          {job.country && (
+          {/* DEBUG: Show country extraction process */}
+          <Box display="flex" alignItems="center">
+            <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 600, color: 'error.main' }}>
+              🔍 API Country: "{job.country || 'MISSING'}" → Extracted: "{extractedCountry}"
+            </Typography>
+          </Box>
+          {extractedCountry && extractedCountry !== 'Unknown' && (
             <Box display="flex" alignItems="center">
               <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 600, color: 'primary.main' }}>
-                {getCountryFlag(job.country)} {job.country}
+                {getCountryFlag(extractedCountry)} {extractedCountry}
               </Typography>
             </Box>
           )}

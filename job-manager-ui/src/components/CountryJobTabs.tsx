@@ -20,6 +20,7 @@ import {
 } from '@mui/icons-material';
 import type { Job } from '../types';
 import JobTable from './JobTable';
+import { getCountryFromLocation } from '../utils/countryUtils';
 
 interface CountryJobTabsProps {
   jobs: Record<string, Job>;
@@ -72,7 +73,9 @@ const CountryJobTabs: React.FC<CountryJobTabsProps> = ({
     const countryGroups: Record<string, CountryData> = {};
 
     Object.keys(countryConfig).forEach(country => {
-      const countryJobs = active.filter((job: any) => job.country === country);
+      const countryJobs = active.filter((job: any) =>
+        (job.country || getCountryFromLocation(job.location)) === country
+      );
 
       countryGroups[country] = {
         country,
@@ -80,7 +83,9 @@ const CountryJobTabs: React.FC<CountryJobTabsProps> = ({
         color: countryConfig[country].color,
         jobs: countryJobs,
         newJobs: countryJobs.filter((job: any) => job.is_new || job.category === 'new').length,
-        appliedJobs: jobsArray.filter((job: any) => job.country === country && job.applied).length,
+        appliedJobs: jobsArray.filter((job: any) =>
+          (job.country || getCountryFromLocation(job.location)) === country && job.applied
+        ).length,
         totalJobs: countryJobs.length,
       };
     });

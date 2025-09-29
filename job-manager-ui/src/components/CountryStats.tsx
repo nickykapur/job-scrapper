@@ -16,6 +16,7 @@ import {
   Work as WorkIcon,
   Schedule as ScheduleIcon,
 } from '@mui/icons-material';
+import { getCountryFromLocation } from '../utils/countryUtils';
 
 interface CountryStatsProps {
   jobs: Record<string, any>;
@@ -66,7 +67,7 @@ const CountryStats: React.FC<CountryStatsProps> = ({ jobs }) => {
 
     // Count jobs by country and category
     jobValues.forEach((job: any) => {
-      const country = job.country || 'Unknown';
+      const country = job.country || getCountryFromLocation(job.location);
 
       if (!job.rejected) {
         // Initialize country if not in predefined list

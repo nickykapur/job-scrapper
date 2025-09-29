@@ -222,6 +222,19 @@ function App() {
       console.log('🔄 Loading jobs from API...');
       const jobsData = await jobApi.getJobs();
       console.log('✅ Jobs loaded successfully:', Object.keys(jobsData).length, 'jobs');
+
+      // DEBUG: Check first job's country data
+      const firstJobId = Object.keys(jobsData).find(k => !k.startsWith('_'));
+      if (firstJobId) {
+        const firstJob = jobsData[firstJobId];
+        console.log('🔍 DEBUG - First job data:');
+        console.log('  ID:', firstJobId);
+        console.log('  Title:', firstJob.title);
+        console.log('  Location:', firstJob.location);
+        console.log('  Country field:', firstJob.country);
+        console.log('  Has country:', !!firstJob.country);
+        console.log('  Full job object:', firstJob);
+      }
       
       const oldCount = Object.keys(jobs).length;
       const newCount = Object.keys(jobsData).length;
