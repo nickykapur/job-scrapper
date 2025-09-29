@@ -1,6 +1,6 @@
 {
   "_metadata": {
-    "last_updated": "2025-09-29T15:09:07.907364",
+    "last_updated": "2025-09-29T16:50:46.083518",
     "last_multi_country_search": "2025-09-29T15:09:07.907364",
     "total_jobs": 1057,
     "new_jobs_count": 974,
@@ -62,7 +62,8 @@
         "new": 87,
         "last_24h": 0
       }
-    }
+    },
+    "country_fix_applied": "2025-09-29T16:50:46.083534"
   },
   "119a7b61ead9": {
     "id": "119a7b61ead9",
@@ -14100,7 +14101,8 @@
     "applied": false,
     "is_new": false,
     "category": "existing",
-    "last_seen_24h": "2025-09-29T13:29:01.464507"
+    "last_seen_24h": "2025-09-29T13:29:01.464507",
+    "country": "Ireland"
   },
   "081499e05894": {
     "id": "081499e05894",
@@ -14113,7 +14115,8 @@
     "applied": false,
     "is_new": false,
     "category": "existing",
-    "last_seen_24h": "2025-09-29T13:29:01.464614"
+    "last_seen_24h": "2025-09-29T13:29:01.464614",
+    "country": "Ireland"
   },
   "701d0694e8f4": {
     "id": "701d0694e8f4",
@@ -14126,7 +14129,8 @@
     "applied": false,
     "is_new": false,
     "category": "existing",
-    "last_seen_24h": "2025-09-29T13:29:01.464626"
+    "last_seen_24h": "2025-09-29T13:29:01.464626",
+    "country": "Ireland"
   },
   "fe311e9fd79a": {
     "id": "fe311e9fd79a",
@@ -14139,7 +14143,8 @@
     "applied": false,
     "is_new": false,
     "category": "existing",
-    "last_seen_24h": "2025-09-29T12:09:19.035859"
+    "last_seen_24h": "2025-09-29T12:09:19.035859",
+    "country": "Ireland"
   },
   "3c31cd3683d3": {
     "id": "3c31cd3683d3",
@@ -14152,7 +14157,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-09-28T17:26:11.815073"
+    "first_seen": "2025-09-28T17:26:11.815073",
+    "country": "Ireland"
   },
   "728cdd5c4095": {
     "id": "728cdd5c4095",
@@ -14165,7 +14171,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-09-28T17:26:11.815082"
+    "first_seen": "2025-09-28T17:26:11.815082",
+    "country": "Ireland"
   },
   "0e6b6fe85134": {
     "id": "0e6b6fe85134",
@@ -14178,7 +14185,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-09-28T17:26:11.815090"
+    "first_seen": "2025-09-28T17:26:11.815090",
+    "country": "Ireland"
   },
   "fd0749a7b301": {
     "id": "fd0749a7b301",
@@ -14191,7 +14199,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-09-28T17:26:11.815126"
+    "first_seen": "2025-09-28T17:26:11.815126",
+    "country": "Ireland"
   },
   "0d5c34975381": {
     "id": "0d5c34975381",
@@ -14204,7 +14213,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-09-28T17:26:11.815143"
+    "first_seen": "2025-09-28T17:26:11.815143",
+    "country": "Ireland"
   },
   "e26520fc3f2c": {
     "id": "e26520fc3f2c",
@@ -14217,7 +14227,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-09-28T17:26:11.815146"
+    "first_seen": "2025-09-28T17:26:11.815146",
+    "country": "Ireland"
   },
   "98ed354d9949": {
     "id": "98ed354d9949",
@@ -14230,7 +14241,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-09-28T17:26:11.815150"
+    "first_seen": "2025-09-28T17:26:11.815150",
+    "country": "Ireland"
   },
   "1b642b861b9d": {
     "id": "1b642b861b9d",
@@ -14243,7 +14255,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-09-28T17:26:11.815165"
+    "first_seen": "2025-09-28T17:26:11.815165",
+    "country": "Ireland"
   },
   "1f767a8cd813": {
     "id": "1f767a8cd813",
@@ -14256,7 +14269,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-09-28T17:26:11.815169"
+    "first_seen": "2025-09-28T17:26:11.815169",
+    "country": "Ireland"
   },
   "181d90800eeb": {
     "id": "181d90800eeb",
@@ -14269,7 +14283,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955492"
+    "first_seen": "2025-08-23T13:20:33.955492",
+    "country": "Ireland"
   },
   "66438792bb17": {
     "id": "66438792bb17",
@@ -14282,7 +14297,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955510"
+    "first_seen": "2025-08-23T13:20:33.955510",
+    "country": "Ireland"
   },
   "09f36a986074": {
     "id": "09f36a986074",
@@ -14295,7 +14311,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955513"
+    "first_seen": "2025-08-23T13:20:33.955513",
+    "country": "Ireland"
   },
   "cdcd64b18e04": {
     "id": "cdcd64b18e04",
@@ -14308,7 +14325,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955515"
+    "first_seen": "2025-08-23T13:20:33.955515",
+    "country": "Ireland"
   },
   "0f918c06e341": {
     "id": "0f918c06e341",
@@ -14321,7 +14339,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955517"
+    "first_seen": "2025-08-23T13:20:33.955517",
+    "country": "Ireland"
   },
   "1cf3deeefb76": {
     "id": "1cf3deeefb76",
@@ -14334,7 +14353,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955519"
+    "first_seen": "2025-08-23T13:20:33.955519",
+    "country": "Ireland"
   },
   "1a2fc82e1138": {
     "id": "1a2fc82e1138",
@@ -14347,7 +14367,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955521"
+    "first_seen": "2025-08-23T13:20:33.955521",
+    "country": "Ireland"
   },
   "9b47682c6819": {
     "id": "9b47682c6819",
@@ -14360,7 +14381,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955522"
+    "first_seen": "2025-08-23T13:20:33.955522",
+    "country": "Ireland"
   },
   "b0cd375d81b2": {
     "id": "b0cd375d81b2",
@@ -14373,7 +14395,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955524"
+    "first_seen": "2025-08-23T13:20:33.955524",
+    "country": "Ireland"
   },
   "fe8cafe6cf38": {
     "id": "fe8cafe6cf38",
@@ -14386,7 +14409,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955526"
+    "first_seen": "2025-08-23T13:20:33.955526",
+    "country": "Ireland"
   },
   "46c84b52946c": {
     "id": "46c84b52946c",
@@ -14399,7 +14423,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955529"
+    "first_seen": "2025-08-23T13:20:33.955529",
+    "country": "Ireland"
   },
   "8ec78ae7c726": {
     "id": "8ec78ae7c726",
@@ -14412,7 +14437,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955531"
+    "first_seen": "2025-08-23T13:20:33.955531",
+    "country": "Ireland"
   },
   "32ea59f86889": {
     "id": "32ea59f86889",
@@ -14425,7 +14451,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955534"
+    "first_seen": "2025-08-23T13:20:33.955534",
+    "country": "Ireland"
   },
   "27bca5cfde5b": {
     "id": "27bca5cfde5b",
@@ -14438,7 +14465,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955537"
+    "first_seen": "2025-08-23T13:20:33.955537",
+    "country": "Ireland"
   },
   "d36264acdf2d": {
     "id": "d36264acdf2d",
@@ -14451,7 +14479,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955539"
+    "first_seen": "2025-08-23T13:20:33.955539",
+    "country": "Ireland"
   },
   "9f144cfac052": {
     "id": "9f144cfac052",
@@ -14464,7 +14493,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955542"
+    "first_seen": "2025-08-23T13:20:33.955542",
+    "country": "Ireland"
   },
   "f2b6d4a650af": {
     "id": "f2b6d4a650af",
@@ -14477,7 +14507,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955544"
+    "first_seen": "2025-08-23T13:20:33.955544",
+    "country": "Ireland"
   },
   "99856ccee69e": {
     "id": "99856ccee69e",
@@ -14490,7 +14521,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955574"
+    "first_seen": "2025-08-23T13:20:33.955574",
+    "country": "Ireland"
   },
   "1e2e59dd0960": {
     "id": "1e2e59dd0960",
@@ -14503,7 +14535,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955578"
+    "first_seen": "2025-08-23T13:20:33.955578",
+    "country": "Ireland"
   },
   "5d905d55f62b": {
     "id": "5d905d55f62b",
@@ -14516,7 +14549,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955580"
+    "first_seen": "2025-08-23T13:20:33.955580",
+    "country": "Ireland"
   },
   "0e34915443d4": {
     "id": "0e34915443d4",
@@ -14529,7 +14563,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955582"
+    "first_seen": "2025-08-23T13:20:33.955582",
+    "country": "Ireland"
   },
   "aaa5c4838b98": {
     "id": "aaa5c4838b98",
@@ -14542,7 +14577,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955584"
+    "first_seen": "2025-08-23T13:20:33.955584",
+    "country": "Ireland"
   },
   "b6d87335c822": {
     "id": "b6d87335c822",
@@ -14555,7 +14591,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955586"
+    "first_seen": "2025-08-23T13:20:33.955586",
+    "country": "Ireland"
   },
   "d9568e24ccbf": {
     "id": "d9568e24ccbf",
@@ -14568,7 +14605,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955588"
+    "first_seen": "2025-08-23T13:20:33.955588",
+    "country": "Ireland"
   },
   "e00e239e016f": {
     "id": "e00e239e016f",
@@ -14581,7 +14619,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955589"
+    "first_seen": "2025-08-23T13:20:33.955589",
+    "country": "Ireland"
   },
   "df65a676651a": {
     "id": "df65a676651a",
@@ -14594,7 +14633,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955591"
+    "first_seen": "2025-08-23T13:20:33.955591",
+    "country": "Ireland"
   },
   "824cbcd6a957": {
     "id": "824cbcd6a957",
@@ -14607,7 +14647,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955593"
+    "first_seen": "2025-08-23T13:20:33.955593",
+    "country": "Ireland"
   },
   "1037605a5935": {
     "id": "1037605a5935",
@@ -14620,7 +14661,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955595"
+    "first_seen": "2025-08-23T13:20:33.955595",
+    "country": "Ireland"
   },
   "470f7ccbb4da": {
     "id": "470f7ccbb4da",
@@ -14633,7 +14675,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955597"
+    "first_seen": "2025-08-23T13:20:33.955597",
+    "country": "Ireland"
   },
   "895686f33b37": {
     "id": "895686f33b37",
@@ -14646,7 +14689,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955599"
+    "first_seen": "2025-08-23T13:20:33.955599",
+    "country": "Ireland"
   },
   "e2bc8304067b": {
     "id": "e2bc8304067b",
@@ -14659,7 +14703,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955600"
+    "first_seen": "2025-08-23T13:20:33.955600",
+    "country": "Ireland"
   },
   "801a943a767a": {
     "id": "801a943a767a",
@@ -14672,7 +14717,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955602"
+    "first_seen": "2025-08-23T13:20:33.955602",
+    "country": "Ireland"
   },
   "3cd509e7fc7a": {
     "id": "3cd509e7fc7a",
@@ -14685,7 +14731,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955604"
+    "first_seen": "2025-08-23T13:20:33.955604",
+    "country": "Ireland"
   },
   "bac2415f8522": {
     "id": "bac2415f8522",
@@ -14698,7 +14745,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955607"
+    "first_seen": "2025-08-23T13:20:33.955607",
+    "country": "Ireland"
   },
   "89d4ae57d122": {
     "id": "89d4ae57d122",
@@ -14711,7 +14759,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955609"
+    "first_seen": "2025-08-23T13:20:33.955609",
+    "country": "Ireland"
   },
   "4f01876b90b4": {
     "id": "4f01876b90b4",
@@ -14724,7 +14773,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955611"
+    "first_seen": "2025-08-23T13:20:33.955611",
+    "country": "Ireland"
   },
   "9f1265e5165c": {
     "id": "9f1265e5165c",
@@ -14737,7 +14787,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955612"
+    "first_seen": "2025-08-23T13:20:33.955612",
+    "country": "Ireland"
   },
   "6cbe28fe481b": {
     "id": "6cbe28fe481b",
@@ -14750,7 +14801,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955624"
+    "first_seen": "2025-08-23T13:20:33.955624",
+    "country": "Ireland"
   },
   "451b686e8163": {
     "id": "451b686e8163",
@@ -14763,7 +14815,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955626"
+    "first_seen": "2025-08-23T13:20:33.955626",
+    "country": "Ireland"
   },
   "b1e5d0a81868": {
     "id": "b1e5d0a81868",
@@ -14776,7 +14829,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955628"
+    "first_seen": "2025-08-23T13:20:33.955628",
+    "country": "Ireland"
   },
   "e12d6d4131e4": {
     "id": "e12d6d4131e4",
@@ -14789,7 +14843,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955630"
+    "first_seen": "2025-08-23T13:20:33.955630",
+    "country": "Ireland"
   },
   "209d033d96ac": {
     "id": "209d033d96ac",
@@ -14802,7 +14857,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955632"
+    "first_seen": "2025-08-23T13:20:33.955632",
+    "country": "Ireland"
   },
   "83ebcdcc55f1": {
     "id": "83ebcdcc55f1",
@@ -14815,7 +14871,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955635"
+    "first_seen": "2025-08-23T13:20:33.955635",
+    "country": "Ireland"
   },
   "8fad6c13fa29": {
     "id": "8fad6c13fa29",
@@ -14828,7 +14885,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955638"
+    "first_seen": "2025-08-23T13:20:33.955638",
+    "country": "Ireland"
   },
   "40a6dc92f958": {
     "id": "40a6dc92f958",
@@ -14841,7 +14899,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955641"
+    "first_seen": "2025-08-23T13:20:33.955641",
+    "country": "Ireland"
   },
   "b3c520d8db71": {
     "id": "b3c520d8db71",
@@ -14854,7 +14913,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955643"
+    "first_seen": "2025-08-23T13:20:33.955643",
+    "country": "Ireland"
   },
   "c007b9ca7829": {
     "id": "c007b9ca7829",
@@ -14867,7 +14927,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955651"
+    "first_seen": "2025-08-23T13:20:33.955651",
+    "country": "Ireland"
   },
   "16e4e1c7ae53": {
     "id": "16e4e1c7ae53",
@@ -14880,7 +14941,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955654"
+    "first_seen": "2025-08-23T13:20:33.955654",
+    "country": "Ireland"
   },
   "cf20e2120178": {
     "id": "cf20e2120178",
@@ -14893,7 +14955,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955656"
+    "first_seen": "2025-08-23T13:20:33.955656",
+    "country": "Ireland"
   },
   "296c8245cc1a": {
     "id": "296c8245cc1a",
@@ -14906,7 +14969,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955659"
+    "first_seen": "2025-08-23T13:20:33.955659",
+    "country": "Ireland"
   },
   "898c49acb355": {
     "id": "898c49acb355",
@@ -14919,7 +14983,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955662"
+    "first_seen": "2025-08-23T13:20:33.955662",
+    "country": "Ireland"
   },
   "074558a40057": {
     "id": "074558a40057",
@@ -14932,7 +14997,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955664"
+    "first_seen": "2025-08-23T13:20:33.955664",
+    "country": "Ireland"
   },
   "de5284307fa7": {
     "id": "de5284307fa7",
@@ -14945,7 +15011,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955666"
+    "first_seen": "2025-08-23T13:20:33.955666",
+    "country": "Ireland"
   },
   "67ba4a6b489a": {
     "id": "67ba4a6b489a",
@@ -14958,7 +15025,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955668"
+    "first_seen": "2025-08-23T13:20:33.955668",
+    "country": "Ireland"
   },
   "3b850bf77fee": {
     "id": "3b850bf77fee",
@@ -14971,7 +15039,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955670"
+    "first_seen": "2025-08-23T13:20:33.955670",
+    "country": "Ireland"
   },
   "9fdbe7c85b38": {
     "id": "9fdbe7c85b38",
@@ -14984,7 +15053,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955673"
+    "first_seen": "2025-08-23T13:20:33.955673",
+    "country": "Ireland"
   },
   "48ae8ee2fc35": {
     "id": "48ae8ee2fc35",
@@ -14997,7 +15067,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955675"
+    "first_seen": "2025-08-23T13:20:33.955675",
+    "country": "Ireland"
   },
   "fc1d4c30b663": {
     "id": "fc1d4c30b663",
@@ -15010,7 +15081,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955676"
+    "first_seen": "2025-08-23T13:20:33.955676",
+    "country": "Ireland"
   },
   "bc40733cc819": {
     "id": "bc40733cc819",
@@ -15023,7 +15095,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955678"
+    "first_seen": "2025-08-23T13:20:33.955678",
+    "country": "Ireland"
   },
   "7b7de2f03e74": {
     "id": "7b7de2f03e74",
@@ -15036,7 +15109,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955680"
+    "first_seen": "2025-08-23T13:20:33.955680",
+    "country": "Ireland"
   },
   "9c5d69e3377e": {
     "id": "9c5d69e3377e",
@@ -15049,7 +15123,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955681"
+    "first_seen": "2025-08-23T13:20:33.955681",
+    "country": "Ireland"
   },
   "c06c1dc48607": {
     "id": "c06c1dc48607",
@@ -15062,7 +15137,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955683"
+    "first_seen": "2025-08-23T13:20:33.955683",
+    "country": "Ireland"
   },
   "76b65a9a7b05": {
     "id": "76b65a9a7b05",
@@ -15075,7 +15151,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955684"
+    "first_seen": "2025-08-23T13:20:33.955684",
+    "country": "Ireland"
   },
   "7ec4e6d770b8": {
     "id": "7ec4e6d770b8",
@@ -15088,7 +15165,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955686"
+    "first_seen": "2025-08-23T13:20:33.955686",
+    "country": "Ireland"
   },
   "c21de52e70b3": {
     "id": "c21de52e70b3",
@@ -15101,7 +15179,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955687"
+    "first_seen": "2025-08-23T13:20:33.955687",
+    "country": "Ireland"
   },
   "11549678a6fd": {
     "id": "11549678a6fd",
@@ -15114,7 +15193,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955689"
+    "first_seen": "2025-08-23T13:20:33.955689",
+    "country": "Ireland"
   },
   "9137debf6315": {
     "id": "9137debf6315",
@@ -15127,7 +15207,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955691"
+    "first_seen": "2025-08-23T13:20:33.955691",
+    "country": "Ireland"
   },
   "370510d4101a": {
     "id": "370510d4101a",
@@ -15140,7 +15221,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955693"
+    "first_seen": "2025-08-23T13:20:33.955693",
+    "country": "Ireland"
   },
   "fab2653fee72": {
     "id": "fab2653fee72",
@@ -15153,7 +15235,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955694"
+    "first_seen": "2025-08-23T13:20:33.955694",
+    "country": "Ireland"
   },
   "ca6c1471da75": {
     "id": "ca6c1471da75",
@@ -15166,7 +15249,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955696"
+    "first_seen": "2025-08-23T13:20:33.955696",
+    "country": "Ireland"
   },
   "39b7ba38e9e6": {
     "id": "39b7ba38e9e6",
@@ -15179,7 +15263,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955697"
+    "first_seen": "2025-08-23T13:20:33.955697",
+    "country": "Ireland"
   },
   "9a861d46f26b": {
     "id": "9a861d46f26b",
@@ -15192,7 +15277,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955699"
+    "first_seen": "2025-08-23T13:20:33.955699",
+    "country": "Ireland"
   },
   "49faaef1a972": {
     "id": "49faaef1a972",
@@ -15205,7 +15291,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955700"
+    "first_seen": "2025-08-23T13:20:33.955700",
+    "country": "Ireland"
   },
   "d57ab0401b1f": {
     "id": "d57ab0401b1f",
@@ -15218,7 +15305,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955702"
+    "first_seen": "2025-08-23T13:20:33.955702",
+    "country": "Ireland"
   },
   "2f4cc3fa5f2a": {
     "id": "2f4cc3fa5f2a",
@@ -15231,7 +15319,8 @@
     "applied": false,
     "is_new": true,
     "category": "existing",
-    "first_seen": "2025-08-23T13:20:33.955704"
+    "first_seen": "2025-08-23T13:20:33.955704",
+    "country": "Ireland"
   },
   "4bae4e5feb1c": {
     "id": "4bae4e5feb1c",
@@ -15242,7 +15331,8 @@
     "job_url": "https://ie.linkedin.com/jobs/view/software-engineer-at-vectra-ai-4288632215?position=4&pageNum=0&refId=cltQqCFJorglKIl5aW5rYA%3D%3D&trackingId=kPEbAcfEIDwBZCwxbkbu2A%3D%3D",
     "scraped_at": "2025-08-22T13:07:02.911662",
     "applied": false,
-    "is_new": false
+    "is_new": false,
+    "country": "Ireland"
   },
   "b25197c23195": {
     "id": "b25197c23195",
@@ -15253,7 +15343,8 @@
     "job_url": "https://ie.linkedin.com/jobs/view/full-stack-developer-at-recruitroo-4285505987?position=10&pageNum=0&refId=wsI2Zn7%2BMYP7ctRRVIRFmg%3D%3D&trackingId=Kq1W4Sh7vLXin62EJ0mLmg%3D%3D",
     "scraped_at": "2025-08-21T14:37:10.942185",
     "applied": false,
-    "is_new": false
+    "is_new": false,
+    "country": "Ireland"
   },
   "28ad66123648": {
     "id": "28ad66123648",
@@ -15264,7 +15355,8 @@
     "job_url": "https://ie.linkedin.com/jobs/view/associate-software-engineer-at-hackajob-4288266009?position=14&pageNum=0&refId=gApzfHQVRFTCOlsss9AHsA%3D%3D&trackingId=5Ik8o5OJsVJacc2yaiRLLA%3D%3D",
     "scraped_at": "2025-08-21T23:02:00.888069",
     "applied": false,
-    "is_new": false
+    "is_new": false,
+    "country": "Ireland"
   },
   "852f99e5242d": {
     "id": "852f99e5242d",
@@ -15275,7 +15367,8 @@
     "job_url": "https://ie.linkedin.com/jobs/view/full-stack-software-development-engineer-java-at-workday-4272183488?position=10&pageNum=5&refId=Y%2FQZ7YQUIqYMaOhtXFmxiQ%3D%3D&trackingId=p8omvcxbz4X0aci64s4kNA%3D%3D",
     "scraped_at": "2025-08-22T13:07:12.824603",
     "applied": false,
-    "is_new": false
+    "is_new": false,
+    "country": "Ireland"
   },
   "5f37852b9a4a": {
     "id": "5f37852b9a4a",
@@ -15286,7 +15379,8 @@
     "job_url": "https://ie.linkedin.com/jobs/view/graduate-software-engineer-relocate-to-london-at-bending-spoons-4288245927?position=2&pageNum=2&refId=uhlaj82dr52qtq1MRaPIxA%3D%3D&trackingId=5s7oRmLR5b2SzWhV%2BTCjVw%3D%3D",
     "scraped_at": "2025-08-22T13:07:10.509559",
     "applied": false,
-    "is_new": false
+    "is_new": false,
+    "country": "Ireland"
   },
   "74dfd4d79d6a": {
     "id": "74dfd4d79d6a",
@@ -15297,7 +15391,8 @@
     "job_url": "https://ie.linkedin.com/jobs/view/software-engineer-intern-relocate-to-london-at-bending-spoons-4288245929?position=3&pageNum=5&refId=Y%2FQZ7YQUIqYMaOhtXFmxiQ%3D%3D&trackingId=%2FyYTDd8wD%2FedZtj5Kyhfhw%3D%3D",
     "scraped_at": "2025-08-22T13:07:11.931511",
     "applied": false,
-    "is_new": false
+    "is_new": false,
+    "country": "Ireland"
   },
   "c3b03f58ae1b": {
     "id": "c3b03f58ae1b",
@@ -15308,7 +15403,8 @@
     "job_url": "https://ie.linkedin.com/jobs/view/graduate-software-engineer-relocate-to-milan-at-bending-spoons-4288250864?position=25&pageNum=0&refId=cltQqCFJorglKIl5aW5rYA%3D%3D&trackingId=DBmuQIasWM8Dl193uyleUQ%3D%3D",
     "scraped_at": "2025-08-22T13:07:05.653313",
     "applied": false,
-    "is_new": false
+    "is_new": false,
+    "country": "Ireland"
   },
   "f8b702497a33": {
     "id": "f8b702497a33",
@@ -15319,7 +15415,8 @@
     "job_url": "https://ie.linkedin.com/jobs/view/software-engineer-intern-at-bending-spoons-4288248889?position=37&pageNum=0&refId=cltQqCFJorglKIl5aW5rYA%3D%3D&trackingId=QOs3NLe4JOiMZtYMEFFb8g%3D%3D",
     "scraped_at": "2025-08-22T13:07:07.270044",
     "applied": false,
-    "is_new": false
+    "is_new": false,
+    "country": "Ireland"
   },
   "48fa2546b009": {
     "id": "48fa2546b009",
@@ -15330,7 +15427,8 @@
     "job_url": "https://ie.linkedin.com/jobs/view/software-engineer-python-at-fenergo-4286465016?position=17&pageNum=0&refId=wsI2Zn7%2BMYP7ctRRVIRFmg%3D%3D&trackingId=ixkLRLjM9i3uizLOw8bkyg%3D%3D",
     "scraped_at": "2025-08-21T14:37:12.068839",
     "applied": false,
-    "is_new": false
+    "is_new": false,
+    "country": "Ireland"
   },
   "5f5551e59eec": {
     "id": "5f5551e59eec",
@@ -15341,7 +15439,8 @@
     "job_url": "https://ie.linkedin.com/jobs/view/graduate-software-engineer-relocate-to-london-at-bending-spoons-4288251175?position=3&pageNum=2&refId=uhlaj82dr52qtq1MRaPIxA%3D%3D&trackingId=9%2FoigFqYbalMT9OYb0lgGA%3D%3D",
     "scraped_at": "2025-08-22T13:07:10.635469",
     "applied": false,
-    "is_new": false
+    "is_new": false,
+    "country": "Ireland"
   },
   "b3b34f1c910d": {
     "id": "b3b34f1c910d",
@@ -15352,7 +15451,8 @@
     "job_url": "https://ie.linkedin.com/jobs/view/software-engineer-intern-relocate-to-milan-at-bending-spoons-4288249832?position=5&pageNum=5&refId=Y%2FQZ7YQUIqYMaOhtXFmxiQ%3D%3D&trackingId=ceC94DQenjgHJJmAzfq2Og%3D%3D",
     "scraped_at": "2025-08-22T13:07:12.182958",
     "applied": false,
-    "is_new": false
+    "is_new": false,
+    "country": "Ireland"
   },
   "a82d756931b8": {
     "id": "a82d756931b8",
@@ -15363,7 +15463,8 @@
     "job_url": "https://ie.linkedin.com/jobs/view/software-engineer-ii-novel-threats-core-at-google-4271838919?position=20&pageNum=0&refId=wsI2Zn7%2BMYP7ctRRVIRFmg%3D%3D&trackingId=ohBCnNY4m1b8BtxJYeaChA%3D%3D",
     "scraped_at": "2025-08-21T14:37:12.549153",
     "applied": false,
-    "is_new": false
+    "is_new": false,
+    "country": "Ireland"
   },
   "0e5e963c0153": {
     "id": "0e5e963c0153",
@@ -15374,7 +15475,8 @@
     "job_url": "https://ie.linkedin.com/jobs/view/full-stack-engineer-at-kaptea-4288980289?position=40&pageNum=0&refId=wsI2Zn7%2BMYP7ctRRVIRFmg%3D%3D&trackingId=VboGrnWiYNx8iH%2F65cMGjg%3D%3D",
     "scraped_at": "2025-08-21T14:37:15.656545",
     "applied": false,
-    "is_new": false
+    "is_new": false,
+    "country": "Ireland"
   },
   "544f7f4d6499": {
     "id": "544f7f4d6499",
@@ -15385,7 +15487,8 @@
     "job_url": "https://ie.linkedin.com/jobs/view/software-engineer-relocate-to-milan-at-bending-spoons-4288247920?position=7&pageNum=5&refId=Y%2FQZ7YQUIqYMaOhtXFmxiQ%3D%3D&trackingId=DIqsgBbNgycV6DbuC7IAPA%3D%3D",
     "scraped_at": "2025-08-22T13:07:12.439897",
     "applied": false,
-    "is_new": false
+    "is_new": false,
+    "country": "Ireland"
   },
   "52fcd814d847": {
     "id": "52fcd814d847",
@@ -15396,7 +15499,8 @@
     "job_url": "https://ie.linkedin.com/jobs/view/java-fullstack-developer-at-harvey-nash-4253206852?position=43&pageNum=0&refId=wsI2Zn7%2BMYP7ctRRVIRFmg%3D%3D&trackingId=ZrNo2fjkX%2FNISNPlYPFFxA%3D%3D",
     "scraped_at": "2025-08-21T14:37:16.164560",
     "applied": false,
-    "is_new": false
+    "is_new": false,
+    "country": "Ireland"
   },
   "d43545ee863b": {
     "id": "d43545ee863b",
@@ -15407,7 +15511,8 @@
     "job_url": "https://ie.linkedin.com/jobs/view/software-engineer-at-bending-spoons-4288248897?position=7&pageNum=2&refId=uhlaj82dr52qtq1MRaPIxA%3D%3D&trackingId=eieR%2FESMAWxKD%2BPjaaIIMw%3D%3D",
     "scraped_at": "2025-08-22T13:07:11.151539",
     "applied": false,
-    "is_new": false
+    "is_new": false,
+    "country": "Ireland"
   },
   "84939bc2a5ff": {
     "id": "84939bc2a5ff",
@@ -15418,7 +15523,8 @@
     "job_url": "https://ie.linkedin.com/jobs/view/software-engineer-at-tomra-4280229369?position=45&pageNum=0&refId=wsI2Zn7%2BMYP7ctRRVIRFmg%3D%3D&trackingId=RYvWwWxSlipOloM51q4j2A%3D%3D",
     "scraped_at": "2025-08-21T14:37:16.485747",
     "applied": false,
-    "is_new": false
+    "is_new": false,
+    "country": "Ireland"
   },
   "21f7dcc4ef8d": {
     "id": "21f7dcc4ef8d",
@@ -15429,7 +15535,8 @@
     "job_url": "https://ie.linkedin.com/jobs/view/software-engineer-relocate-to-london-at-bending-spoons-4288246929?position=6&pageNum=5&refId=5ejtEPCotZ7PcswGz9Lmrw%3D%3D&trackingId=WvsbENNhMqG%2BO1TwdYD1vQ%3D%3D",
     "scraped_at": "2025-08-22T10:55:53.428390",
     "applied": false,
-    "is_new": false
+    "is_new": false,
+    "country": "Ireland"
   },
   "b65aedb837ae": {
     "id": "b65aedb837ae",
@@ -15440,7 +15547,8 @@
     "job_url": "https://ie.linkedin.com/jobs/view/full-stack-engineer-at-harvey-nash-4285921619?position=47&pageNum=0&refId=wsI2Zn7%2BMYP7ctRRVIRFmg%3D%3D&trackingId=PsirHiMDtyQDW4OKxBPCRA%3D%3D",
     "scraped_at": "2025-08-21T14:37:16.797304",
     "applied": false,
-    "is_new": false
+    "is_new": false,
+    "country": "Ireland"
   },
   "9e825aa52b07": {
     "id": "9e825aa52b07",
@@ -15451,7 +15559,8 @@
     "job_url": "https://ie.linkedin.com/jobs/view/junior-software-engineer-customer-experience-at-e-frontiers-4288431627?position=50&pageNum=0&refId=cltQqCFJorglKIl5aW5rYA%3D%3D&trackingId=TvbTwsRI6sMzGZOqMfGytg%3D%3D",
     "scraped_at": "2025-08-22T13:07:08.953822",
     "applied": false,
-    "is_new": false
+    "is_new": false,
+    "country": "Ireland"
   },
   "efc59e715b5f": {
     "id": "efc59e715b5f",
@@ -15462,7 +15571,8 @@
     "job_url": "https://ie.linkedin.com/jobs/view/net-full-stack-engineer-at-prepaypower-4274350090?position=1&pageNum=5&refId=jHaeUttBoKWcckAydrE1pQ%3D%3D&trackingId=xCzesCvh%2BB4rQpHbj5w%2Fqg%3D%3D",
     "scraped_at": "2025-08-21T14:37:20.618562",
     "applied": false,
-    "is_new": false
+    "is_new": false,
+    "country": "Ireland"
   },
   "310c30e0a6ff": {
     "id": "310c30e0a6ff",
@@ -15473,7 +15583,8 @@
     "job_url": "https://ie.linkedin.com/jobs/view/full-stack-engineer-at-exl-4283288840?position=3&pageNum=7&refId=QHe1Sz7L5OXmeU4xQw5uXg%3D%3D&trackingId=f4iFwGllfyZ3iFmezTDzVQ%3D%3D",
     "scraped_at": "2025-08-22T10:55:54.475738",
     "applied": false,
-    "is_new": false
+    "is_new": false,
+    "country": "Ireland"
   },
   "37f46f1da166": {
     "id": "37f46f1da166",
@@ -15484,7 +15595,8 @@
     "job_url": "https://ie.linkedin.com/jobs/view/software-engineering-manager-security-at-google-4287512006?position=5&pageNum=7&refId=rIyW6HlZlz%2Bgn4C%2BtTQqHQ%3D%3D&trackingId=3S3XLn9rDzRk8Eo0MNofxQ%3D%3D",
     "scraped_at": "2025-08-21T14:37:22.775792",
     "applied": false,
-    "is_new": false
+    "is_new": false,
+    "country": "Ireland"
   },
   "7b0b2ea60c4c": {
     "id": "7b0b2ea60c4c",
@@ -15495,7 +15607,8 @@
     "job_url": "https://ie.linkedin.com/jobs/view/sdet-at-e-frontiers-4287906376?position=10&pageNum=12&refId=JXACTMN1XNG3dz98HluYWw%3D%3D&trackingId=7YgKcbhqsmtGT6gkkAIJhw%3D%3D",
     "scraped_at": "2025-08-21T14:37:26.725108",
     "applied": false,
-    "is_new": true
+    "is_new": true,
+    "country": "Ireland"
   },
   "eb55d68a202e": {
     "id": "eb55d68a202e",
@@ -15506,7 +15619,8 @@
     "job_url": "https://ie.linkedin.com/jobs/view/web-developer-programmer-at-emagine-4283006831?position=8&pageNum=0&refId=cltQqCFJorglKIl5aW5rYA%3D%3D&trackingId=q2q87moGHYmcMTHrkzWL0g%3D%3D",
     "scraped_at": "2025-08-22T13:07:03.456302",
     "applied": false,
-    "is_new": false
+    "is_new": false,
+    "country": "Ireland"
   },
   "c96b407389ef": {
     "id": "c96b407389ef",
@@ -15517,7 +15631,8 @@
     "job_url": "https://ie.linkedin.com/jobs/view/backend-engineer-api-payments-and-risk-at-stripe-4289317979?position=11&pageNum=0&refId=cltQqCFJorglKIl5aW5rYA%3D%3D&trackingId=CQXA%2FacRLB43FqetIoDZPg%3D%3D",
     "scraped_at": "2025-08-22T13:07:03.854878",
     "applied": false,
-    "is_new": false
+    "is_new": false,
+    "country": "Ireland"
   },
   "8923c6301103": {
     "id": "8923c6301103",
@@ -15528,7 +15643,8 @@
     "job_url": "https://ie.linkedin.com/jobs/view/software-engineer-at-cartrawler-4289762524?position=3&pageNum=0&refId=cltQqCFJorglKIl5aW5rYA%3D%3D&trackingId=Vhrn%2FJmlQsN1tAAonoxVNg%3D%3D",
     "scraped_at": "2025-08-22T13:07:02.777221",
     "applied": false,
-    "is_new": false
+    "is_new": false,
+    "country": "Ireland"
   },
   "63619611046c": {
     "id": "63619611046c",
@@ -15539,7 +15655,8 @@
     "job_url": "https://ie.linkedin.com/jobs/view/software-engineer-at-partnerre-4289453544?position=14&pageNum=0&refId=cltQqCFJorglKIl5aW5rYA%3D%3D&trackingId=0EbN4jPT0od9sDvP7mgDFw%3D%3D",
     "scraped_at": "2025-08-22T13:07:04.242167",
     "applied": false,
-    "is_new": false
+    "is_new": false,
+    "country": "Ireland"
   },
   "97bc39bbada4": {
     "id": "97bc39bbada4",
@@ -15550,7 +15667,8 @@
     "job_url": "https://ie.linkedin.com/jobs/view/hardware-logic-designer-at-infuse-4287920234?position=7&pageNum=7&refId=Ehm%2BN6kr6XDWVCEldGEE8g%3D%3D&trackingId=bMQgg3cKQ5m3%2BtdkDdDztQ%3D%3D",
     "scraped_at": "2025-08-22T12:55:39.991473",
     "applied": false,
-    "is_new": false
+    "is_new": false,
+    "country": "Ireland"
   },
   "67f6b89328ff": {
     "id": "67f6b89328ff",
@@ -15561,7 +15679,8 @@
     "job_url": "https://ie.linkedin.com/jobs/view/junior-software-developer-%E2%80%93-angular-vs46421-at-osborne-recruitment-consultancy-4289445899?position=1&pageNum=10&refId=YSYlqm87kGHm3rFx%2FaP6PA%3D%3D&trackingId=ZY2i4HVyXsgOPbtpB5YobA%3D%3D",
     "scraped_at": "2025-08-22T10:55:55.722951",
     "applied": false,
-    "is_new": true
+    "is_new": true,
+    "country": "Ireland"
   },
   "3abb7383beb8": {
     "id": "3abb7383beb8",
@@ -15572,7 +15691,8 @@
     "job_url": "https://ie.linkedin.com/jobs/view/quantitative-data-engineer-at-brightwater-recruitment-4287914711?position=1&pageNum=10&refId=HovGJn7fhl9wu2AljU6Tew%3D%3D&trackingId=QeuqogEiGH7v9xrEpnr5IA%3D%3D",
     "scraped_at": "2025-08-22T12:55:40.519547",
     "applied": false,
-    "is_new": false
+    "is_new": false,
+    "country": "Ireland"
   },
   "20b6fe72eecf": {
     "id": "20b6fe72eecf",
@@ -15583,7 +15703,8 @@
     "job_url": "https://ie.linkedin.com/jobs/view/software-engineer-full-stack-at-amcs-group-4283608664?position=3&pageNum=10&refId=s%2Bg5T6UrWvthI0N3lpT2XA%3D%3D&trackingId=%2FxCENCvsyA7ld1hBOUhq1w%3D%3D",
     "scraped_at": "2025-08-22T13:07:14.521874",
     "applied": false,
-    "is_new": false
+    "is_new": false,
+    "country": "Ireland"
   },
   "02eba68febe9": {
     "id": "02eba68febe9",
@@ -15594,7 +15715,8 @@
     "job_url": "https://ie.linkedin.com/jobs/view/senior-software-engineer-at-dun-bradstreet-4269654679?position=1&pageNum=12&refId=TzJBAzQxW%2BZC3GzaC0bGdg%3D%3D&trackingId=78KEUwZyfwsVe%2BykwZ3tHQ%3D%3D",
     "scraped_at": "2025-08-22T13:07:15.597675",
     "applied": false,
-    "is_new": false
+    "is_new": false,
+    "country": "Ireland"
   },
   "7ed6359fa419": {
     "id": "7ed6359fa419",
@@ -15605,6 +15727,7 @@
     "job_url": "https://ie.linkedin.com/jobs/view/associate-front-end-developer-at-resmed-4289782912?position=2&pageNum=7&refId=t80mqkJMdMz48dhiWsgDMg%3D%3D&trackingId=HfMm6vj2TXRO1%2FmhpNexzQ%3D%3D",
     "scraped_at": "2025-08-22T13:07:13.089238",
     "applied": false,
-    "is_new": true
+    "is_new": true,
+    "country": "Ireland"
   }
 }
