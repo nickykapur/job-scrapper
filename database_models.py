@@ -41,6 +41,26 @@ class JobDatabase:
         else:
             print("📄 Using JSON file fallback")
 
+    def _parse_datetime_string(self, date_string: Optional[str]) -> Optional[datetime]:
+        """Parse datetime string to datetime object"""
+        if not date_string or date_string == "None":
+            return None
+
+        try:
+            # Handle ISO format strings
+            if isinstance(date_string, str):
+                # Remove timezone info if present for simplicity
+                if 'T' in date_string:
+                    date_string = date_string.split('.')[0]  # Remove microseconds
+                    date_string = date_string.replace('T', ' ')
+                    return datetime.fromisoformat(date_string)
+                else:
+                    return datetime.fromisoformat(date_string)
+            return date_string
+        except Exception as e:
+            print(f"Warning: Could not parse date '{date_string}': {e}")
+            return None
+
     async def get_connection(self):
         """Get database connection"""
         if not self.use_postgres:
@@ -243,27 +263,30 @@ class JobDatabase:
                 
                 if existing:
                     # Update existing job, preserve applied status
+                    scraped_at = self._parse_datetime_string(job_data.get('scraped_at'))
                     await conn.execute("""
-                        UPDATE jobs SET 
+                        UPDATE jobs SET
                             title = $2, company = $3, location = $4, posted_date = $5,
                             job_url = $6, scraped_at = $7, is_new = $8, category = $9,
                             last_seen_24h = CASE WHEN $9 = 'last_24h' THEN CURRENT_TIMESTAMP ELSE last_seen_24h END,
                             updated_at = CURRENT_TIMESTAMP
                         WHERE id = $1
                     """, job_id, job_data['title'], job_data['company'], job_data['location'],
-                        job_data['posted_date'], job_data['job_url'], job_data['scraped_at'],
+                        job_data['posted_date'], job_data['job_url'], scraped_at,
                         job_data.get('is_new', False), job_data.get('category'))
                     updated_jobs += 1
                 else:
                     # Insert new job
+                    scraped_at = self._parse_datetime_string(job_data.get('scraped_at'))
+                    first_seen = self._parse_datetime_string(job_data.get('first_seen'))
                     await conn.execute("""
                         INSERT INTO jobs (id, title, company, location, posted_date, job_url,
                                         scraped_at, applied, is_new, category, first_seen)
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
                     """, job_id, job_data['title'], job_data['company'], job_data['location'],
-                        job_data['posted_date'], job_data['job_url'], job_data['scraped_at'],
-                        job_data.get('applied', False), job_data.get('is_new', True), 
-                        job_data.get('category'))
+                        job_data['posted_date'], job_data['job_url'], scraped_at,
+                        job_data.get('applied', False), job_data.get('is_new', True),
+                        job_data.get('category'), first_seen or datetime.now())
                     new_jobs += 1
             
             # Log scraping session
