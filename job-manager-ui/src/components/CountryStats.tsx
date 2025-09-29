@@ -67,13 +67,29 @@ const CountryStats: React.FC<CountryStatsProps> = ({ jobs }) => {
     // Count jobs by country and category
     jobValues.forEach((job: any) => {
       const country = job.country || 'Unknown';
-      if (countryStats[country] && !job.rejected) {
-        if (job.is_new) {
+
+      if (!job.rejected) {
+        // Initialize country if not in predefined list
+        if (!countryStats[country]) {
+          countryStats[country] = {
+            country,
+            flag: country === 'Unknown' ? '🌍' : '🏁', // Default flag
+            color: '#607D8B', // Default color
+            newJobs: 0,
+            last24hJobs: 0,
+            totalJobs: 0,
+          };
+        }
+
+        // Count total jobs for this country
+        countryStats[country].totalJobs++;
+
+        // Count specific categories
+        if (job.is_new || job.category === 'new') {
           countryStats[country].newJobs++;
         } else if (job.category === 'last_24h') {
           countryStats[country].last24hJobs++;
         }
-        countryStats[country].totalJobs = countryStats[country].newJobs + countryStats[country].last24hJobs;
       }
     });
 

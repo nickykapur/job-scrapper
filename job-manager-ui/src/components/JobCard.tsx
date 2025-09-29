@@ -30,6 +30,20 @@ export const JobCard: React.FC<JobCardProps> = ({
   onRejectJob,
   isUpdating = false,
 }) => {
+  // Country flag mapping
+  const getCountryFlag = (country: string): string => {
+    const flags: Record<string, string> = {
+      'Ireland': '🇮🇪',
+      'Spain': '🇪🇸',
+      'Germany': '🇩🇪',
+      'Switzerland': '🇨🇭',
+      'United Kingdom': '🇬🇧',
+      'Netherlands': '🇳🇱',
+      'France': '🇫🇷',
+      'Italy': '🇮🇹',
+    };
+    return flags[country] || '🏳️';
+  };
   return (
     <Card
       sx={{
@@ -93,6 +107,13 @@ export const JobCard: React.FC<JobCardProps> = ({
               {job.location}
             </Typography>
           </Box>
+          {job.country && (
+            <Box display="flex" alignItems="center">
+              <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 600, color: 'primary.main' }}>
+                {getCountryFlag(job.country)} {job.country}
+              </Typography>
+            </Box>
+          )}
           <Box display="flex" alignItems="center">
             <TimeIcon sx={{ fontSize: 14, mr: 0.5, color: 'text.secondary' }} />
             <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
