@@ -12,6 +12,7 @@ export interface Job {
   category?: 'new' | 'last_24h' | 'existing';
   first_seen?: string;
   last_seen_24h?: string;
+  country?: string;
 }
 
 export interface JobStats {

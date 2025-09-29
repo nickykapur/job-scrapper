@@ -836,7 +836,7 @@ function App() {
                   <JobSearch onSearchComplete={(newJobs) => {
                     if (newJobs > 0) {
                       // Refresh jobs after successful search
-                      fetchJobs();
+                      loadJobs();
                       setNotification({
                         message: `Found ${newJobs} new jobs! Refreshing list...`,
                         severity: 'success'
