@@ -273,15 +273,13 @@ class JobDatabase:
                     posted_date = str(job_data['posted_date'])[:100] if job_data.get('posted_date') else ''
                     category = str(job_data.get('category', ''))[:50] if job_data.get('category') else None
 
+                    # Use simpler UPDATE with only core fields
                     await conn.execute("""
                         UPDATE jobs SET
                             title = $2, company = $3, location = $4, posted_date = $5,
-                            job_url = $6, scraped_at = $7, is_new = $8, category = $9,
-                            last_seen_24h = CASE WHEN $9 = 'last_24h' THEN CURRENT_TIMESTAMP ELSE last_seen_24h END,
-                            updated_at = CURRENT_TIMESTAMP
+                            job_url = $6, is_new = $7
                         WHERE id = $1
-                    """, job_id, title, company, location, posted_date, job_data['job_url'], scraped_at,
-                        is_new_bool, category)
+                    """, job_id, title, company, location, posted_date, job_data['job_url'], is_new_bool)
                     updated_jobs += 1
                 else:
                     # Insert new job
@@ -299,12 +297,11 @@ class JobDatabase:
                     posted_date = str(job_data['posted_date'])[:100] if job_data.get('posted_date') else ''
                     category = str(job_data.get('category', ''))[:50] if job_data.get('category') else None
 
+                    # Use simpler INSERT with only core fields to avoid schema mismatches
                     await conn.execute("""
-                        INSERT INTO jobs (id, title, company, location, posted_date, job_url,
-                                        scraped_at, applied, is_new, category, first_seen)
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-                    """, job_id, title, company, location, posted_date, job_data['job_url'], scraped_at,
-                        applied_bool, is_new_bool, category, first_seen or datetime.now())
+                        INSERT INTO jobs (id, title, company, location, posted_date, job_url, applied, is_new)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                    """, job_id, title, company, location, posted_date, job_data['job_url'], applied_bool, is_new_bool)
                     new_jobs += 1
             
             # Log scraping session
