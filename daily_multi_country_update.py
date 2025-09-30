@@ -10,8 +10,40 @@ Searches for jobs across multiple European countries in the last 24 hours and ca
 import os
 import sys
 import json
+import subprocess
 from datetime import datetime, timedelta
 from linkedin_job_scraper import LinkedInJobScraper
+
+def sync_to_railway(railway_url):
+    """Sync to Railway using the sync script"""
+    try:
+        print(f"🚀 Syncing to Railway: {railway_url}")
+        result = subprocess.run([
+            sys.executable, 'sync_to_railway.py', railway_url
+        ], capture_output=True, text=True, timeout=300)  # 5 minute timeout
+
+        if result.returncode == 0:
+            print(f"✅ Railway sync successful!")
+            # Print any success output
+            if result.stdout:
+                for line in result.stdout.split('\n'):
+                    if line.strip() and ('✅' in line or '📊' in line or '🚀' in line):
+                        print(f"   {line.strip()}")
+            return True
+        else:
+            print(f"❌ Railway sync failed!")
+            if result.stderr:
+                print(f"   Error: {result.stderr.strip()}")
+            if result.stdout:
+                print(f"   Output: {result.stdout.strip()}")
+            return False
+
+    except subprocess.TimeoutExpired:
+        print(f"⏰ Railway sync timed out after 5 minutes")
+        return False
+    except Exception as e:
+        print(f"❌ Railway sync error: {e}")
+        return False
 
 def load_existing_jobs():
     """Load existing jobs from database"""
@@ -151,20 +183,12 @@ def run_multi_country_job_search():
     print(f"📊 Current database: {old_count} total jobs")
 
     # Multi-country search configuration
+    # Limited to 4 main locations for faster scraping
     countries_config = [
         {"location": "Dublin, County Dublin, Ireland", "country": "Ireland"},
         {"location": "Barcelona, Catalonia, Spain", "country": "Spain"},
         {"location": "Berlin, Germany", "country": "Germany"},
-        {"location": "Munich, Bavaria, Germany", "country": "Germany"},
-        {"location": "Frankfurt, Hesse, Germany", "country": "Germany"},
-        {"location": "Zurich, Switzerland", "country": "Switzerland"},
-        {"location": "Geneva, Switzerland", "country": "Switzerland"},
         {"location": "London, England, United Kingdom", "country": "United Kingdom"},
-        {"location": "Manchester, England, United Kingdom", "country": "United Kingdom"},
-        {"location": "Edinburgh, Scotland, United Kingdom", "country": "United Kingdom"},
-        {"location": "Amsterdam, North Holland, Netherlands", "country": "Netherlands"},
-        {"location": "Paris, Île-de-France, France", "country": "France"},
-        {"location": "Milan, Lombardy, Italy", "country": "Italy"},
     ]
 
     # Search terms
@@ -301,8 +325,23 @@ def run_multi_country_job_search():
                 print(f"   1. git add jobs_database.json")
                 print(f"   2. git commit -m 'Multi-country 24h job update - {datetime.now().strftime('%Y-%m-%d')}'")
                 print(f"   3. git push")
-                print(f"   4. python3 sync_to_railway.py (or check Railway app)")
-                print(f"   5. Check country stats in your dashboard!")
+                print(f"   4. Check country stats in your dashboard!")
+
+                # Auto-sync to Railway
+                print(f"\n🚀 Auto-syncing to Railway...")
+                try:
+                    sync_success = sync_to_railway("web-production-110bb.up.railway.app")
+                    if sync_success:
+                        print(f"🎉 Successfully synced to Railway! Your jobs are now live.")
+                    else:
+                        print(f"⚠️ Railway sync failed, but data is saved locally.")
+                        print(f"📝 You can manually sync later with:")
+                        print(f"   python3 sync_to_railway.py web-production-110bb.up.railway.app")
+                except Exception as sync_error:
+                    print(f"⚠️ Railway sync error: {sync_error}")
+                    print(f"📁 Data is saved locally in jobs_database.json")
+                    print(f"📝 You can manually sync later with:")
+                    print(f"   python3 sync_to_railway.py web-production-110bb.up.railway.app")
             else:
                 print(f"\n🔄 No new jobs found across all countries, database unchanged")
 

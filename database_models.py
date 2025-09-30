@@ -264,6 +264,15 @@ class JobDatabase:
                 if existing:
                     # Update existing job, preserve applied status
                     scraped_at = self._parse_datetime_string(job_data.get('scraped_at'))
+                    is_new_bool = bool(job_data.get('is_new', False))
+
+                    # Clean and limit string fields
+                    title = str(job_data['title'])[:500] if job_data.get('title') else 'No title'
+                    company = str(job_data['company'])[:300] if job_data.get('company') else 'Unknown'
+                    location = str(job_data['location'])[:300] if job_data.get('location') else ''
+                    posted_date = str(job_data['posted_date'])[:100] if job_data.get('posted_date') else ''
+                    category = str(job_data.get('category', ''))[:50] if job_data.get('category') else None
+
                     await conn.execute("""
                         UPDATE jobs SET
                             title = $2, company = $3, location = $4, posted_date = $5,
@@ -271,22 +280,31 @@ class JobDatabase:
                             last_seen_24h = CASE WHEN $9 = 'last_24h' THEN CURRENT_TIMESTAMP ELSE last_seen_24h END,
                             updated_at = CURRENT_TIMESTAMP
                         WHERE id = $1
-                    """, job_id, job_data['title'], job_data['company'], job_data['location'],
-                        job_data['posted_date'], job_data['job_url'], scraped_at,
-                        job_data.get('is_new', False), job_data.get('category'))
+                    """, job_id, title, company, location, posted_date, job_data['job_url'], scraped_at,
+                        is_new_bool, category)
                     updated_jobs += 1
                 else:
                     # Insert new job
                     scraped_at = self._parse_datetime_string(job_data.get('scraped_at'))
                     first_seen = self._parse_datetime_string(job_data.get('first_seen'))
+
+                    # Ensure proper data types for database consistency
+                    applied_bool = bool(job_data.get('applied', False))
+                    is_new_bool = bool(job_data.get('is_new', True))
+
+                    # Clean and limit string fields to prevent type errors
+                    title = str(job_data['title'])[:500] if job_data.get('title') else 'No title'
+                    company = str(job_data['company'])[:300] if job_data.get('company') else 'Unknown'
+                    location = str(job_data['location'])[:300] if job_data.get('location') else ''
+                    posted_date = str(job_data['posted_date'])[:100] if job_data.get('posted_date') else ''
+                    category = str(job_data.get('category', ''))[:50] if job_data.get('category') else None
+
                     await conn.execute("""
                         INSERT INTO jobs (id, title, company, location, posted_date, job_url,
                                         scraped_at, applied, is_new, category, first_seen)
                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-                    """, job_id, job_data['title'], job_data['company'], job_data['location'],
-                        job_data['posted_date'], job_data['job_url'], scraped_at,
-                        job_data.get('applied', False), job_data.get('is_new', True),
-                        job_data.get('category'), first_seen or datetime.now())
+                    """, job_id, title, company, location, posted_date, job_data['job_url'], scraped_at,
+                        applied_bool, is_new_bool, category, first_seen or datetime.now())
                     new_jobs += 1
             
             # Log scraping session
