@@ -237,6 +237,12 @@ class JobDatabase:
             return self._update_job_status_json(job_id, applied, rejected)
 
         try:
+            # First check if job exists
+            existing = await conn.fetchrow("SELECT id FROM jobs WHERE id = $1", job_id)
+            if not existing:
+                print(f"❌ Job {job_id} not found in PostgreSQL database")
+                return False
+
             # Build dynamic SQL based on what fields need updating
             updates = []
             params = []
@@ -265,8 +271,11 @@ class JobDatabase:
 
             # Build and execute query
             query = f"UPDATE jobs SET {', '.join(updates)}, updated_at = CURRENT_TIMESTAMP WHERE id = ${param_count}"
-            await conn.execute(query, *params)
-            return True
+            result = await conn.execute(query, *params)
+
+            # Check if any rows were affected (job was found and updated)
+            rows_affected = int(result.split()[-1]) if result and 'UPDATE' in result else 0
+            return rows_affected > 0
         except Exception as e:
             print(f"❌ Error updating job in PostgreSQL: {e}")
             return False
