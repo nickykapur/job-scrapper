@@ -210,16 +210,26 @@ class LinkedInJobScraper:
             try:
                 job_data = self.extract_job_data(card)
                 if job_data:
-                    # Check if this job already exists and preserve applied status
+                    # Check if this job already exists
                     if job_data['id'] in self.existing_jobs:
-                        job_data['applied'] = self.existing_jobs[job_data['id']].get('applied', False)
+                        existing_job = self.existing_jobs[job_data['id']]
+
+                        # Skip jobs that have been rejected to avoid repetitive results
+                        if existing_job.get('rejected', False):
+                            print(f"Skipping rejected job: '{job_data['title']}' at {job_data['company']}")
+                            continue
+
+                        # Preserve applied status and other fields
+                        job_data['applied'] = existing_job.get('applied', False)
+                        job_data['rejected'] = existing_job.get('rejected', False)
                         job_data['is_new'] = False
                     else:
                         job_data['is_new'] = True
-                    
+                        job_data['rejected'] = False
+
                     jobs_dict[job_data['id']] = job_data
                     extracted_count += 1
-                    
+
                     # Update existing jobs database
                     self.existing_jobs[job_data['id']] = job_data
                     
@@ -334,11 +344,12 @@ class LinkedInJobScraper:
         return False
 
     def preserve_applied_status(self, job_id, new_job_data):
-        """Preserve the applied status from existing jobs when updating"""
+        """Preserve the applied and rejected status from existing jobs when updating"""
         if job_id in self.existing_jobs:
             existing_job = self.existing_jobs[job_id]
-            # Preserve applied status and any manual updates
+            # Preserve applied and rejected status and any manual updates
             new_job_data["applied"] = existing_job.get("applied", False)
+            new_job_data["rejected"] = existing_job.get("rejected", False)
             # Also preserve any manual notes or custom fields
             if "notes" in existing_job:
                 new_job_data["notes"] = existing_job["notes"]
@@ -506,11 +517,12 @@ class LinkedInJobScraper:
                 "id": job_id,
                 "title": title,
                 "company": company or "Unknown Company",
-                "location": location or "Unknown Location", 
+                "location": location or "Unknown Location",
                 "posted_date": posted_date or "Unknown",
                 "job_url": job_url,
                 "scraped_at": datetime.now().isoformat(),
                 "applied": False,
+                "rejected": False,
                 "is_new": job_id not in self.existing_jobs
             }
             

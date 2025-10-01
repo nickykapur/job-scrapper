@@ -130,8 +130,8 @@ async def update_job(request: JobUpdateRequest):
     """Update a single job's applied or rejected status"""
     try:
         if USE_DATABASE and db:
-            # TODO: Update database method to handle rejected status
-            success = await db.update_job_applied_status(request.job_id, request.applied)
+            # Use the new method that handles both applied and rejected status
+            success = await db.update_job_status(request.job_id, request.applied, request.rejected)
             if success:
                 return {"success": True, "message": f"Job {request.job_id} updated"}
             else:

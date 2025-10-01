@@ -235,19 +235,21 @@ function App() {
         console.log('  Has country:', !!firstJob.country);
         console.log('  Full job object:', firstJob);
       }
-      
-      const oldCount = Object.keys(jobs).length;
-      const newCount = Object.keys(jobsData).length;
-      
-      setJobs(jobsData);
+
+      setJobs(prevJobs => {
+        const oldCount = Object.keys(prevJobs).length;
+        const newCount = Object.keys(jobsData).length;
+
+        if (!silent && newCount > oldCount && oldCount > 0) {
+          showNotification(`${newCount - oldCount} new jobs loaded!`, 'success');
+        }
+
+        return jobsData;
+      });
       setError(null);
-      
-      if (!silent && newCount > oldCount && oldCount > 0) {
-        showNotification(`${newCount - oldCount} new jobs loaded!`, 'success');
-      }
     } catch (err: any) {
       console.error('Failed to load jobs:', err);
-      
+
       let errorMessage = 'Failed to load jobs';
       if (err.response) {
         errorMessage = `API Error: ${err.response.status} - ${err.response.statusText}`;
@@ -256,14 +258,14 @@ function App() {
       } else {
         errorMessage = `Error: ${err.message}`;
       }
-      
+
       setError(errorMessage);
       showNotification(errorMessage, 'error');
     } finally {
       setLoading(false);
       if (!silent) setIsRefreshing(false);
     }
-  }, [jobs]);
+  }, []);
 
   const applyAndOpenJob = async (jobId: string, jobUrl: string) => {
     const job = jobs[jobId];
@@ -285,6 +287,8 @@ function App() {
       try {
         await jobApi.updateJob(jobId, true);
         showNotification('Job marked as applied!', 'success');
+        // Refresh data from server to ensure consistency
+        loadJobs(true);
       } catch (err) {
         // Revert the optimistic update on error
         setJobs(prev => ({
@@ -318,6 +322,8 @@ function App() {
       // Try to reject job via cloud API first
       await jobApi.rejectJob(jobId);
       showNotification('Job rejected and saved to cloud', 'success');
+      // Refresh data from server to ensure consistency
+      loadJobs(true);
     } catch (err) {
       // If cloud API fails, store locally for later sync
       console.warn('Cloud API reject failed, storing locally:', err);

@@ -205,6 +205,13 @@ class JobDatabase:
         else:
             return self._update_job_json(job_id, applied)
 
+    async def update_job_status(self, job_id: str, applied: Optional[bool] = None, rejected: Optional[bool] = None) -> bool:
+        """Update job's applied and/or rejected status"""
+        if self.use_postgres:
+            return await self._update_job_status_postgres(job_id, applied, rejected)
+        else:
+            return self._update_job_status_json(job_id, applied, rejected)
+
     async def _update_job_postgres(self, job_id: str, applied: bool) -> bool:
         """Update job in PostgreSQL"""
         conn = await self.get_connection()
@@ -223,12 +230,76 @@ class JobDatabase:
         finally:
             await conn.close()
 
+    async def _update_job_status_postgres(self, job_id: str, applied: Optional[bool] = None, rejected: Optional[bool] = None) -> bool:
+        """Update job applied and/or rejected status in PostgreSQL"""
+        conn = await self.get_connection()
+        if not conn:
+            return self._update_job_status_json(job_id, applied, rejected)
+
+        try:
+            # Build dynamic SQL based on what fields need updating
+            updates = []
+            params = []
+            param_count = 1
+
+            if applied is not None:
+                updates.append(f"applied = ${param_count}")
+                params.append(applied)
+                param_count += 1
+
+            if rejected is not None:
+                updates.append(f"rejected = ${param_count}")
+                params.append(rejected)
+                param_count += 1
+                # If rejecting, also set applied to false
+                if rejected and applied is None:
+                    updates.append(f"applied = ${param_count}")
+                    params.append(False)
+                    param_count += 1
+
+            if not updates:
+                return True  # Nothing to update
+
+            # Add job_id as last parameter
+            params.append(job_id)
+
+            # Build and execute query
+            query = f"UPDATE jobs SET {', '.join(updates)}, updated_at = CURRENT_TIMESTAMP WHERE id = ${param_count}"
+            await conn.execute(query, *params)
+            return True
+        except Exception as e:
+            print(f"❌ Error updating job in PostgreSQL: {e}")
+            return False
+        finally:
+            await conn.close()
+
     def _update_job_json(self, job_id: str, applied: bool) -> bool:
         """Fallback: Update job in JSON"""
         try:
             data = self._get_jobs_from_json()
             if job_id in data:
                 data[job_id]['applied'] = applied
+                with open(self.json_file, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, indent=2, ensure_ascii=False)
+                return True
+            return False
+        except Exception as e:
+            print(f"❌ Error updating JSON: {e}")
+            return False
+
+    def _update_job_status_json(self, job_id: str, applied: Optional[bool] = None, rejected: Optional[bool] = None) -> bool:
+        """Fallback: Update job applied and/or rejected status in JSON"""
+        try:
+            data = self._get_jobs_from_json()
+            if job_id in data:
+                if applied is not None:
+                    data[job_id]['applied'] = applied
+                if rejected is not None:
+                    data[job_id]['rejected'] = rejected
+                    # If rejecting, also set applied to false
+                    if rejected and applied is None:
+                        data[job_id]['applied'] = False
+
                 with open(self.json_file, 'w', encoding='utf-8') as f:
                     json.dump(data, f, indent=2, ensure_ascii=False)
                 return True
