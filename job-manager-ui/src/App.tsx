@@ -287,8 +287,7 @@ function App() {
       try {
         await jobApi.updateJob(jobId, true);
         showNotification('Job marked as applied!', 'success');
-        // Refresh data from server to ensure consistency
-        loadJobs(true);
+        // No need to reload - optimistic update already done
       } catch (err) {
         // Revert the optimistic update on error
         setJobs(prev => ({
@@ -322,23 +321,18 @@ function App() {
       // Try to reject job via cloud API first
       await jobApi.rejectJob(jobId);
       showNotification('Job rejected and saved to cloud', 'success');
-      // Refresh data from server to ensure consistency
-      loadJobs(true);
+      // No need to reload - optimistic update already done
     } catch (err) {
-      // If cloud API fails, store locally for later sync
-      console.warn('Cloud API reject failed, storing locally:', err);
+      // If cloud API fails, revert the optimistic update
+      console.warn('Cloud API reject failed:', err);
 
-      // Get existing locally rejected jobs
-      const localRejectedJobs = JSON.parse(localStorage.getItem('locally-rejected-jobs') || '[]');
+      // Revert the optimistic update
+      setJobs(prev => ({
+        ...prev,
+        [jobId]: { ...prev[jobId], rejected: false },
+      }));
 
-      // Add this job to local storage if not already there
-      if (!localRejectedJobs.includes(jobId)) {
-        localRejectedJobs.push(jobId);
-        localStorage.setItem('locally-rejected-jobs', JSON.stringify(localRejectedJobs));
-        updateLocalRejectedCount();
-      }
-
-      showNotification('Job rejected (saved locally, will sync when online)', 'warning');
+      showNotification('Failed to reject job - please try again', 'error');
     } finally {
       setUpdatingJobs(prev => {
         const newSet = new Set(prev);

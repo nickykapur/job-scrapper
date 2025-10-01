@@ -243,6 +243,15 @@ async def get_jobs_api():
     """Get all jobs from database - proper API endpoint"""
     return await load_jobs()
 
+@app.get("/api/jobs/{job_id}")
+async def get_job_by_id(job_id: str):
+    """Get specific job by ID for debugging"""
+    jobs = await load_jobs()
+    if job_id in jobs:
+        return {"job_id": job_id, "job_data": jobs[job_id]}
+    else:
+        raise HTTPException(status_code=404, detail="Job not found")
+
 @app.get("/jobs_database.json")
 async def get_jobs_legacy():
     """Legacy endpoint - redirects to proper API"""
