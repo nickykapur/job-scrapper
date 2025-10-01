@@ -42,7 +42,8 @@ async def health_check():
 
 class JobUpdateRequest(BaseModel):
     job_id: str
-    applied: bool
+    applied: Optional[bool] = None
+    rejected: Optional[bool] = None
 
 class BulkUpdateRequest(BaseModel):
     job_ids: list[str]
@@ -80,20 +81,29 @@ async def get_jobs_database():
 
 @app.post("/update_job")
 async def update_job(request: JobUpdateRequest):
-    """Update a specific job's applied status"""
+    """Update a specific job's applied and/or rejected status"""
     try:
         jobs_data = load_jobs_database()
-        
+
         if request.job_id not in jobs_data:
             raise HTTPException(status_code=404, detail="Job not found")
-        
-        jobs_data[request.job_id]["applied"] = request.applied
-        
+
+        # Update applied status if provided
+        if request.applied is not None:
+            jobs_data[request.job_id]["applied"] = request.applied
+
+        # Update rejected status if provided
+        if request.rejected is not None:
+            jobs_data[request.job_id]["rejected"] = request.rejected
+            # If rejecting, also set applied to False
+            if request.rejected:
+                jobs_data[request.job_id]["applied"] = False
+
         if save_jobs_database(jobs_data):
-            return {"success": True, "message": "Job updated successfully"}
+            return {"success": True, "message": f"Job {request.job_id} updated"}
         else:
             raise HTTPException(status_code=500, detail="Failed to save job update")
-    
+
     except HTTPException:
         raise
     except Exception as e:
