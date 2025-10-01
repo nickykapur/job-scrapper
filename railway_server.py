@@ -195,41 +195,30 @@ async def startup_event():
             print(f"⚠️  Database initialization failed: {e}")
 
 async def load_jobs():
-    """Load jobs from database or JSON fallback"""
-    if db and DATABASE_AVAILABLE:
-        try:
-            return await db.get_all_jobs()
-        except Exception as e:
-            print(f"❌ Database load failed: {e}, falling back to JSON")
+    """Load jobs from database ONLY - no JSON fallback"""
+    if not db or not DATABASE_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Database not available")
 
-    # JSON fallback
-    jobs_file = "jobs_database.json"
-    if os.path.exists(jobs_file):
-        try:
-            with open(jobs_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except:
-            return {}
-    return {}
+    try:
+        return await db.get_all_jobs()
+    except Exception as e:
+        print(f"❌ Database load failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Database load failed: {str(e)}")
 
 async def save_jobs(jobs_data):
-    """Save jobs to database or JSON fallback"""
-    if db and DATABASE_AVAILABLE:
-        try:
-            # For save operations, we sync the data to database
-            result = await db.sync_jobs_from_scraper(jobs_data)
-            return not ("error" in result)
-        except Exception as e:
-            print(f"❌ Database save failed: {e}, falling back to JSON")
+    """Save jobs to database ONLY - no JSON fallback"""
+    if not db or not DATABASE_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Database not available")
 
-    # JSON fallback
-    jobs_file = "jobs_database.json"
     try:
-        with open(jobs_file, 'w', encoding='utf-8') as f:
-            json.dump(jobs_data, f, indent=2, ensure_ascii=False)
+        # For save operations, we sync the data to database
+        result = await db.sync_jobs_from_scraper(jobs_data)
+        if "error" in result:
+            raise HTTPException(status_code=500, detail=f"Database save failed: {result['error']}")
         return True
-    except:
-        return False
+    except Exception as e:
+        print(f"❌ Database save failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Database save failed: {str(e)}")
 
 @app.get("/")
 async def home():
@@ -256,102 +245,45 @@ async def get_jobs():
 
 @app.post("/update_job")
 async def update_job(request: JobUpdateRequest):
-    """Update job applied and/or rejected status"""
-    if db and DATABASE_AVAILABLE:
-        # Use database update method
-        try:
-            success = await db.update_job_status(
-                job_id=request.job_id,
-                applied=request.applied,
-                rejected=request.rejected
-            )
-            if success:
-                return {"success": True, "message": f"Job {request.job_id} updated"}
-            else:
-                raise HTTPException(status_code=404, detail="Job not found")
-        except Exception as e:
-            print(f"❌ Database update failed: {e}, falling back to JSON")
+    """Update job applied and/or rejected status - DATABASE ONLY"""
+    if not db or not DATABASE_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Database not available")
 
-    # JSON fallback
-    jobs = await load_jobs()
-    if request.job_id not in jobs:
-        raise HTTPException(status_code=404, detail="Job not found")
-
-    # Update applied status if provided
-    if request.applied is not None:
-        jobs[request.job_id]["applied"] = request.applied
-
-    # Update rejected status if provided
-    if request.rejected is not None:
-        jobs[request.job_id]["rejected"] = request.rejected
-        # If rejecting, also set applied to False
-        if request.rejected:
-            jobs[request.job_id]["applied"] = False
-
-    if await save_jobs(jobs):
-        return {"success": True, "message": f"Job {request.job_id} updated"}
-    else:
-        raise HTTPException(status_code=500, detail="Failed to save")
+    try:
+        success = await db.update_job_status(
+            job_id=request.job_id,
+            applied=request.applied,
+            rejected=request.rejected
+        )
+        if success:
+            return {"success": True, "message": f"Job {request.job_id} updated"}
+        else:
+            raise HTTPException(status_code=404, detail="Job not found")
+    except Exception as e:
+        print(f"❌ Database update failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Database update failed: {str(e)}")
 
 @app.post("/sync_jobs")
 async def sync_jobs(request: SyncJobsRequest):
-    """Sync jobs from local scraper to database"""
+    """Sync jobs from local scraper to database - DATABASE ONLY"""
+    if not db or not DATABASE_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Database not available")
+
     try:
-        if db and DATABASE_AVAILABLE:
-            # Use database sync method
-            result = await db.sync_jobs_from_scraper(request.jobs_data)
-            if "error" in result:
-                raise HTTPException(status_code=500, detail=result["error"])
+        # Use database sync method
+        result = await db.sync_jobs_from_scraper(request.jobs_data)
+        if "error" in result:
+            raise HTTPException(status_code=500, detail=result["error"])
 
-            return {
-                "success": True,
-                "message": f"Synced jobs successfully to database",
-                "new_jobs": result.get("new_jobs", 0),
-                "updated_jobs": result.get("updated_jobs", 0)
-            }
-
-        # JSON fallback
-        existing_data = await load_jobs()
-
-        new_jobs = 0
-        updated_jobs = 0
-
-        # Merge new data with existing, preserving applied/rejected status
-        for job_id, job_data in request.jobs_data.items():
-            if job_id.startswith("_"):  # Skip metadata
-                continue
-
-            if job_id in existing_data:
-                # Preserve applied and rejected status from existing data
-                job_data['applied'] = existing_data[job_id].get('applied', False)
-                job_data['rejected'] = existing_data[job_id].get('rejected', False)
-                updated_jobs += 1
-            else:
-                new_jobs += 1
-
-            existing_data[job_id] = job_data
-
-        # Update metadata
-        existing_data["_metadata"] = {
-            "last_updated": datetime.now().isoformat(),
-            "total_jobs": len([k for k in existing_data.keys() if not k.startswith("_")]),
-            "database_type": "json_sync",
-            "last_sync": datetime.now().isoformat()
+        return {
+            "success": True,
+            "message": f"Synced jobs successfully to database",
+            "new_jobs": result.get("new_jobs", 0),
+            "updated_jobs": result.get("updated_jobs", 0)
         }
-
-        # Save updated data
-        if await save_jobs(existing_data):
-            return {
-                "success": True,
-                "message": f"Synced jobs successfully to JSON",
-                "new_jobs": new_jobs,
-                "updated_jobs": updated_jobs
-            }
-        else:
-            raise HTTPException(status_code=500, detail="Failed to save synced jobs")
-
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Sync failed: {str(e)}")
+        print(f"❌ Database sync failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Database sync failed: {str(e)}")
 
 # Catch-all route for React Router (SPA routing)
 @app.get("/{full_path:path}")
