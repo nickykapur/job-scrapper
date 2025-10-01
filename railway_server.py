@@ -238,13 +238,18 @@ async def health():
         "database_type": "postgresql" if (db and db.use_postgres) else "json_fallback"
     }
 
-@app.get("/jobs_database.json")
-async def get_jobs():
-    """Get all jobs"""
+@app.get("/api/jobs")
+async def get_jobs_api():
+    """Get all jobs from database - proper API endpoint"""
     return await load_jobs()
 
-@app.post("/update_job")
-async def update_job(request: JobUpdateRequest):
+@app.get("/jobs_database.json")
+async def get_jobs_legacy():
+    """Legacy endpoint - redirects to proper API"""
+    return await load_jobs()
+
+@app.post("/api/update_job")
+async def update_job_api(request: JobUpdateRequest):
     """Update job applied and/or rejected status - DATABASE ONLY"""
     if not db or not DATABASE_AVAILABLE:
         raise HTTPException(status_code=500, detail="Database not available")
@@ -262,6 +267,11 @@ async def update_job(request: JobUpdateRequest):
     except Exception as e:
         print(f"❌ Database update failed: {e}")
         raise HTTPException(status_code=500, detail=f"Database update failed: {str(e)}")
+
+@app.post("/update_job")
+async def update_job_legacy(request: JobUpdateRequest):
+    """Legacy endpoint - redirects to proper API"""
+    return await update_job_api(request)
 
 @app.post("/sync_jobs")
 async def sync_jobs(request: SyncJobsRequest):

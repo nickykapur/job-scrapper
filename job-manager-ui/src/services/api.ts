@@ -12,23 +12,23 @@ const api = axios.create({
 });
 
 export const jobApi = {
-  // Get all jobs
+  // Get all jobs from database
   getJobs: async (): Promise<Record<string, Job>> => {
-    const response = await api.get('/jobs_database.json');
+    const response = await api.get('/api/jobs');
     return response.data;
   },
 
   // Update job status
   updateJob: async (jobId: string, applied: boolean): Promise<void> => {
-    await api.post('/update_job', {
+    await api.post('/api/update_job', {
       job_id: jobId,
       applied: applied,
     });
   },
 
-  // Reject job - using update_job endpoint since reject_job doesn't exist
+  // Reject job - using update_job endpoint
   rejectJob: async (jobId: string): Promise<void> => {
-    await api.post('/update_job', {
+    await api.post('/api/update_job', {
       job_id: jobId,
       rejected: true,
     });
