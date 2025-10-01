@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     job_url TEXT NOT NULL,
     scraped_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     applied BOOLEAN DEFAULT FALSE,
+    rejected BOOLEAN DEFAULT FALSE,
     is_new BOOLEAN DEFAULT FALSE,
     category VARCHAR(50), -- 'new', 'last_24h', 'existing'
     notes TEXT,
