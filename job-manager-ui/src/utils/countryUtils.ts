@@ -8,23 +8,15 @@ export function getCountryFromLocation(location: string): string {
 
   const locationLower = location.toLowerCase();
 
-  // Check for country names in location string
+  // Check for actively scraped country names in location string
   if (locationLower.includes("ireland")) {
     return "Ireland";
   } else if (locationLower.includes("spain")) {
     return "Spain";
   } else if (locationLower.includes("germany")) {
     return "Germany";
-  } else if (locationLower.includes("switzerland")) {
-    return "Switzerland";
   } else if (locationLower.includes("united kingdom") || locationLower.includes("england") || locationLower.includes("scotland")) {
     return "United Kingdom";
-  } else if (locationLower.includes("netherlands")) {
-    return "Netherlands";
-  } else if (locationLower.includes("france")) {
-    return "France";
-  } else if (locationLower.includes("italy")) {
-    return "Italy";
   } else {
     return "Unknown";
   }
@@ -38,11 +30,7 @@ export function getCountryFlag(country: string): string {
     'Ireland': '🇮🇪',
     'Spain': '🇪🇸',
     'Germany': '🇩🇪',
-    'Switzerland': '🇨🇭',
     'United Kingdom': '🇬🇧',
-    'Netherlands': '🇳🇱',
-    'France': '🇫🇷',
-    'Italy': '🇮🇹',
   };
   return flags[country] || '🏳️';
 }

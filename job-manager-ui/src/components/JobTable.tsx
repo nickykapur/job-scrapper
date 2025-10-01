@@ -128,11 +128,7 @@ const JobTable: React.FC<JobTableProps> = ({
       'Ireland': '🇮🇪',
       'Spain': '🇪🇸',
       'Germany': '🇩🇪',
-      'Switzerland': '🇨🇭',
       'United Kingdom': '🇬🇧',
-      'Netherlands': '🇳🇱',
-      'France': '🇫🇷',
-      'Italy': '🇮🇹',
     };
     return flags[country] || '🌍';
   };

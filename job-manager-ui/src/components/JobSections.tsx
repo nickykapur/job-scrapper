@@ -163,29 +163,21 @@ export const JobSections: React.FC<JobSectionsProps> = ({
     return acc;
   }, {} as Record<string, Job[]>);
 
-  // Country flag mapping
+  // Country flag mapping - Only actively scraped countries
   const countryFlags: Record<string, string> = {
     'Ireland': '🇮🇪',
     'Spain': '🇪🇸',
     'Germany': '🇩🇪',
-    'Switzerland': '🇨🇭',
     'United Kingdom': '🇬🇧',
-    'Netherlands': '🇳🇱',
-    'France': '🇫🇷',
-    'Italy': '🇮🇹',
     'Unknown': '🌍'
   };
 
-  // Country colors
+  // Country colors - Only actively scraped countries
   const countryColors: Record<string, string> = {
     'Ireland': '#4CAF50',
     'Spain': '#FF9800',
     'Germany': '#2196F3',
-    'Switzerland': '#E91E63',
     'United Kingdom': '#9C27B0',
-    'Netherlands': '#FF5722',
-    'France': '#3F51B5',
-    'Italy': '#795548',
     'Unknown': '#607D8B'
   };
 

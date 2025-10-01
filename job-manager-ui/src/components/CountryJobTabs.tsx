@@ -47,16 +47,12 @@ const CountryJobTabs: React.FC<CountryJobTabsProps> = ({
 }) => {
   const [selectedTab, setSelectedTab] = useState('all');
 
-  // Country configuration
+  // Country configuration - Only actively scraped countries
   const countryConfig: Record<string, { flag: string; color: string }> = {
     'Ireland': { flag: '🇮🇪', color: '#4CAF50' },
     'Spain': { flag: '🇪🇸', color: '#FF9800' },
     'Germany': { flag: '🇩🇪', color: '#2196F3' },
-    'Switzerland': { flag: '🇨🇭', color: '#E91E63' },
     'United Kingdom': { flag: '🇬🇧', color: '#9C27B0' },
-    'Netherlands': { flag: '🇳🇱', color: '#FF5722' },
-    'France': { flag: '🇫🇷', color: '#3F51B5' },
-    'Italy': { flag: '🇮🇹', color: '#795548' },
   };
 
   // Process jobs data

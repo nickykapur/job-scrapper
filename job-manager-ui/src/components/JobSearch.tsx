@@ -25,16 +25,7 @@ const countries = [
   { value: 'Dublin, County Dublin, Ireland', label: 'Ireland (Dublin)' },
   { value: 'Barcelona, Catalonia, Spain', label: 'Spain (Barcelona)' },
   { value: 'Berlin, Germany', label: 'Germany (Berlin)' },
-  { value: 'Munich, Bavaria, Germany', label: 'Germany (Munich)' },
-  { value: 'Frankfurt, Hesse, Germany', label: 'Germany (Frankfurt)' },
-  { value: 'Zurich, Switzerland', label: 'Switzerland (Zurich)' },
-  { value: 'Geneva, Switzerland', label: 'Switzerland (Geneva)' },
   { value: 'London, England, United Kingdom', label: 'United Kingdom (London)' },
-  { value: 'Manchester, England, United Kingdom', label: 'United Kingdom (Manchester)' },
-  { value: 'Edinburgh, Scotland, United Kingdom', label: 'United Kingdom (Edinburgh)' },
-  { value: 'Amsterdam, North Holland, Netherlands', label: 'Netherlands (Amsterdam)' },
-  { value: 'Paris, Île-de-France, France', label: 'France (Paris)' },
-  { value: 'Milan, Lombardy, Italy', label: 'Italy (Milan)' },
 ];
 
 const JobSearch: React.FC<JobSearchProps> = ({ onSearchComplete }) => {
