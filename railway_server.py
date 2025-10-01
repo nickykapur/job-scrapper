@@ -6,7 +6,8 @@ Just serves existing job database - no React build needed
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 import json
@@ -39,6 +40,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Serve React app static files
+if os.path.exists("job-manager-ui/dist"):
+    app.mount("/assets", StaticFiles(directory="job-manager-ui/dist/assets"), name="assets")
 
 # Simple HTML interface
 HTML_INTERFACE = """
@@ -228,8 +233,11 @@ async def save_jobs(jobs_data):
 
 @app.get("/")
 async def home():
-    """Serve the HTML interface"""
-    return HTMLResponse(content=HTML_INTERFACE)
+    """Serve the React app or fallback HTML interface"""
+    if os.path.exists("job-manager-ui/dist/index.html"):
+        return FileResponse("job-manager-ui/dist/index.html")
+    else:
+        return HTMLResponse(content=HTML_INTERFACE)
 
 @app.get("/health")
 async def health():
@@ -344,6 +352,15 @@ async def sync_jobs(request: SyncJobsRequest):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Sync failed: {str(e)}")
+
+# Catch-all route for React Router (SPA routing)
+@app.get("/{full_path:path}")
+async def catch_all(full_path: str):
+    """Serve React app for all other routes (SPA routing)"""
+    if os.path.exists("job-manager-ui/dist/index.html"):
+        return FileResponse("job-manager-ui/dist/index.html")
+    else:
+        return HTMLResponse(content=HTML_INTERFACE)
 
 if __name__ == "__main__":
     import uvicorn
