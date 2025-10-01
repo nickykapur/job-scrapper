@@ -10,7 +10,7 @@ import os
 import subprocess
 import sys
 from typing import Dict, Any, Optional, List
-app = FastAPI(title="LinkedIn Job Manager API", version="1.0.0")
+app = FastAPI(title="LinkedIn Job Manager API", version="1.0.1")
 
 # Try to import database models, fallback to JSON if not available
 try:
