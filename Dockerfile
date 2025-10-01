@@ -52,6 +52,7 @@ WORKDIR /app
 # Copy all Python files including scraper and daily update scripts
 COPY requirements.txt .
 COPY fastapi_server.py .
+COPY railway_server.py .
 COPY main.py .
 COPY linkedin_job_scraper.py .
 COPY database_models.py .
