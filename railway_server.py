@@ -200,7 +200,20 @@ async def load_jobs():
         raise HTTPException(status_code=500, detail="Database not available")
 
     try:
-        return await db.get_all_jobs()
+        jobs_data = await db.get_all_jobs()
+
+        # DEBUG: Check what we're returning
+        actual_jobs = {k: v for k, v in jobs_data.items() if not k.startswith('_')}
+        rejected_jobs = {k: v for k, v in actual_jobs.items() if v.get('rejected', False)}
+
+        print(f"🔄 DEBUG: load_jobs() returning {len(actual_jobs)} jobs, {len(rejected_jobs)} rejected")
+
+        if len(rejected_jobs) > 0:
+            print(f"🚫 DEBUG: Rejected jobs being returned:")
+            for job_id, job in rejected_jobs.items():
+                print(f"   {job_id[:12]}... - rejected: {job.get('rejected')}, applied: {job.get('applied')}")
+
+        return jobs_data
     except Exception as e:
         print(f"❌ Database load failed: {e}")
         raise HTTPException(status_code=500, detail=f"Database load failed: {str(e)}")
@@ -251,6 +264,45 @@ async def get_job_by_id(job_id: str):
         return {"job_id": job_id, "job_data": jobs[job_id]}
     else:
         raise HTTPException(status_code=404, detail="Job not found")
+
+@app.get("/api/debug/rejected-jobs")
+async def debug_rejected_jobs():
+    """Debug endpoint to check rejected jobs in database"""
+    if not db or not DATABASE_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    try:
+        # Get all jobs directly from database
+        all_jobs = await db.get_all_jobs()
+
+        # Filter rejected jobs
+        rejected_jobs = {}
+        all_jobs_count = 0
+
+        for job_id, job_data in all_jobs.items():
+            if job_id.startswith('_'):
+                continue
+
+            all_jobs_count += 1
+            if job_data.get('rejected', False):
+                rejected_jobs[job_id] = {
+                    'id': job_id,
+                    'title': job_data.get('title', 'Unknown'),
+                    'company': job_data.get('company', 'Unknown'),
+                    'rejected': job_data.get('rejected'),
+                    'applied': job_data.get('applied', False)
+                }
+
+        return {
+            "total_jobs": all_jobs_count,
+            "rejected_count": len(rejected_jobs),
+            "rejected_jobs": rejected_jobs,
+            "message": f"Found {len(rejected_jobs)} rejected jobs out of {all_jobs_count} total"
+        }
+
+    except Exception as e:
+        print(f"❌ Debug rejected jobs failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Debug failed: {str(e)}")
 
 @app.delete("/api/jobs/clear-all")
 async def clear_all_jobs():

@@ -111,10 +111,10 @@ class JobDatabase:
         try:
             # Get jobs
             jobs_query = """
-                SELECT id, title, company, location, posted_date, job_url, 
-                       scraped_at, applied, is_new, category, notes,
-                       first_seen, last_seen_24h, excluded
-                FROM jobs 
+                SELECT id, title, company, location, posted_date, job_url,
+                       scraped_at, applied, rejected, is_new, category, notes,
+                       first_seen, last_seen_24h, excluded, country
+                FROM jobs
                 ORDER BY scraped_at DESC
             """
             rows = await conn.fetch(jobs_query)
@@ -131,12 +131,14 @@ class JobDatabase:
                     "job_url": row['job_url'],
                     "scraped_at": row['scraped_at'].isoformat() if row['scraped_at'] else None,
                     "applied": row['applied'],
+                    "rejected": row['rejected'],  # IMPORTANT: Add the rejected field!
                     "is_new": row['is_new'],
                     "category": row['category'],
                     "notes": row['notes'],
                     "first_seen": row['first_seen'].isoformat() if row['first_seen'] else None,
                     "last_seen_24h": row['last_seen_24h'].isoformat() if row['last_seen_24h'] else None,
-                    "excluded": row['excluded']
+                    "excluded": row['excluded'],
+                    "country": row['country']  # Also add country field that was missing
                 }
                 jobs[row['id']] = job_data
             
