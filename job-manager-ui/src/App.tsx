@@ -203,10 +203,13 @@ function App() {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   // Memoize drawer stats to avoid recalculating on every render
-  const drawerStats = useMemo(() => ({
-    totalJobs: Object.keys(cleanJobs).length,
-    appliedJobs: stats.applied
-  }), [cleanJobs, stats.applied]);
+  const drawerStats = useMemo(() => {
+    const totalJobs = Object.keys(cleanJobs).length;
+    return {
+      totalJobs,
+      appliedJobs: stats.applied
+    };
+  }, [cleanJobs, stats.applied]);
   
   const [filters, setFilters] = useState<FilterState>({
     status: 'all',
@@ -215,9 +218,9 @@ function App() {
   });
 
 
-  const showNotification = useCallback((message: string, severity: 'success' | 'error' | 'info' = 'info') => {
+  const showNotification = (message: string, severity: 'success' | 'error' | 'info' = 'info') => {
     setNotification({ message, severity });
-  }, []);
+  };
 
   const toggleDarkMode = useCallback(() => {
     setDarkMode(prev => !prev);
