@@ -202,14 +202,6 @@ function App() {
   }, [darkMode]);
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
-  // Memoize drawer stats to avoid recalculating on every render
-  const drawerStats = useMemo(() => {
-    const totalJobs = Object.keys(cleanJobs).length;
-    return {
-      totalJobs,
-      appliedJobs: stats.applied
-    };
-  }, [cleanJobs, stats.applied]);
   
   const [filters, setFilters] = useState<FilterState>({
     status: 'all',
@@ -222,13 +214,13 @@ function App() {
     setNotification({ message, severity });
   };
 
-  const toggleDarkMode = useCallback(() => {
+  const toggleDarkMode = () => {
     setDarkMode(prev => !prev);
-  }, []);
+  };
 
-  const toggleDrawer = useCallback((open: boolean) => {
+  const toggleDrawer = (open: boolean) => {
     setDrawerOpen(open);
-  }, []);
+  };
 
   const loadJobs = useCallback(async (silent = false) => {
     if (!silent) setIsRefreshing(true);
@@ -296,7 +288,7 @@ function App() {
     }
   }, []);
 
-  const applyAndOpenJob = useCallback(async (jobId: string, jobUrl: string) => {
+  const applyAndOpenJob = async (jobId: string, jobUrl: string) => {
     const job = jobs[jobId];
     if (!job) return;
 
@@ -332,9 +324,9 @@ function App() {
         });
       }
     }
-  }, [jobs]);
+  };
 
-  const rejectJob = useCallback(async (jobId: string) => {
+  const rejectJob = async (jobId: string) => {
     const job = jobs[jobId];
     if (!job) return;
 
@@ -376,7 +368,7 @@ function App() {
         return newSet;
       });
     }
-  }, [jobs]);
+  };
 
   const removeAppliedJobs = async () => {
     const appliedJobs = Object.values(jobs).filter(job => job.applied);
@@ -410,62 +402,46 @@ function App() {
 
 
 
-  // Combined filtering and stats calculation for better performance
-  const { cleanJobs, stats } = useMemo(() => {
-    const searchTerm = filters.search?.toLowerCase();
-    const filteredJobs: Record<string, Job> = {};
+  // Filter out metadata and create clean jobs object
+  const cleanJobs = useMemo(() => {
+    const filtered = Object.fromEntries(
+      Object.entries(jobs).filter(([key, job]) => {
+        // Skip metadata entries
+        if (key.startsWith('_')) return false;
 
-    // Stats counters
-    let totalCount = 0;
-    let newCount = 0;
-    let appliedCount = 0;
-    let filteredCount = 0;
-
-    // Single iteration through all jobs
-    for (const [key, job] of Object.entries(jobs)) {
-      // Skip metadata entries
-      if (key.startsWith('_')) continue;
-
-      // Count for stats (all valid jobs)
-      if (job.title && job.company && job.id) {
-        totalCount++;
-        if (job.is_new) newCount++;
-        if (job.applied) appliedCount++;
-
-        // Apply filters
-        let passesFilter = true;
+        // Ensure job has required fields
+        if (!job.title || !job.company || !job.id) return false;
 
         // Status filter
-        if (filters.status === 'applied' && !job.applied) passesFilter = false;
-        else if (filters.status === 'not-applied' && (job.applied || job.rejected)) passesFilter = false;
-        else if (filters.status === 'rejected' && !job.rejected) passesFilter = false;
-        else if (filters.status === 'new' && !job.is_new) passesFilter = false;
+        if (filters.status === 'applied' && !job.applied) return false;
+        if (filters.status === 'not-applied' && (job.applied || job.rejected)) return false;
+        if (filters.status === 'rejected' && !job.rejected) return false;
+        if (filters.status === 'new' && !job.is_new) return false;
 
-        // Search filter (only check if we haven't already failed)
-        if (passesFilter && searchTerm) {
-          const searchFields = `${job.title} ${job.company} ${job.location}`.toLowerCase();
-          if (!searchFields.includes(searchTerm)) passesFilter = false;
+        // Search filter
+        if (filters.search) {
+          const searchTerm = filters.search.toLowerCase();
+          const searchFields = [job.title, job.company, job.location].join(' ').toLowerCase();
+          if (!searchFields.includes(searchTerm)) return false;
         }
 
-        if (passesFilter) {
-          filteredJobs[key] = job;
-          filteredCount++;
-        }
-      }
-    }
+        return true;
+      })
+    );
 
-    const jobStats: JobStats = {
-      total: totalCount,
-      new: newCount,
-      existing: totalCount - newCount,
-      applied: appliedCount,
-      not_applied: totalCount - appliedCount,
-    };
-
-    console.log(`🔍 Performance: Filtered ${filteredCount}/${totalCount} jobs in single pass`);
-
-    return { cleanJobs: filteredJobs, stats: jobStats };
+    return filtered;
   }, [jobs, filters]);
+
+  const stats: JobStats = useMemo(() => {
+    const allJobs = Object.values(jobs);
+    return {
+      total: allJobs.length,
+      new: allJobs.filter(job => job.is_new).length,
+      existing: allJobs.filter(job => !job.is_new).length,
+      applied: allJobs.filter(job => job.applied).length,
+      not_applied: allJobs.filter(job => !job.applied).length,
+    };
+  }, [jobs]);
 
   // Update local rejected count
   const updateLocalRejectedCount = () => {
@@ -688,7 +664,7 @@ function App() {
             </ListItemIcon>
             <ListItemText
               primary="Total Jobs"
-              secondary={drawerStats.totalJobs}
+              secondary={Object.keys(cleanJobs).length}
               primaryTypographyProps={{ fontSize: '0.875rem' }}
               secondaryTypographyProps={{ fontSize: '0.75rem', fontWeight: 600 }}
             />
@@ -700,7 +676,7 @@ function App() {
             </ListItemIcon>
             <ListItemText
               primary="Applied"
-              secondary={drawerStats.appliedJobs}
+              secondary={stats.applied}
               primaryTypographyProps={{ fontSize: '0.875rem' }}
               secondaryTypographyProps={{ fontSize: '0.75rem', fontWeight: 600, color: 'success.main' }}
             />
@@ -831,7 +807,7 @@ function App() {
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 2 }}>
                   <Chip
                     icon={<DatabaseIcon />}
-                    label={`${drawerStats.totalJobs}`}
+                    label={`${Object.keys(cleanJobs).length}`}
                     variant="outlined"
                     size="small"
                     sx={{ height: 24, fontSize: '0.75rem' }}
