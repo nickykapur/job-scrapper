@@ -233,6 +233,20 @@ function App() {
       console.log('🔄 Loading jobs from API...');
       const jobsData = await jobApi.getJobs();
       console.log('✅ Jobs loaded successfully:', Object.keys(jobsData).length, 'jobs');
+
+      // DEBUG: Check for rejected jobs in the data
+      const rejectedJobs = Object.entries(jobsData).filter(([key, job]) =>
+        !key.startsWith('_') && job.rejected === true
+      );
+      console.log(`🚫 DEBUG: Found ${rejectedJobs.length} rejected jobs in API response`);
+      if (rejectedJobs.length > 0) {
+        console.log('🚫 DEBUG: Rejected jobs:', rejectedJobs.map(([id, job]) => ({
+          id,
+          title: job.title,
+          rejected: job.rejected
+        })));
+      }
+
       console.log('📋 Jobs data received:', jobsData);
 
       // DEBUG: Check first job's country data
@@ -330,13 +344,20 @@ function App() {
     }));
 
     try {
+      console.log(`🚫 DEBUG: Rejecting job ${jobId}...`);
+      console.log(`🚫 DEBUG: Job data before reject:`, job);
+
       // Try to reject job via cloud API first
       await jobApi.rejectJob(jobId);
+
+      console.log(`✅ DEBUG: Job ${jobId} rejected successfully via API`);
       showNotification('Job rejected and saved to cloud', 'success');
+
       // No need to reload - optimistic update already done
     } catch (err) {
       // If cloud API fails, revert the optimistic update
-      console.warn('Cloud API reject failed:', err);
+      console.error('❌ DEBUG: Cloud API reject failed:', err);
+      console.log(`🔄 DEBUG: Reverting optimistic update for job ${jobId}`);
 
       // Revert the optimistic update
       setJobs(prev => ({
