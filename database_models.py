@@ -232,16 +232,21 @@ class JobDatabase:
 
     async def _update_job_status_postgres(self, job_id: str, applied: Optional[bool] = None, rejected: Optional[bool] = None) -> bool:
         """Update job applied and/or rejected status in PostgreSQL"""
+        print(f"🔄 DEBUG: _update_job_status_postgres called for job {job_id} - applied: {applied}, rejected: {rejected}")
+
         conn = await self.get_connection()
         if not conn:
+            print(f"❌ DEBUG: No PostgreSQL connection, falling back to JSON")
             return self._update_job_status_json(job_id, applied, rejected)
 
         try:
             # First check if job exists
-            existing = await conn.fetchrow("SELECT id FROM jobs WHERE id = $1", job_id)
+            existing = await conn.fetchrow("SELECT id, rejected, applied FROM jobs WHERE id = $1", job_id)
             if not existing:
-                print(f"❌ Job {job_id} not found in PostgreSQL database")
+                print(f"❌ DEBUG: Job {job_id} not found in PostgreSQL database")
                 return False
+
+            print(f"✅ DEBUG: Found job {job_id} in database - current status: rejected={existing['rejected']}, applied={existing['applied']}")
 
             # Build dynamic SQL based on what fields need updating
             updates = []
@@ -271,10 +276,22 @@ class JobDatabase:
 
             # Build and execute query
             query = f"UPDATE jobs SET {', '.join(updates)}, updated_at = CURRENT_TIMESTAMP WHERE id = ${param_count}"
+            print(f"🔄 DEBUG: Executing SQL: {query}")
+            print(f"🔄 DEBUG: With parameters: {params}")
+
             result = await conn.execute(query, *params)
+            print(f"✅ DEBUG: SQL execution result: {result}")
 
             # Check if any rows were affected (job was found and updated)
             rows_affected = int(result.split()[-1]) if result and 'UPDATE' in result else 0
+            print(f"✅ DEBUG: Rows affected: {rows_affected}")
+
+            if rows_affected > 0:
+                # Verify the update by reading the job back
+                updated_job = await conn.fetchrow("SELECT id, rejected, applied FROM jobs WHERE id = $1", job_id)
+                if updated_job:
+                    print(f"✅ DEBUG: After update - job {job_id}: rejected={updated_job['rejected']}, applied={updated_job['applied']}")
+
             return rows_affected > 0
         except Exception as e:
             print(f"❌ Error updating job in PostgreSQL: {e}")

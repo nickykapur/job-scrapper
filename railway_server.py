@@ -297,17 +297,22 @@ async def update_job_api(request: JobUpdateRequest):
         raise HTTPException(status_code=500, detail="Database not available")
 
     try:
+        print(f"🔄 DEBUG: Updating job {request.job_id} - applied: {request.applied}, rejected: {request.rejected}")
+
         success = await db.update_job_status(
             job_id=request.job_id,
             applied=request.applied,
             rejected=request.rejected
         )
+
         if success:
+            print(f"✅ DEBUG: Job {request.job_id} updated successfully in database")
             return {"success": True, "message": f"Job {request.job_id} updated"}
         else:
+            print(f"❌ DEBUG: Job {request.job_id} not found in database")
             raise HTTPException(status_code=404, detail="Job not found")
     except Exception as e:
-        print(f"❌ Database update failed: {e}")
+        print(f"❌ DEBUG: Database update failed for job {request.job_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Database update failed: {str(e)}")
 
 @app.post("/update_job")
