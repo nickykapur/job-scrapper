@@ -252,6 +252,39 @@ async def get_job_by_id(job_id: str):
     else:
         raise HTTPException(status_code=404, detail="Job not found")
 
+@app.delete("/api/jobs/clear-all")
+async def clear_all_jobs():
+    """Clear all jobs from database - USE WITH CAUTION"""
+    if not db or not DATABASE_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    try:
+        # Get connection
+        conn = await db.get_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+
+        # Count before deletion
+        total_before = await conn.fetchval("SELECT COUNT(*) FROM jobs")
+
+        # Delete all jobs
+        await conn.execute("DELETE FROM jobs")
+
+        # Count after deletion
+        total_after = await conn.fetchval("SELECT COUNT(*) FROM jobs")
+
+        await conn.close()
+
+        return {
+            "success": True,
+            "message": "All jobs cleared from database",
+            "jobs_deleted": total_before,
+            "jobs_remaining": total_after
+        }
+    except Exception as e:
+        print(f"❌ Database clear failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to clear database: {str(e)}")
+
 @app.get("/jobs_database.json")
 async def get_jobs_legacy():
     """Legacy endpoint - redirects to proper API"""

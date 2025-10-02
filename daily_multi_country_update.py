@@ -45,8 +45,12 @@ def sync_to_railway(railway_url):
         print(f"❌ Railway sync error: {e}")
         return False
 
-def load_existing_jobs():
+def load_existing_jobs(fresh_start=False):
     """Load existing jobs from database"""
+    if fresh_start:
+        print("🆕 Starting fresh - ignoring existing jobs")
+        return {}
+
     jobs_file = "jobs_database.json"
     if os.path.exists(jobs_file):
         try:
@@ -133,17 +137,8 @@ def categorize_jobs(existing_jobs, new_scraped_jobs):
 
         categorized_jobs[job_id] = job_copy
 
-    # Keep existing jobs that weren't found in the 24h search
-    for job_id, job_data in existing_jobs.items():
-        if job_id.startswith("_"):  # Skip metadata
-            continue
-
-        if job_id not in categorized_jobs:
-            job_copy = job_data.copy()
-            # Reset category if it was temporary
-            if job_copy.get("category") in ["new", "last_24h"]:
-                job_copy["category"] = "existing"
-            categorized_jobs[job_id] = job_copy
+    # DON'T keep old jobs - we only want 24h results
+    # This ensures the database only contains recent jobs
 
     return categorized_jobs, new_count, last_24h_count
 
@@ -176,8 +171,9 @@ def run_multi_country_job_search():
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("🎯 Target: 13 European Countries - Software Jobs - Last 24 Hours")
 
-    # Load existing jobs
-    existing_jobs = load_existing_jobs()
+    # Load existing jobs (set fresh_start=True to ignore old jobs)
+    fresh_start = True  # Change to False if you want to keep building on existing jobs
+    existing_jobs = load_existing_jobs(fresh_start=fresh_start)
     old_count = len([j for k, j in existing_jobs.items() if not k.startswith("_")])
 
     print(f"📊 Current database: {old_count} total jobs")

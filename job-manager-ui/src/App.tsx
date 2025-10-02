@@ -1,43 +1,36 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import {
-  ThemeProvider,
-  createTheme,
-  CssBaseline,
-  Container,
-  AppBar,
-  Toolbar,
-  Typography,
-  Box,
-  Alert,
-  Snackbar,
-  IconButton,
-  Chip,
-  Avatar,
-  Button,
-  Drawer,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  Divider,
-  useMediaQuery,
-} from '@mui/material';
-import {
-  Work as WorkIcon,
-  Brightness4 as DarkIcon,
-  Brightness7 as LightIcon,
-  CloudSync as SyncIcon,
-  Storage as DatabaseIcon,
-  Dashboard as DashboardIcon,
-  BookmarkBorder as BookmarkIcon,
-  Settings as SettingsIcon,
-  Person as PersonIcon,
-  Menu as MenuIcon,
-  Search as SearchIcon,
-  School as TrainingIcon,
-  Architecture as SystemDesignIcon,
-  CloudUpload as CloudUploadIcon,
-} from '@mui/icons-material';
+// Optimized imports to reduce bundle size
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import Container from '@mui/material/Container';
+import AppBar from '@mui/material/AppBar';
+import Toolbar from '@mui/material/Toolbar';
+import Typography from '@mui/material/Typography';
+import Box from '@mui/material/Box';
+import Alert from '@mui/material/Alert';
+import Snackbar from '@mui/material/Snackbar';
+import IconButton from '@mui/material/IconButton';
+import Chip from '@mui/material/Chip';
+import Button from '@mui/material/Button';
+import Drawer from '@mui/material/Drawer';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
+import useMediaQuery from '@mui/material/useMediaQuery';
+// Optimized icon imports to reduce bundle size
+import WorkIcon from '@mui/icons-material/Work';
+import DarkIcon from '@mui/icons-material/Brightness4';
+import LightIcon from '@mui/icons-material/Brightness7';
+import SyncIcon from '@mui/icons-material/CloudSync';
+import DatabaseIcon from '@mui/icons-material/Storage';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import BookmarkIcon from '@mui/icons-material/BookmarkBorder';
+import SettingsIcon from '@mui/icons-material/Settings';
+import MenuIcon from '@mui/icons-material/Menu';
+import TrainingIcon from '@mui/icons-material/School';
+import SystemDesignIcon from '@mui/icons-material/Architecture';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { JobCard } from './components/JobCard';
 import { StatsCards } from './components/StatsCards';
 import { FilterControls } from './components/FilterControls';
@@ -202,8 +195,18 @@ function App() {
   } | null>(null);
   const [currentTab, setCurrentTab] = useState<'dashboard' | 'training' | 'system-design'>('dashboard');
   
-  const theme = useMemo(() => createAppTheme(darkMode ? 'dark' : 'light'), [darkMode]);
+  // Lazy theme creation to avoid heavy computation on every render
+  const theme = useMemo(() => {
+    console.log(`🎨 Creating ${darkMode ? 'dark' : 'light'} theme`);
+    return createAppTheme(darkMode ? 'dark' : 'light');
+  }, [darkMode]);
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
+  // Memoize drawer stats to avoid recalculating on every render
+  const drawerStats = useMemo(() => ({
+    totalJobs: Object.keys(cleanJobs).length,
+    appliedJobs: stats.applied
+  }), [cleanJobs, stats.applied]);
   
   const [filters, setFilters] = useState<FilterState>({
     status: 'all',
@@ -212,9 +215,17 @@ function App() {
   });
 
 
-  const showNotification = (message: string, severity: 'success' | 'error' | 'info' = 'info') => {
+  const showNotification = useCallback((message: string, severity: 'success' | 'error' | 'info' = 'info') => {
     setNotification({ message, severity });
-  };
+  }, []);
+
+  const toggleDarkMode = useCallback(() => {
+    setDarkMode(prev => !prev);
+  }, []);
+
+  const toggleDrawer = useCallback((open: boolean) => {
+    setDrawerOpen(open);
+  }, []);
 
   const loadJobs = useCallback(async (silent = false) => {
     if (!silent) setIsRefreshing(true);
@@ -222,6 +233,7 @@ function App() {
       console.log('🔄 Loading jobs from API...');
       const jobsData = await jobApi.getJobs();
       console.log('✅ Jobs loaded successfully:', Object.keys(jobsData).length, 'jobs');
+      console.log('📋 Jobs data received:', jobsData);
 
       // DEBUG: Check first job's country data
       const firstJobId = Object.keys(jobsData).find(k => !k.startsWith('_'));
@@ -267,7 +279,7 @@ function App() {
     }
   }, []);
 
-  const applyAndOpenJob = async (jobId: string, jobUrl: string) => {
+  const applyAndOpenJob = useCallback(async (jobId: string, jobUrl: string) => {
     const job = jobs[jobId];
     if (!job) return;
 
@@ -303,9 +315,9 @@ function App() {
         });
       }
     }
-  };
+  }, [jobs]);
 
-  const rejectJob = async (jobId: string) => {
+  const rejectJob = useCallback(async (jobId: string) => {
     const job = jobs[jobId];
     if (!job) return;
 
@@ -340,7 +352,7 @@ function App() {
         return newSet;
       });
     }
-  };
+  }, [jobs]);
 
   const removeAppliedJobs = async () => {
     const appliedJobs = Object.values(jobs).filter(job => job.applied);
@@ -374,47 +386,62 @@ function App() {
 
 
 
-  // Filter out metadata and create clean jobs object
-  const cleanJobs = useMemo(() => {
-    const filtered = Object.fromEntries(
-      Object.entries(jobs).filter(([key, job]) => {
-        // Skip metadata entries
-        if (key.startsWith('_')) return false;
-        
-        // Ensure job has required fields
-        if (!job.title || !job.company || !job.id) return false;
-        
-        // Status filter
-        if (filters.status === 'applied' && !job.applied) return false;
-        if (filters.status === 'not-applied' && (job.applied || job.rejected)) return false;
-        if (filters.status === 'rejected' && !job.rejected) return false;
-        if (filters.status === 'new' && !job.is_new) return false;
+  // Combined filtering and stats calculation for better performance
+  const { cleanJobs, stats } = useMemo(() => {
+    const searchTerm = filters.search?.toLowerCase();
+    const filteredJobs: Record<string, Job> = {};
 
-        // Search filter
-        if (filters.search) {
-          const searchTerm = filters.search.toLowerCase();
-          const searchFields = [job.title, job.company, job.location].join(' ').toLowerCase();
-          if (!searchFields.includes(searchTerm)) return false;
+    // Stats counters
+    let totalCount = 0;
+    let newCount = 0;
+    let appliedCount = 0;
+    let filteredCount = 0;
+
+    // Single iteration through all jobs
+    for (const [key, job] of Object.entries(jobs)) {
+      // Skip metadata entries
+      if (key.startsWith('_')) continue;
+
+      // Count for stats (all valid jobs)
+      if (job.title && job.company && job.id) {
+        totalCount++;
+        if (job.is_new) newCount++;
+        if (job.applied) appliedCount++;
+
+        // Apply filters
+        let passesFilter = true;
+
+        // Status filter
+        if (filters.status === 'applied' && !job.applied) passesFilter = false;
+        else if (filters.status === 'not-applied' && (job.applied || job.rejected)) passesFilter = false;
+        else if (filters.status === 'rejected' && !job.rejected) passesFilter = false;
+        else if (filters.status === 'new' && !job.is_new) passesFilter = false;
+
+        // Search filter (only check if we haven't already failed)
+        if (passesFilter && searchTerm) {
+          const searchFields = `${job.title} ${job.company} ${job.location}`.toLowerCase();
+          if (!searchFields.includes(searchTerm)) passesFilter = false;
         }
 
+        if (passesFilter) {
+          filteredJobs[key] = job;
+          filteredCount++;
+        }
+      }
+    }
 
-        return true;
-      })
-    );
-    
-    return filtered;
-  }, [jobs, filters]);
-
-  const stats: JobStats = useMemo(() => {
-    const allJobs = Object.values(jobs);
-    return {
-      total: allJobs.length,
-      new: allJobs.filter(job => job.is_new).length,
-      existing: allJobs.filter(job => !job.is_new).length,
-      applied: allJobs.filter(job => job.applied).length,
-      not_applied: allJobs.filter(job => !job.applied).length,
+    const jobStats: JobStats = {
+      total: totalCount,
+      new: newCount,
+      existing: totalCount - newCount,
+      applied: appliedCount,
+      not_applied: totalCount - appliedCount,
     };
-  }, [jobs]);
+
+    console.log(`🔍 Performance: Filtered ${filteredCount}/${totalCount} jobs in single pass`);
+
+    return { cleanJobs: filteredJobs, stats: jobStats };
+  }, [jobs, filters]);
 
   // Update local rejected count
   const updateLocalRejectedCount = () => {
@@ -637,7 +664,7 @@ function App() {
             </ListItemIcon>
             <ListItemText
               primary="Total Jobs"
-              secondary={Object.keys(cleanJobs).length}
+              secondary={drawerStats.totalJobs}
               primaryTypographyProps={{ fontSize: '0.875rem' }}
               secondaryTypographyProps={{ fontSize: '0.75rem', fontWeight: 600 }}
             />
@@ -649,7 +676,7 @@ function App() {
             </ListItemIcon>
             <ListItemText
               primary="Applied"
-              secondary={stats.applied}
+              secondary={drawerStats.appliedJobs}
               primaryTypographyProps={{ fontSize: '0.875rem' }}
               secondaryTypographyProps={{ fontSize: '0.75rem', fontWeight: 600, color: 'success.main' }}
             />
@@ -715,7 +742,7 @@ function App() {
           variant={isMobile ? 'temporary' : 'persistent'}
           anchor="left"
           open={isMobile ? drawerOpen : true}
-          onClose={() => setDrawerOpen(false)}
+          onClose={() => toggleDrawer(false)}
           sx={{
             width: isMobile ? 0 : DRAWER_WIDTH,
             flexShrink: 0,
@@ -763,7 +790,7 @@ function App() {
                 <IconButton
                   edge="start"
                   color="inherit"
-                  onClick={() => setDrawerOpen(true)}
+                  onClick={() => toggleDrawer(true)}
                   sx={{ mr: 2 }}
                 >
                   <MenuIcon />
@@ -780,7 +807,7 @@ function App() {
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 2 }}>
                   <Chip
                     icon={<DatabaseIcon />}
-                    label={`${Object.keys(cleanJobs).length}`}
+                    label={`${drawerStats.totalJobs}`}
                     variant="outlined"
                     size="small"
                     sx={{ height: 24, fontSize: '0.75rem' }}
@@ -800,7 +827,7 @@ function App() {
 
               {/* Theme Toggle */}
               <IconButton
-                onClick={() => setDarkMode(!darkMode)}
+                onClick={toggleDarkMode}
                 color="inherit"
                 size="medium"
                 title={`Switch to ${darkMode ? 'light' : 'dark'} mode`}
