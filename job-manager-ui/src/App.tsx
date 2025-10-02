@@ -234,6 +234,7 @@ function App() {
         !key.startsWith('_') && job.rejected === true
       );
       console.log(`🚫 DEBUG: Found ${rejectedJobs.length} rejected jobs in API response`);
+      console.log(`🎯 DEBUG: These rejected jobs will be hidden from UI unless viewing 'rejected' filter`);
       if (rejectedJobs.length > 0) {
         console.log('🚫 DEBUG: Rejected jobs:', rejectedJobs.map(([id, job]) => ({
           id,
@@ -417,6 +418,9 @@ function App() {
         if (filters.status === 'not-applied' && (job.applied || job.rejected)) return false;
         if (filters.status === 'rejected' && !job.rejected) return false;
         if (filters.status === 'new' && !job.is_new) return false;
+
+        // IMPORTANT: Hide rejected jobs by default unless specifically viewing rejected jobs
+        if (filters.status !== 'rejected' && job.rejected) return false;
 
         // Search filter
         if (filters.search) {
