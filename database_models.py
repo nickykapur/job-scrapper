@@ -113,7 +113,7 @@ class JobDatabase:
             jobs_query = """
                 SELECT id, title, company, location, posted_date, job_url,
                        scraped_at, applied, rejected, is_new, category, notes,
-                       first_seen, last_seen_24h, excluded, country
+                       first_seen, last_seen_24h, excluded
                 FROM jobs
                 ORDER BY scraped_at DESC
             """
@@ -137,8 +137,7 @@ class JobDatabase:
                     "notes": row['notes'],
                     "first_seen": row['first_seen'].isoformat() if row['first_seen'] else None,
                     "last_seen_24h": row['last_seen_24h'].isoformat() if row['last_seen_24h'] else None,
-                    "excluded": row['excluded'],
-                    "country": row['country']  # Also add country field that was missing
+                    "excluded": row['excluded']
                 }
                 jobs[row['id']] = job_data
             
@@ -276,23 +275,34 @@ class JobDatabase:
             # Add job_id as last parameter
             params.append(job_id)
 
-            # Build and execute query
+            # Build and execute query with explicit transaction
             query = f"UPDATE jobs SET {', '.join(updates)}, updated_at = CURRENT_TIMESTAMP WHERE id = ${param_count}"
             print(f"🔄 DEBUG: Executing SQL: {query}")
             print(f"🔄 DEBUG: With parameters: {params}")
 
-            result = await conn.execute(query, *params)
-            print(f"✅ DEBUG: SQL execution result: {result}")
+            # Use explicit transaction to ensure changes are committed
+            async with conn.transaction():
+                result = await conn.execute(query, *params)
+                print(f"✅ DEBUG: SQL execution result: {result}")
 
-            # Check if any rows were affected (job was found and updated)
-            rows_affected = int(result.split()[-1]) if result and 'UPDATE' in result else 0
-            print(f"✅ DEBUG: Rows affected: {rows_affected}")
+                # Check if any rows were affected (job was found and updated)
+                rows_affected = int(result.split()[-1]) if result and 'UPDATE' in result else 0
+                print(f"✅ DEBUG: Rows affected: {rows_affected}")
 
-            if rows_affected > 0:
-                # Verify the update by reading the job back
-                updated_job = await conn.fetchrow("SELECT id, rejected, applied FROM jobs WHERE id = $1", job_id)
-                if updated_job:
-                    print(f"✅ DEBUG: After update - job {job_id}: rejected={updated_job['rejected']}, applied={updated_job['applied']}")
+                if rows_affected > 0:
+                    # Verify the update by reading the job back WITHIN the same transaction
+                    updated_job = await conn.fetchrow("SELECT id, rejected, applied FROM jobs WHERE id = $1", job_id)
+                    if updated_job:
+                        print(f"✅ DEBUG: After update WITHIN transaction - job {job_id}: rejected={updated_job['rejected']}, applied={updated_job['applied']}")
+                    else:
+                        print(f"❌ DEBUG: Could not verify update - job {job_id} not found after update")
+
+            # Verify the update OUTSIDE the transaction to confirm persistence
+            final_check = await conn.fetchrow("SELECT id, rejected, applied FROM jobs WHERE id = $1", job_id)
+            if final_check:
+                print(f"🔍 DEBUG: Final verification OUTSIDE transaction - job {job_id}: rejected={final_check['rejected']}, applied={final_check['applied']}")
+            else:
+                print(f"❌ DEBUG: Final verification failed - job {job_id} not found")
 
             return rows_affected > 0
         except Exception as e:

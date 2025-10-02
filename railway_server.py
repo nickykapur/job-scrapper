@@ -197,25 +197,32 @@ async def startup_event():
 async def load_jobs():
     """Load jobs from database ONLY - no JSON fallback"""
     if not db or not DATABASE_AVAILABLE:
+        print(f"❌ DEBUG: Database not available - db: {db}, DATABASE_AVAILABLE: {DATABASE_AVAILABLE}")
         raise HTTPException(status_code=500, detail="Database not available")
+
+    print(f"🔄 DEBUG: load_jobs() called - use_postgres: {db.use_postgres if db else 'N/A'}")
+    print(f"🔄 DEBUG: DATABASE_URL exists: {bool(os.environ.get('DATABASE_URL'))}")
 
     try:
         jobs_data = await db.get_all_jobs()
 
-        # DEBUG: Check what we're returning
+        # DEBUG: Check what we're returning and WHERE it came from
         actual_jobs = {k: v for k, v in jobs_data.items() if not k.startswith('_')}
         rejected_jobs = {k: v for k, v in actual_jobs.items() if v.get('rejected', False)}
 
         print(f"🔄 DEBUG: load_jobs() returning {len(actual_jobs)} jobs, {len(rejected_jobs)} rejected")
+        print(f"🔍 DEBUG: Data source - PostgreSQL: {db.use_postgres}, JSON fallback: {not db.use_postgres}")
 
         if len(rejected_jobs) > 0:
             print(f"🚫 DEBUG: Rejected jobs being returned:")
             for job_id, job in rejected_jobs.items():
                 print(f"   {job_id[:12]}... - rejected: {job.get('rejected')}, applied: {job.get('applied')}")
+        else:
+            print(f"📋 DEBUG: No rejected jobs found in returned data")
 
         return jobs_data
     except Exception as e:
-        print(f"❌ Database load failed: {e}")
+        print(f"❌ DEBUG: Database load failed: {e}")
         raise HTTPException(status_code=500, detail=f"Database load failed: {str(e)}")
 
 async def save_jobs(jobs_data):
