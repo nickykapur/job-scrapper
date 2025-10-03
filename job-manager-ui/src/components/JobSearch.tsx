@@ -24,6 +24,7 @@ interface JobSearchProps {
 const countries = [
   { value: 'Dublin, County Dublin, Ireland', label: 'Ireland (Dublin)' },
   { value: 'Barcelona, Catalonia, Spain', label: 'Spain (Barcelona)' },
+  { value: 'Madrid, Community of Madrid, Spain', label: 'Spain (Madrid)' },
   { value: 'Berlin, Germany', label: 'Germany (Berlin)' },
   { value: 'London, England, United Kingdom', label: 'United Kingdom (London)' },
 ];

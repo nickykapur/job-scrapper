@@ -13,6 +13,7 @@ import json
 import subprocess
 from datetime import datetime, timedelta
 from linkedin_job_scraper import LinkedInJobScraper
+import re
 
 def sync_to_railway(railway_url):
     """Sync to Railway using the sync script"""
@@ -164,6 +165,42 @@ def get_country_from_location(location):
     else:
         return "Unknown"
 
+def filter_high_experience_jobs(job_data):
+    """Filter out jobs requiring 5+ years of experience"""
+
+    # Fields to check for experience requirements
+    text_fields = [
+        job_data.get('title', ''),
+        job_data.get('company', ''),
+        job_data.get('location', ''),
+        job_data.get('description', ''),
+        job_data.get('requirements', '')
+    ]
+
+    # Join all text fields
+    combined_text = ' '.join(str(field) for field in text_fields).lower()
+
+    # Experience patterns that indicate 5+ years requirement
+    high_experience_patterns = [
+        r'\b(?:5|five|6|six|7|seven|8|eight|9|nine|10|ten)\+?\s*(?:years?|yrs?)\s*(?:of\s*)?(?:experience|exp)\b',
+        r'\b(?:5|five|6|six|7|seven|8|eight|9|nine|10|ten)\+?\s*(?:years?|yrs?)\s*(?:in|with|of)\b',
+        r'\bminimum\s*(?:of\s*)?(?:5|five|6|six|7|seven|8|eight|9|nine|10|ten)\+?\s*(?:years?|yrs?)\b',
+        r'\bat\s*least\s*(?:5|five|6|six|7|seven|8|eight|9|nine|10|ten)\+?\s*(?:years?|yrs?)\b',
+        r'\b(?:5|five|6|six|7|seven|8|eight|9|nine|10|ten)\+\s*(?:years?|yrs?)\b',
+        r'\bsenior\s*(?:software\s*)?(?:engineer|developer|programmer)\b',
+        r'\blead\s*(?:software\s*)?(?:engineer|developer|programmer)\b',
+        r'\bprincipal\s*(?:software\s*)?(?:engineer|developer|programmer)\b',
+        r'\bstaff\s*(?:software\s*)?(?:engineer|developer|programmer)\b',
+        r'\barchitect\b'
+    ]
+
+    # Check if any high experience pattern matches
+    for pattern in high_experience_patterns:
+        if re.search(pattern, combined_text, re.IGNORECASE):
+            return False  # Filter out this job
+
+    return True  # Keep this job
+
 def run_multi_country_job_search():
     """Run multi-country job search for last 24 hours"""
 
@@ -179,10 +216,11 @@ def run_multi_country_job_search():
     print(f"📊 Current database: {old_count} total jobs")
 
     # Multi-country search configuration
-    # Limited to 4 main locations for faster scraping
+    # Limited to 5 main locations for faster scraping
     countries_config = [
         {"location": "Dublin, County Dublin, Ireland", "country": "Ireland"},
         {"location": "Barcelona, Catalonia, Spain", "country": "Spain"},
+        {"location": "Madrid, Community of Madrid, Spain", "country": "Spain"},
         {"location": "Berlin, Germany", "country": "Germany"},
         {"location": "London, England, United Kingdom", "country": "United Kingdom"},
     ]
@@ -235,15 +273,27 @@ def run_multi_country_job_search():
                         found_jobs = len(results)
                         print(f"      ✅ Found {found_jobs} jobs")
 
-                        # Add country info to each job and merge results
+                        # Filter out high experience jobs and add country info
+                        filtered_jobs = 0
+                        high_exp_filtered = 0
+
                         for job_id, job_data in results.items():
                             if job_id not in all_new_jobs:
-                                job_data["country"] = country
-                                job_data["search_location"] = location
-                                all_new_jobs[job_id] = job_data
-                                country_jobs += 1
+                                # Apply experience filter
+                                if filter_high_experience_jobs(job_data):
+                                    job_data["country"] = country
+                                    job_data["search_location"] = location
+                                    all_new_jobs[job_id] = job_data
+                                    country_jobs += 1
+                                    filtered_jobs += 1
+                                else:
+                                    high_exp_filtered += 1
 
-                        country_results[country]["jobs"] += found_jobs
+                        if high_exp_filtered > 0:
+                            print(f"      🚫 Filtered out {high_exp_filtered} high-experience jobs")
+                        print(f"      ✅ Added {filtered_jobs} suitable jobs")
+
+                        country_results[country]["jobs"] += filtered_jobs
                         successful_searches += 1
                     else:
                         print(f"      ⚠️ No jobs found")
@@ -314,8 +364,9 @@ def run_multi_country_job_search():
                 print(f"\n🎉 Multi-country update completed successfully!")
                 print(f"📊 Daily Summary:")
                 print(f"   • Best market: {top_countries[0][0]} ({top_countries[0][1]} jobs)" if top_countries[0][1] > 0 else "   • No standout markets today")
-                print(f"   • Countries active: {len([c for c, s in categorized_jobs['_metadata']['country_daily_stats'].items() if s['new_jobs'] + s['last_24h_jobs'] > 0])}/8")
+                print(f"   • Countries active: {len([c for c, s in categorized_jobs['_metadata']['country_daily_stats'].items() if s['new_jobs'] + s['last_24h_jobs'] > 0])}/5")
                 print(f"   • Total job opportunities: {new_count + last_24h_count}")
+                print(f"   • Experience filtering: Jobs requiring 5+ years filtered out automatically")
 
                 print(f"\n📝 Next steps:")
                 print(f"   1. git add jobs_database.json")
