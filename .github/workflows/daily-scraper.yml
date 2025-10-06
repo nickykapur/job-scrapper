@@ -28,19 +28,9 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run multi-country scraper
+      - name: Run multi-country scraper and sync to Railway
         run: |
           python daily_multi_country_update.py
         env:
-          # Railway URL for syncing (already in your script)
+          # Railway URL for syncing (already in your script at line 380)
           RAILWAY_URL: https://web-production-110bb.up.railway.app
-
-      - name: Commit updated jobs database
-        run: |
-          git config user.name "GitHub Actions Bot"
-          git config user.email "actions@github.com"
-          git add jobs_database.json
-          git diff --quiet && git diff --staged --quiet || git commit -m "Auto: Multi-country job update $(date +'%Y-%m-%d %H:%M UTC')"
-          git push
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
