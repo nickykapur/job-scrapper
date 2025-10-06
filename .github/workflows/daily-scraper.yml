@@ -1,0 +1,46 @@
+name: Daily Multi-Country Job Scraper
+
+on:
+  schedule:
+    # Runs at 9 AM, 11 AM, 1 PM, 3 PM, 4 PM, 6 PM, 8 PM Dublin time (UTC/UTC+1)
+    # Dublin is UTC+0 (winter) or UTC+1 (summer - IST)
+    # Currently using UTC times: 9, 11, 13, 15, 16, 18, 20
+    - cron: '0 9,11,13,15,16,18,20 * * *'
+
+  # Allow manual trigger from GitHub Actions tab
+  workflow_dispatch:
+
+jobs:
+  scrape-and-sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run multi-country scraper
+        run: |
+          python daily_multi_country_update.py
+        env:
+          # Railway URL for syncing (already in your script)
+          RAILWAY_URL: https://web-production-110bb.up.railway.app
+
+      - name: Commit updated jobs database
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+          git add jobs_database.json
+          git diff --quiet && git diff --staged --quiet || git commit -m "Auto: Multi-country job update $(date +'%Y-%m-%d %H:%M UTC')"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
