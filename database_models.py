@@ -354,6 +354,49 @@ class JobDatabase:
         else:
             return self._sync_jobs_json(jobs_data)
 
+    async def _cleanup_old_jobs_postgres(self, conn, max_jobs_per_country: int = 300) -> int:
+        """Delete old jobs from PostgreSQL, keeping only max_jobs_per_country most recent per country"""
+        try:
+            # Get list of countries
+            countries = await conn.fetch("""
+                SELECT DISTINCT country FROM jobs WHERE country IS NOT NULL
+            """)
+
+            total_deleted = 0
+
+            for row in countries:
+                country = row['country']
+
+                # Delete old jobs for this country, keeping max_jobs_per_country newest
+                result = await conn.execute("""
+                    DELETE FROM jobs
+                    WHERE id IN (
+                        SELECT id FROM (
+                            SELECT
+                                id,
+                                ROW_NUMBER() OVER (
+                                    PARTITION BY country
+                                    ORDER BY scraped_at DESC NULLS LAST
+                                ) as rn
+                            FROM jobs
+                            WHERE country = $1
+                        ) ranked
+                        WHERE rn > $2
+                    )
+                """, country, max_jobs_per_country)
+
+                # Extract deleted count from result like "DELETE 50"
+                deleted_count = int(result.split()[-1]) if result and result.split() else 0
+                if deleted_count > 0:
+                    print(f"   ✂️ {country}: Removed {deleted_count} old jobs (kept {max_jobs_per_country} newest)")
+                    total_deleted += deleted_count
+
+            return total_deleted
+
+        except Exception as e:
+            print(f"⚠️  Warning: Could not clean up old jobs: {e}")
+            return 0
+
     async def _sync_jobs_postgres(self, jobs_data: Dict[str, Any]) -> Dict[str, int]:
         """Sync jobs to PostgreSQL"""
         conn = await self.get_connection()
@@ -421,9 +464,19 @@ class JobDatabase:
                 INSERT INTO scraping_sessions (total_jobs_found, new_jobs_count, updated_jobs_count, notes)
                 VALUES ($1, $2, $3, $4)
             """, len(jobs_data), new_jobs, updated_jobs, f"Synced from local scraper")
-            
-            return {"new_jobs": new_jobs, "updated_jobs": updated_jobs}
-            
+
+            print(f"✅ PostgreSQL: {new_jobs} new jobs, {updated_jobs} updated jobs")
+
+            # IMPORTANT: Clean up old jobs to maintain 300 per country limit
+            print(f"\n✂️ Cleaning up old jobs (maintaining 300 per country)...")
+            deleted_jobs = await self._cleanup_old_jobs_postgres(conn, max_jobs_per_country=300)
+            if deleted_jobs > 0:
+                print(f"🗑️  PostgreSQL: Deleted {deleted_jobs} old jobs total")
+            else:
+                print(f"✅ No cleanup needed - all countries within limit")
+
+            return {"new_jobs": new_jobs, "updated_jobs": updated_jobs, "deleted_jobs": deleted_jobs}
+
         except Exception as e:
             print(f"❌ Error syncing to PostgreSQL: {e}")
             return {"error": str(e)}
