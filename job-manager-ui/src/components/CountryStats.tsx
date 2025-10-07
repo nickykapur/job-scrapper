@@ -240,49 +240,6 @@ const CountryStats: React.FC<CountryStatsProps> = ({ jobs }) => {
           ))}
         </Stack>
 
-        {/* Spain City Breakdown - Show Madrid vs Barcelona if both have jobs */}
-        {(() => {
-          const spainJobs = Object.values(jobs).filter((job: any) =>
-            typeof job === 'object' && job !== null && !job.id?.startsWith('_') &&
-            !job.rejected && (job.country === 'Spain' || getCountryFromLocation(job.location) === 'Spain')
-          );
-
-          if (spainJobs.length > 0) {
-            const cityStats: Record<string, number> = {};
-            spainJobs.forEach((job: any) => {
-              const city = getCityFromLocation(job.location);
-              cityStats[city] = (cityStats[city] || 0) + 1;
-            });
-
-            const cities = Object.entries(cityStats).filter(([_, count]) => count > 0);
-
-            if (cities.length > 1) {
-              return (
-                <Box sx={{ mt: 3 }}>
-                  <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, display: 'flex', alignItems: 'center' }}>
-                    🇪🇸 Spain City Breakdown
-                  </Typography>
-                  <Stack spacing={1}>
-                    {cities.map(([city, count]) => (
-                      <Box key={city} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                          {city === 'Barcelona' ? '🏛️ Barcelona' : city === 'Madrid' ? '🏰 Madrid' : `🏙️ ${city}`}
-                        </Typography>
-                        <Chip
-                          label={`${count} jobs`}
-                          size="small"
-                          sx={{ bgcolor: '#FF980020', color: '#FF9800', fontWeight: 600 }}
-                        />
-                      </Box>
-                    ))}
-                  </Stack>
-                </Box>
-              );
-            }
-          }
-          return null;
-        })()}
-
         {/* Best Performing Country */}
         {countryData.length > 0 && (
           <Box sx={{ mt: 3, p: 2, bgcolor: 'primary.main', color: 'white', borderRadius: 2, opacity: 0.9 }}>

@@ -52,8 +52,6 @@ const JobTable: React.FC<JobTableProps> = ({
   const [sortField, setSortField] = useState<SortField>('posted_date');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [searchTerm, setSearchTerm] = useState('');
-  const [countryFilter, setCountryFilter] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
 
   // Convert jobs to array and filter
   const jobsArray = useMemo(() => {
@@ -62,24 +60,6 @@ const JobTable: React.FC<JobTableProps> = ({
     );
   }, [jobs]);
 
-  // Get unique countries
-  const countries = useMemo(() => {
-    const countrySet = new Set<string>();
-    jobsArray.forEach((job: any) => {
-      if (job.country) countrySet.add(job.country);
-    });
-    return Array.from(countrySet).sort();
-  }, [jobsArray]);
-
-  // Get unique categories
-  const categories = useMemo(() => {
-    const categorySet = new Set<string>();
-    jobsArray.forEach((job: any) => {
-      if (job.category) categorySet.add(job.category);
-    });
-    return Array.from(categorySet).sort();
-  }, [jobsArray]);
-
   // Filter and sort jobs
   const filteredAndSortedJobs = useMemo(() => {
     let filtered = jobsArray.filter((job: any) => {
@@ -87,10 +67,7 @@ const JobTable: React.FC<JobTableProps> = ({
         job.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         job.company?.toLowerCase().includes(searchTerm.toLowerCase());
 
-      const matchesCountry = !countryFilter || job.country === countryFilter;
-      const matchesCategory = !categoryFilter || job.category === categoryFilter;
-
-      return matchesSearch && matchesCountry && matchesCategory;
+      return matchesSearch;
     });
 
     // Sort jobs
@@ -113,7 +90,7 @@ const JobTable: React.FC<JobTableProps> = ({
     });
 
     return filtered;
-  }, [jobsArray, sortField, sortDirection, searchTerm, countryFilter, categoryFilter]);
+  }, [jobsArray, sortField, sortDirection, searchTerm]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -124,31 +101,6 @@ const JobTable: React.FC<JobTableProps> = ({
     }
   };
 
-  const getCountryFlag = (country: string): string => {
-    const flags: Record<string, string> = {
-      'Ireland': '🇮🇪',
-      'Spain': '🇪🇸',
-      'Germany': '🇩🇪',
-      'United Kingdom': '🇬🇧',
-    };
-    return flags[country] || '🌍';
-  };
-
-  const getCategoryColor = (category: string): string => {
-    switch (category) {
-      case 'new': return '#4CAF50';
-      case 'last_24h': return '#FF9800';
-      default: return '#9C27B0';
-    }
-  };
-
-  const getCategoryLabel = (category: string): string => {
-    switch (category) {
-      case 'new': return 'New';
-      case 'last_24h': return '24h';
-      default: return 'Other';
-    }
-  };
 
   if (jobsArray.length === 0) {
     return (
@@ -174,38 +126,6 @@ const JobTable: React.FC<JobTableProps> = ({
             onChange={(e) => setSearchTerm(e.target.value)}
             sx={{ flex: 1, minWidth: 200 }}
           />
-
-          <FormControl size="small" sx={{ minWidth: 150 }}>
-            <InputLabel>Country</InputLabel>
-            <Select
-              value={countryFilter}
-              onChange={(e) => setCountryFilter(e.target.value)}
-              label="Country"
-            >
-              <MenuItem value="">All Countries</MenuItem>
-              {countries.map((country) => (
-                <MenuItem key={country} value={country}>
-                  {getCountryFlag(country)} {country}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel>Category</InputLabel>
-            <Select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              label="Category"
-            >
-              <MenuItem value="">All Categories</MenuItem>
-              {categories.map((category) => (
-                <MenuItem key={category} value={category}>
-                  {getCategoryLabel(category)}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
 
           <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
             {filteredAndSortedJobs.length} jobs
@@ -238,17 +158,6 @@ const JobTable: React.FC<JobTableProps> = ({
                   Company
                 </TableSortLabel>
               </TableCell>
-              <TableCell sx={{ color: 'white', fontWeight: 600 }}>
-                <TableSortLabel
-                  active={sortField === 'country'}
-                  direction={sortField === 'country' ? sortDirection : 'asc'}
-                  onClick={() => handleSort('country')}
-                  sx={{ color: 'white', '&.Mui-active': { color: 'white' } }}
-                >
-                  Country
-                </TableSortLabel>
-              </TableCell>
-              <TableCell sx={{ color: 'white', fontWeight: 600 }}>Category</TableCell>
               <TableCell sx={{ color: 'white', fontWeight: 600 }}>
                 <TableSortLabel
                   active={sortField === 'posted_date'}
@@ -306,25 +215,6 @@ const JobTable: React.FC<JobTableProps> = ({
                     <CompanyIcon sx={{ fontSize: '1rem', mr: 1, color: 'text.secondary' }} />
                     <Typography variant="body2">{job.company}</Typography>
                   </Box>
-                </TableCell>
-                <TableCell>
-                  <Chip
-                    label={`${getCountryFlag(job.country || 'Unknown')} ${job.country || 'Unknown'}`}
-                    size="small"
-                    variant="outlined"
-                    sx={{ fontWeight: 500 }}
-                  />
-                </TableCell>
-                <TableCell>
-                  <Chip
-                    label={getCategoryLabel(job.category || 'other')}
-                    size="small"
-                    sx={{
-                      bgcolor: `${getCategoryColor(job.category || 'other')}20`,
-                      color: getCategoryColor(job.category || 'other'),
-                      fontWeight: 600,
-                    }}
-                  />
                 </TableCell>
                 <TableCell>
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
