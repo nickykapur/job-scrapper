@@ -29,6 +29,7 @@ import {
   Business as CompanyIcon,
   Schedule as TimeIcon,
   FilterList as FilterIcon,
+  Bolt as EasyApplyIcon,
 } from '@mui/icons-material';
 import type { Job } from '../types';
 
@@ -274,9 +275,26 @@ const JobTable: React.FC<JobTableProps> = ({
               >
                 <TableCell>
                   <Box>
-                    <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>
-                      {job.title}
-                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                      <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                        {job.title}
+                      </Typography>
+                      {job.easy_apply && (
+                        <Chip
+                          icon={<EasyApplyIcon sx={{ fontSize: '0.75rem' }} />}
+                          label="Easy Apply"
+                          size="small"
+                          sx={{
+                            height: 20,
+                            bgcolor: '#10b98120',
+                            color: '#10b981',
+                            fontSize: '0.65rem',
+                            fontWeight: 600,
+                            '& .MuiChip-icon': { color: '#10b981' }
+                          }}
+                        />
+                      )}
+                    </Box>
                     <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
                       <LocationIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
                       {job.location}

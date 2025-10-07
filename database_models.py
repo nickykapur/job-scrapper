@@ -112,7 +112,7 @@ class JobDatabase:
             # Get jobs
             jobs_query = """
                 SELECT id, title, company, location, posted_date, job_url,
-                       scraped_at, applied, rejected, is_new, category, notes,
+                       scraped_at, applied, rejected, is_new, easy_apply, category, notes,
                        first_seen, last_seen_24h, excluded
                 FROM jobs
                 ORDER BY scraped_at DESC
@@ -131,8 +131,9 @@ class JobDatabase:
                     "job_url": row['job_url'],
                     "scraped_at": row['scraped_at'].isoformat() if row['scraped_at'] else None,
                     "applied": row['applied'],
-                    "rejected": row['rejected'],  # IMPORTANT: Add the rejected field!
+                    "rejected": row['rejected'],
                     "is_new": row['is_new'],
+                    "easy_apply": row['easy_apply'],
                     "category": row['category'],
                     "notes": row['notes'],
                     "first_seen": row['first_seen'].isoformat() if row['first_seen'] else None,
@@ -383,12 +384,13 @@ class JobDatabase:
                     category = str(job_data.get('category', ''))[:50] if job_data.get('category') else None
 
                     # Use simpler UPDATE with only core fields
+                    easy_apply_bool = bool(job_data.get('easy_apply', False))
                     await conn.execute("""
                         UPDATE jobs SET
                             title = $2, company = $3, location = $4, posted_date = $5,
-                            job_url = $6, is_new = $7
+                            job_url = $6, is_new = $7, easy_apply = $8
                         WHERE id = $1
-                    """, job_id, title, company, location, posted_date, job_data['job_url'], is_new_bool)
+                    """, job_id, title, company, location, posted_date, job_data['job_url'], is_new_bool, easy_apply_bool)
                     updated_jobs += 1
                 else:
                     # Insert new job
@@ -407,10 +409,11 @@ class JobDatabase:
                     category = str(job_data.get('category', ''))[:50] if job_data.get('category') else None
 
                     # Use simpler INSERT with only core fields to avoid schema mismatches
+                    easy_apply_bool = bool(job_data.get('easy_apply', False))
                     await conn.execute("""
-                        INSERT INTO jobs (id, title, company, location, posted_date, job_url, applied, is_new)
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-                    """, job_id, title, company, location, posted_date, job_data['job_url'], applied_bool, is_new_bool)
+                        INSERT INTO jobs (id, title, company, location, posted_date, job_url, applied, is_new, easy_apply)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                    """, job_id, title, company, location, posted_date, job_data['job_url'], applied_bool, is_new_bool, easy_apply_bool)
                     new_jobs += 1
             
             # Log scraping session

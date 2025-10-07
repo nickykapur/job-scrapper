@@ -14,6 +14,7 @@ import {
   LocationOn as LocationIcon,
   AccessTime as TimeIcon,
   Business as CompanyIcon,
+  Bolt as EasyApplyIcon,
 } from '@mui/icons-material';
 import type { Job } from '../types';
 import { getCountryFromLocation, getCountryFlag } from '../utils/countryUtils';
@@ -90,20 +91,9 @@ export const JobCard: React.FC<JobCardProps> = ({
 
         {/* Job Details */}
         <Stack spacing={1} sx={{ mb: 3, flexGrow: 1 }}>
-          <Box display="flex" alignItems="center">
-            <LocationIcon sx={{ fontSize: 14, mr: 0.5, color: 'text.secondary' }} />
-            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
-              {job.location}
-            </Typography>
-          </Box>
-          {/* DEBUG: Show country extraction process */}
-          <Box display="flex" alignItems="center">
-            <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 600, color: 'error.main' }}>
-              🔍 API Country: "{job.country || 'MISSING'}" → Extracted: "{extractedCountry}"
-            </Typography>
-          </Box>
           {extractedCountry && extractedCountry !== 'Unknown' && (
             <Box display="flex" alignItems="center">
+              <LocationIcon sx={{ fontSize: 14, mr: 0.5, color: 'text.secondary' }} />
               <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 600, color: 'primary.main' }}>
                 {getCountryFlag(extractedCountry)} {extractedCountry}
               </Typography>
@@ -115,6 +105,24 @@ export const JobCard: React.FC<JobCardProps> = ({
               {job.posted_date}
             </Typography>
           </Box>
+          {job.easy_apply && (
+            <Box
+              display="flex"
+              alignItems="center"
+              sx={{
+                bgcolor: '#10b98120',
+                px: 1,
+                py: 0.5,
+                borderRadius: 1,
+                width: 'fit-content'
+              }}
+            >
+              <EasyApplyIcon sx={{ fontSize: 14, mr: 0.5, color: '#10b981' }} />
+              <Typography variant="body2" sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#10b981' }}>
+                Easy Apply
+              </Typography>
+            </Box>
+          )}
         </Stack>
 
         {/* Action Buttons */}

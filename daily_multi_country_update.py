@@ -143,6 +143,43 @@ def categorize_jobs(existing_jobs, new_scraped_jobs):
 
     return categorized_jobs, new_count, last_24h_count
 
+def limit_jobs_per_country(jobs_data, max_jobs_per_country=300):
+    """Keep only the most recent max_jobs_per_country jobs per country"""
+    jobs_by_country = {}
+
+    # Group jobs by country
+    for job_id, job_data in jobs_data.items():
+        if job_id.startswith("_"):  # Skip metadata
+            continue
+
+        country = job_data.get("country", "Unknown")
+        if country not in jobs_by_country:
+            jobs_by_country[country] = []
+
+        jobs_by_country[country].append((job_id, job_data))
+
+    # Limit each country to max_jobs_per_country most recent jobs
+    limited_jobs = {}
+    removed_count = 0
+
+    for country, country_jobs in jobs_by_country.items():
+        # Sort by scraped_at timestamp (most recent first)
+        country_jobs.sort(key=lambda x: x[1].get('scraped_at', ''), reverse=True)
+
+        if len(country_jobs) > max_jobs_per_country:
+            removed_count += len(country_jobs) - max_jobs_per_country
+            country_jobs = country_jobs[:max_jobs_per_country]
+            print(f"   ✂️ {country}: Trimmed to {max_jobs_per_country} most recent jobs (removed {len(country_jobs) - max_jobs_per_country} old jobs)")
+
+        # Add limited jobs back to the result
+        for job_id, job_data in country_jobs:
+            limited_jobs[job_id] = job_data
+
+    if removed_count > 0:
+        print(f"\n🗑️ Removed {removed_count} old jobs total to maintain {max_jobs_per_country} jobs per country limit")
+
+    return limited_jobs
+
 def get_country_from_location(location):
     """Extract country name from location string"""
     location_lower = location.lower()
@@ -309,6 +346,10 @@ def run_multi_country_job_search():
         # Categorize jobs
         print(f"\n📋 Categorizing jobs...")
         categorized_jobs, new_count, last_24h_count = categorize_jobs(existing_jobs, all_new_jobs)
+
+        # Limit jobs to 300 per country
+        print(f"\n✂️ Applying 300 jobs per country limit...")
+        categorized_jobs = limit_jobs_per_country(categorized_jobs, max_jobs_per_country=300)
 
         # Save updated database
         if save_jobs_with_categories(categorized_jobs):

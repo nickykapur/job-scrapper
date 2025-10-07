@@ -73,22 +73,24 @@ const CountryJobTabs: React.FC<CountryJobTabsProps> = ({
         (job.country || getCountryFromLocation(job.location)) === country
       );
 
+      const appliedCountryJobs = jobsArray.filter((job: any) =>
+        (job.country || getCountryFromLocation(job.location)) === country && job.applied
+      );
+
       countryGroups[country] = {
         country,
         flag: countryConfig[country].flag,
         color: countryConfig[country].color,
         jobs: countryJobs,
         newJobs: countryJobs.filter((job: any) => job.is_new || job.category === 'new').length,
-        appliedJobs: jobsArray.filter((job: any) =>
-          (job.country || getCountryFromLocation(job.location)) === country && job.applied
-        ).length,
+        appliedJobs: appliedCountryJobs.length,
         totalJobs: countryJobs.length,
       };
     });
 
-    // Sort countries by total jobs (descending)
+    // IMPORTANT: Always show all configured countries, even if they have 0 active jobs
+    // This way users can still see applied job stats per country
     const sortedCountries = Object.values(countryGroups)
-      .filter(data => data.totalJobs > 0)
       .sort((a, b) => b.totalJobs - a.totalJobs);
 
     return {
@@ -208,7 +210,7 @@ const CountryJobTabs: React.FC<CountryJobTabsProps> = ({
 
           <Grid container spacing={2}>
             {countryData.map((data) => (
-              <Grid item xs={12} md={6} lg={4} key={data.country}>
+              <Grid item xs={12} md={6} lg={3} key={data.country}>
                 <CountryStatCard data={data} />
               </Grid>
             ))}
@@ -252,14 +254,22 @@ const CountryJobTabs: React.FC<CountryJobTabsProps> = ({
               value="applied"
             />
 
-            {/* Country Tabs */}
+            {/* Country Tabs - Always show all countries */}
             {countryData.map((data) => (
               <Tab
                 key={data.country}
                 label={
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Typography>{data.flag}</Typography>
-                    <Badge badgeContent={data.totalJobs} color="primary">
+                    <Badge
+                      badgeContent={data.totalJobs}
+                      color={data.totalJobs > 0 ? "primary" : "default"}
+                      sx={{
+                        '& .MuiBadge-badge': {
+                          bgcolor: data.totalJobs > 0 ? undefined : '#9e9e9e'
+                        }
+                      }}
+                    >
                       <Typography>{data.country}</Typography>
                     </Badge>
                     {data.newJobs > 0 && (
@@ -271,6 +281,19 @@ const CountryJobTabs: React.FC<CountryJobTabsProps> = ({
                           color: '#4CAF50',
                           height: 20,
                           fontSize: '0.7rem',
+                          fontWeight: 600,
+                        }}
+                      />
+                    )}
+                    {data.appliedJobs > 0 && data.totalJobs === 0 && (
+                      <Chip
+                        label={`${data.appliedJobs} applied`}
+                        size="small"
+                        sx={{
+                          bgcolor: '#2196F320',
+                          color: '#2196F3',
+                          height: 20,
+                          fontSize: '0.65rem',
                           fontWeight: 600,
                         }}
                       />
@@ -304,12 +327,20 @@ const CountryJobTabs: React.FC<CountryJobTabsProps> = ({
                 <WorkIcon sx={{ mr: 1, color: 'primary.main' }} />
                 {selectedTab === 'all' ? 'All Available Jobs' : `${selectedTab} Jobs`} ({getTabJobs().length})
               </Typography>
-              <JobTable
-                jobs={createJobsObject(getTabJobs())}
-                onApplyAndOpen={onApplyAndOpen}
-                onRejectJob={onRejectJob}
-                updatingJobs={updatingJobs}
-              />
+              {getTabJobs().length === 0 ? (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <Typography variant="body1" color="text.secondary">
+                    No active jobs for {selectedTab}. Check the Applied tab to see applied jobs.
+                  </Typography>
+                </Box>
+              ) : (
+                <JobTable
+                  jobs={createJobsObject(getTabJobs())}
+                  onApplyAndOpen={onApplyAndOpen}
+                  onRejectJob={onRejectJob}
+                  updatingJobs={updatingJobs}
+                />
+              )}
             </Box>
           )}
         </Box>

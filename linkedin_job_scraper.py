@@ -355,6 +355,37 @@ class LinkedInJobScraper:
                 new_job_data["notes"] = existing_job["notes"]
         return new_job_data
 
+    def detect_easy_apply(self, card):
+        """Detect if a job has LinkedIn Easy Apply"""
+        easy_apply_selectors = [
+            ".job-search-card__easy-apply-label",
+            "[aria-label*='Easy Apply']",
+            ".artdeco-entity-lockup__badge--easy-apply",
+            "li-icon[type='easy-apply-logo']",
+            ".job-card-list__easy-apply"
+        ]
+
+        for selector in easy_apply_selectors:
+            try:
+                elements = card.find_elements(By.CSS_SELECTOR, selector)
+                for element in elements:
+                    if element.is_displayed():
+                        text = element.text.lower()
+                        if 'easy apply' in text or element.get_attribute('type') == 'easy-apply-logo':
+                            return True
+            except:
+                continue
+
+        # Also check for Easy Apply in the card's inner HTML/text
+        try:
+            card_text = card.text.lower()
+            if 'easy apply' in card_text:
+                return True
+        except:
+            pass
+
+        return False
+
     def extract_job_data(self, card):
         try:
             # Try multiple selectors for job title
@@ -363,15 +394,15 @@ class LinkedInJobScraper:
                 ".base-search-card__title a span[aria-hidden='true']",
                 ".base-search-card__title a",
                 ".base-search-card__title",
-                ".job-search-card__title a span", 
-                ".job-search-card__title", 
+                ".job-search-card__title a span",
+                ".job-search-card__title",
                 "h3 a span[aria-hidden='true']",
                 "h3 a span",
                 "h3 a",
                 "a span[aria-hidden='true']",
                 ".sr-only"
             ]
-            
+
             for selector in title_selectors:
                 try:
                     title_element = card.find_element(By.CSS_SELECTOR, selector)
@@ -511,7 +542,10 @@ class LinkedInJobScraper:
             
             # Generate unique job ID
             job_id = self.generate_job_id(title, company, location)
-            
+
+            # Detect Easy Apply status
+            easy_apply = self.detect_easy_apply(card)
+
             # Create job data
             job_data = {
                 "id": job_id,
@@ -523,6 +557,7 @@ class LinkedInJobScraper:
                 "scraped_at": datetime.now().isoformat(),
                 "applied": False,
                 "rejected": False,
+                "easy_apply": easy_apply,
                 "is_new": job_id not in self.existing_jobs
             }
             
@@ -584,13 +619,15 @@ class LinkedInJobScraper:
         new_jobs = len([job for job in self.jobs_data if job.get('is_new', False)])
         existing_jobs = total_jobs - new_jobs
         applied_jobs = len([job for job in self.jobs_data if job.get('applied', False)])
-        
+        easy_apply_jobs = len([job for job in self.jobs_data if job.get('easy_apply', False)])
+
         return {
             'total': total_jobs,
             'new': new_jobs,
             'existing': existing_jobs,
             'applied': applied_jobs,
-            'not_applied': total_jobs - applied_jobs
+            'not_applied': total_jobs - applied_jobs,
+            'easy_apply': easy_apply_jobs
         }
     
     def save_jobs_to_file(self, filename="linkedin_jobs.json"):
@@ -602,14 +639,15 @@ class LinkedInJobScraper:
         if not self.jobs_data:
             print("No jobs found")
             return
-            
+
         stats = self.get_job_stats()
-        
+
         print(f"\n=== Job Search Results ===")
         print(f"📊 Total: {stats['total']} | 🆕 New: {stats['new']} | 🔄 Existing: {stats['existing']}")
         print(f"✅ Applied: {stats['applied']} | ⏳ Not Applied: {stats['not_applied']}")
+        print(f"⚡ Easy Apply: {stats['easy_apply']}")
         print("=" * 60)
-        
+
         for i, job in enumerate(self.jobs_data, 1):
             status_icons = []
             if job.get('is_new', False):
@@ -618,13 +656,17 @@ class LinkedInJobScraper:
                 status_icons.append("✅")
             else:
                 status_icons.append("⏳")
-                
+            if job.get('easy_apply', False):
+                status_icons.append("⚡")
+
             status_str = " ".join(status_icons)
-            
+
             print(f"\n{i}. [{job['id']}] {job['title']} {status_str}")
             print(f"   Company: {job['company']}")
             print(f"   Location: {job['location']}")
             print(f"   Posted: {job['posted_date']}")
+            if job.get('easy_apply', False):
+                print(f"   ⚡ Easy Apply Available")
             print(f"   URL: {job['job_url']}")
             print("-" * 60)
     

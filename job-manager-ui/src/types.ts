@@ -8,6 +8,7 @@ export interface Job {
   scraped_at: string;
   applied: boolean;
   rejected?: boolean;
+  easy_apply?: boolean;
   is_new: boolean;
   category?: 'new' | 'last_24h' | 'existing';
   first_seen?: string;

@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     applied BOOLEAN DEFAULT FALSE,
     rejected BOOLEAN DEFAULT FALSE,
     is_new BOOLEAN DEFAULT FALSE,
+    easy_apply BOOLEAN DEFAULT FALSE, -- LinkedIn Easy Apply indicator
     category VARCHAR(50), -- 'new', 'last_24h', 'existing'
     notes TEXT,
     first_seen TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
