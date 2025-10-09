@@ -90,26 +90,26 @@ const createAppTheme = (mode: 'light' | 'dark') => createTheme({
     fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
     h4: {
       fontWeight: 700,
-      fontSize: '2rem',
+      fontSize: 'clamp(1.5rem, 4vw, 2rem)',
     },
     h5: {
       fontWeight: 600,
-      fontSize: '1.5rem',
+      fontSize: 'clamp(1.25rem, 3vw, 1.5rem)',
     },
     h6: {
       fontWeight: 600,
-      fontSize: '1.25rem',
+      fontSize: 'clamp(1.1rem, 2.5vw, 1.25rem)',
     },
     subtitle1: {
       fontWeight: 500,
-      fontSize: '1.1rem',
+      fontSize: 'clamp(1rem, 2vw, 1.1rem)',
     },
     body1: {
-      fontSize: '0.95rem',
+      fontSize: 'clamp(0.875rem, 1.5vw, 0.95rem)',
       lineHeight: 1.6,
     },
     body2: {
-      fontSize: '0.85rem',
+      fontSize: 'clamp(0.8rem, 1.5vw, 0.85rem)',
       lineHeight: 1.5,
     },
   },
@@ -854,7 +854,7 @@ function App() {
           <Box sx={{ flexGrow: 1, bgcolor: 'background.default', width: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box
               sx={{
-                p: 3,
+                p: { xs: 1.5, sm: 2, md: 3 },
                 flex: 1,
                 width: '100%',
                 height: '100%',

@@ -243,7 +243,7 @@ def run_multi_country_job_search():
 
     print("🌍 Starting Multi-Country Job Search (Last 24 Hours)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print("🎯 Target: 13 European Countries - Software Jobs - Last 24 Hours")
+    print("🎯 Target: Ireland, Spain (Madrid), UK - Software Jobs - Last 24 Hours")
 
     # Load existing jobs (set fresh_start=True to ignore old jobs)
     fresh_start = True  # Change to False if you want to keep building on existing jobs
@@ -253,12 +253,10 @@ def run_multi_country_job_search():
     print(f"📊 Current database: {old_count} total jobs")
 
     # Multi-country search configuration
-    # Limited to 5 main locations for faster scraping
+    # Limited to main locations for faster scraping
     countries_config = [
         {"location": "Dublin, County Dublin, Ireland", "country": "Ireland"},
-        {"location": "Barcelona, Catalonia, Spain", "country": "Spain"},
         {"location": "Madrid, Community of Madrid, Spain", "country": "Spain"},
-        {"location": "Berlin, Germany", "country": "Germany"},
         {"location": "London, England, United Kingdom", "country": "United Kingdom"},
     ]
 
@@ -405,7 +403,7 @@ def run_multi_country_job_search():
                 print(f"\n🎉 Multi-country update completed successfully!")
                 print(f"📊 Daily Summary:")
                 print(f"   • Best market: {top_countries[0][0]} ({top_countries[0][1]} jobs)" if top_countries[0][1] > 0 else "   • No standout markets today")
-                print(f"   • Countries active: {len([c for c, s in categorized_jobs['_metadata']['country_daily_stats'].items() if s['new_jobs'] + s['last_24h_jobs'] > 0])}/5")
+                print(f"   • Countries active: {len([c for c, s in categorized_jobs['_metadata']['country_daily_stats'].items() if s['new_jobs'] + s['last_24h_jobs'] > 0])}/3")
                 print(f"   • Total job opportunities: {new_count + last_24h_count}")
                 print(f"   • Experience filtering: Jobs requiring 5+ years filtered out automatically")
 

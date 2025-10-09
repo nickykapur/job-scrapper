@@ -58,7 +58,7 @@ export const JobCard: React.FC<JobCardProps> = ({
         },
       }}
     >
-      <CardContent sx={{ p: 3, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+      <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3 }, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
         {/* Company Name */}
         <Box display="flex" alignItems="center" mb={1}>
           <CompanyIcon sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />

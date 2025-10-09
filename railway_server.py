@@ -344,6 +344,122 @@ async def clear_all_jobs():
         print(f"❌ Database clear failed: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to clear database: {str(e)}")
 
+@app.delete("/api/jobs/by-country/{country}")
+async def delete_jobs_by_country(country: str):
+    """Delete all jobs from a specific country"""
+    if not db or not DATABASE_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    try:
+        # Get connection
+        conn = await db.get_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+
+        # Count before deletion
+        total_before = await conn.fetchval(
+            "SELECT COUNT(*) FROM jobs WHERE data->>'country' = $1",
+            country
+        )
+
+        # Delete jobs from specified country
+        await conn.execute(
+            "DELETE FROM jobs WHERE data->>'country' = $1",
+            country
+        )
+
+        # Count after deletion to verify
+        total_after = await conn.fetchval(
+            "SELECT COUNT(*) FROM jobs WHERE data->>'country' = $1",
+            country
+        )
+
+        # Get total jobs remaining
+        total_jobs = await conn.fetchval("SELECT COUNT(*) FROM jobs")
+
+        await conn.close()
+
+        return {
+            "success": True,
+            "message": f"Deleted all jobs from {country}",
+            "country": country,
+            "jobs_deleted": total_before,
+            "jobs_remaining_in_country": total_after,
+            "total_jobs_in_database": total_jobs
+        }
+    except Exception as e:
+        print(f"❌ Delete by country failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete jobs: {str(e)}")
+
+@app.post("/api/jobs/enforce-country-limit")
+async def enforce_country_limit(max_jobs: int = 300):
+    """Enforce the max jobs per country limit by removing oldest jobs"""
+    if not db or not DATABASE_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    try:
+        # Get connection
+        conn = await db.get_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+
+        # Get all jobs grouped by country
+        all_jobs = await load_jobs()
+
+        jobs_by_country = {}
+        deleted_count = 0
+
+        # Group jobs by country
+        for job_id, job_data in all_jobs.items():
+            if job_id.startswith("_"):
+                continue
+
+            country = job_data.get("country", "Unknown")
+            if country not in jobs_by_country:
+                jobs_by_country[country] = []
+
+            jobs_by_country[country].append({
+                "id": job_id,
+                "scraped_at": job_data.get("scraped_at", ""),
+                "data": job_data
+            })
+
+        # For each country, keep only the most recent max_jobs
+        for country, country_jobs in jobs_by_country.items():
+            if len(country_jobs) > max_jobs:
+                # Sort by scraped_at timestamp (most recent first)
+                country_jobs.sort(key=lambda x: x["scraped_at"], reverse=True)
+
+                # Keep only the first max_jobs
+                jobs_to_keep = country_jobs[:max_jobs]
+                jobs_to_delete = country_jobs[max_jobs:]
+
+                print(f"   ✂️ {country}: Keeping {len(jobs_to_keep)} jobs, deleting {len(jobs_to_delete)} old jobs")
+
+                # Delete old jobs
+                for job in jobs_to_delete:
+                    await conn.execute(
+                        "DELETE FROM jobs WHERE id = $1",
+                        job["id"]
+                    )
+                    deleted_count += 1
+
+        # Get final count
+        total_jobs = await conn.fetchval("SELECT COUNT(*) FROM jobs")
+
+        await conn.close()
+
+        return {
+            "success": True,
+            "message": f"Enforced {max_jobs} jobs per country limit",
+            "jobs_deleted": deleted_count,
+            "total_jobs_remaining": total_jobs,
+            "countries_processed": len(jobs_by_country)
+        }
+    except Exception as e:
+        print(f"❌ Enforce limit failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to enforce limit: {str(e)}")
+
 @app.get("/jobs_database.json")
 async def get_jobs_legacy():
     """Legacy endpoint - redirects to proper API"""

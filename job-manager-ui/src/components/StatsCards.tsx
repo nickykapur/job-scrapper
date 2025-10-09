@@ -47,9 +47,9 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ stats }) => {
   ];
 
   return (
-    <Grid container spacing={3} sx={{ mb: 4 }}>
+    <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }} sx={{ mb: { xs: 2, sm: 3, md: 4 } }}>
       {statItems.map((item) => (
-        <Grid item xs={12} sm={6} md={3} key={item.label}>
+        <Grid item xs={6} sm={6} md={3} key={item.label}>
           <Card
             elevation={0}
             sx={{
@@ -65,23 +65,23 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ stats }) => {
               },
             }}
           >
-            <CardContent sx={{ p: 3 }}>
+            <CardContent sx={{ p: { xs: 1.5, sm: 2, md: 3 } }}>
               <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                 <Box>
-                  <Typography variant="h4" component="div" sx={{ fontWeight: 700, color: item.color, mb: 0.5 }}>
+                  <Typography variant="h4" component="div" sx={{ fontWeight: 700, color: item.color, mb: { xs: 0, sm: 0.5 }, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
                     {item.value}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                     {item.label}
                   </Typography>
                 </Box>
                 <Box
                   sx={{
-                    display: 'flex',
+                    display: { xs: 'none', sm: 'flex' },
                     alignItems: 'center',
                     justifyContent: 'center',
-                    width: 48,
-                    height: 48,
+                    width: { sm: 40, md: 48 },
+                    height: { sm: 40, md: 48 },
                     borderRadius: 2,
                     backgroundColor: item.bgColor,
                     color: item.color,

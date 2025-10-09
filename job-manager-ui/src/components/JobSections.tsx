@@ -122,18 +122,18 @@ export const JobSections: React.FC<JobSectionsProps> = ({
       case 'table':
         return { xs: 12 }; // Not used in table view
       case 'grid':
-        return { xs: 12, sm: 6, lg: 4 };
+        return { xs: 12, sm: 6, md: 6, lg: 4 };
       case 'list':
         return { xs: 12 };
       case 'compact':
-        return { xs: 12, sm: 6, md: 4, lg: 3 };
+        return { xs: 6, sm: 6, md: 4, lg: 3 };
       default:
         return { xs: 12, sm: 6 };
     }
   };
 
   const renderJobGrid = (jobList: Job[]) => (
-    <Grid container spacing={viewMode === 'compact' ? 1.5 : 2}>
+    <Grid container spacing={{ xs: 1, sm: 1.5, md: viewMode === 'compact' ? 1.5 : 2 }}>
       {jobList.map((job) => (
         <Grid item {...getGridProps()} key={job.id}>
           <JobCard
@@ -198,7 +198,7 @@ export const JobSections: React.FC<JobSectionsProps> = ({
       {allDisplayJobs.length > 0 ? (
         <>
           {/* Header with View Controls */}
-          <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+          <Box sx={{ mb: { xs: 2, sm: 3 }, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: { xs: 1, sm: 2 } }}>
             <Typography
               variant="h4"
               sx={{
@@ -207,20 +207,20 @@ export const JobSections: React.FC<JobSectionsProps> = ({
                 backgroundClip: 'text',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
-                fontSize: '1.75rem',
+                fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.75rem' },
               }}
             >
               Job Listings
             </Typography>
 
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-              {/* Organization Mode Toggle */}
+            <Box sx={{ display: 'flex', gap: { xs: 1, sm: 2 }, alignItems: 'center', flexWrap: 'wrap' }}>
+              {/* Organization Mode Toggle - Hide on mobile */}
               <ToggleButtonGroup
                 value={organizationMode}
                 exclusive
                 onChange={handleOrganizationModeChange}
                 size="small"
-                sx={{ bgcolor: 'background.paper', boxShadow: 1 }}
+                sx={{ bgcolor: 'background.paper', boxShadow: 1, display: { xs: 'none', sm: 'flex' } }}
               >
                 <ToggleButton value="time" aria-label="organize by time">
                   <TimeViewIcon fontSize="small" />
@@ -230,7 +230,7 @@ export const JobSections: React.FC<JobSectionsProps> = ({
                 </ToggleButton>
               </ToggleButtonGroup>
 
-              {/* View Mode Toggle */}
+              {/* View Mode Toggle - Simplified on mobile */}
               <ToggleButtonGroup
                 value={viewMode}
                 exclusive
@@ -241,13 +241,13 @@ export const JobSections: React.FC<JobSectionsProps> = ({
                 <ToggleButton value="tabs" aria-label="country tabs view">
                   <TabViewIcon fontSize="small" />
                 </ToggleButton>
-                <ToggleButton value="table" aria-label="table view">
+                <ToggleButton value="table" aria-label="table view" sx={{ display: { xs: 'none', sm: 'inline-flex' } }}>
                   <TableViewIcon fontSize="small" />
                 </ToggleButton>
                 <ToggleButton value="grid" aria-label="grid view">
                   <GridViewIcon fontSize="small" />
                 </ToggleButton>
-                <ToggleButton value="list" aria-label="list view">
+                <ToggleButton value="list" aria-label="list view" sx={{ display: { xs: 'none', md: 'inline-flex' } }}>
                   <ListViewIcon fontSize="small" />
                 </ToggleButton>
                 <ToggleButton value="compact" aria-label="compact view">
