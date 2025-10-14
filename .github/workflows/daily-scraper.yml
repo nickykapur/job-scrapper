@@ -34,3 +34,10 @@ jobs:
         env:
           # Railway URL for syncing (already in your script at line 380)
           RAILWAY_URL: https://web-production-110bb.up.railway.app
+        # Scraper configuration:
+        # - Scrapes Ireland, Spain, UK, and Germany
+        # - Job limits per session:
+        #   * Ireland: UNLIMITED (all jobs kept)
+        #   * Spain, UK, Germany: 20 most recent jobs each
+        # - Filters out jobs requiring 5+ years experience
+        # - Filters out German jobs requiring proficient German language
