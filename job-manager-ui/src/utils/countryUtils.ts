@@ -13,10 +13,10 @@ export function getCountryFromLocation(location: string): string {
     return "Ireland";
   } else if (locationLower.includes("barcelona") || locationLower.includes("madrid") || locationLower.includes("spain")) {
     return "Spain";
-  } else if (locationLower.includes("berlin") || locationLower.includes("germany")) {
-    return "Germany";
-  } else if (locationLower.includes("london") || locationLower.includes("united kingdom") || locationLower.includes("england") || locationLower.includes("scotland")) {
-    return "United Kingdom";
+  } else if (locationLower.includes("panama")) {
+    return "Panama";
+  } else if (locationLower.includes("santiago") || locationLower.includes("chile")) {
+    return "Chile";
   } else {
     return "Unknown";
   }
@@ -38,10 +38,10 @@ export function getCityFromLocation(location: string): string {
     return "Barcelona";
   } else if (locationLower.includes("madrid")) {
     return "Madrid";
-  } else if (locationLower.includes("berlin")) {
-    return "Berlin";
-  } else if (locationLower.includes("london")) {
-    return "London";
+  } else if (locationLower.includes("panama")) {
+    return "Panama City";
+  } else if (locationLower.includes("santiago")) {
+    return "Santiago";
   } else {
     // Try to extract first part of location as city
     const parts = location.split(',');
@@ -56,8 +56,8 @@ export function getCountryFlag(country: string): string {
   const flags: Record<string, string> = {
     'Ireland': '🇮🇪',
     'Spain': '🇪🇸',
-    'Germany': '🇩🇪',
-    'United Kingdom': '🇬🇧',
+    'Panama': '🇵🇦',
+    'Chile': '🇨🇱',
   };
   return flags[country] || '🏳️';
 }

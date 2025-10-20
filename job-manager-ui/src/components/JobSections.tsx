@@ -167,8 +167,8 @@ export const JobSections: React.FC<JobSectionsProps> = ({
   const countryFlags: Record<string, string> = {
     'Ireland': '🇮🇪',
     'Spain': '🇪🇸',
-    'Germany': '🇩🇪',
-    'United Kingdom': '🇬🇧',
+    'Panama': '🇵🇦',
+    'Chile': '🇨🇱',
     'Unknown': '🌍'
   };
 
@@ -176,8 +176,8 @@ export const JobSections: React.FC<JobSectionsProps> = ({
   const countryColors: Record<string, string> = {
     'Ireland': '#4CAF50',
     'Spain': '#FF9800',
-    'Germany': '#2196F3',
-    'United Kingdom': '#9C27B0',
+    'Panama': '#2196F3',
+    'Chile': '#9C27B0',
     'Unknown': '#607D8B'
   };
 

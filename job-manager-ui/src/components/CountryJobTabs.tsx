@@ -51,8 +51,8 @@ const CountryJobTabs: React.FC<CountryJobTabsProps> = ({
   const countryConfig: Record<string, { flag: string; color: string }> = {
     'Ireland': { flag: '🇮🇪', color: '#4CAF50' },
     'Spain': { flag: '🇪🇸', color: '#FF9800' },
-    'Germany': { flag: '🇩🇪', color: '#2196F3' },
-    'United Kingdom': { flag: '🇬🇧', color: '#9C27B0' },
+    'Panama': { flag: '🇵🇦', color: '#2196F3' },
+    'Chile': { flag: '🇨🇱', color: '#9C27B0' },
   };
 
   // Process jobs data

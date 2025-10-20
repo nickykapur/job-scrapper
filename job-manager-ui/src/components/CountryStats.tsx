@@ -37,8 +37,8 @@ const CountryStats: React.FC<CountryStatsProps> = ({ jobs }) => {
   const countryConfig: Record<string, { flag: string; color: string }> = {
     'Ireland': { flag: '🇮🇪', color: '#4CAF50' },
     'Spain': { flag: '🇪🇸', color: '#FF9800' },
-    'Germany': { flag: '🇩🇪', color: '#2196F3' },
-    'United Kingdom': { flag: '🇬🇧', color: '#9C27B0' },
+    'Panama': { flag: '🇵🇦', color: '#2196F3' },
+    'Chile': { flag: '🇨🇱', color: '#9C27B0' },
   };
 
   // Extract country statistics from jobs

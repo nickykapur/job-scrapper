@@ -200,12 +200,12 @@ def get_country_from_location(location):
         return "Ireland"
     elif "spain" in location_lower:
         return "Spain"
-    elif "germany" in location_lower:
-        return "Germany"
+    elif "panama" in location_lower:
+        return "Panama"
+    elif "chile" in location_lower:
+        return "Chile"
     elif "switzerland" in location_lower:
         return "Switzerland"
-    elif "united kingdom" in location_lower or "england" in location_lower or "scotland" in location_lower:
-        return "United Kingdom"
     elif "netherlands" in location_lower:
         return "Netherlands"
     elif "france" in location_lower:
@@ -298,7 +298,7 @@ def run_multi_country_job_search():
 
     print("🌍 Starting Multi-Country Job Search (Last 24 Hours)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print("🎯 Target: Ireland, Spain, UK, Germany - Software Jobs - Last 24 Hours")
+    print("🎯 Target: Ireland, Spain, Panama, Chile - Software Jobs - Last 24 Hours")
 
     # Load existing jobs (set fresh_start=True to ignore old jobs)
     fresh_start = True  # Change to False if you want to keep building on existing jobs
@@ -312,8 +312,8 @@ def run_multi_country_job_search():
     countries_config = [
         {"location": "Dublin, County Dublin, Ireland", "country": "Ireland"},
         {"location": "Madrid, Community of Madrid, Spain", "country": "Spain"},
-        {"location": "London, England, United Kingdom", "country": "United Kingdom"},
-        {"location": "Berlin, Germany", "country": "Germany"},
+        {"location": "Panama City, Panama", "country": "Panama"},
+        {"location": "Santiago, Chile", "country": "Chile"},
     ]
 
     # Search terms
@@ -364,21 +364,15 @@ def run_multi_country_job_search():
                         found_jobs = len(results)
                         print(f"      ✅ Found {found_jobs} jobs")
 
-                        # Filter out high experience jobs and German language requirements
+                        # Filter out high experience jobs
                         filtered_jobs = 0
                         high_exp_filtered = 0
-                        german_lang_filtered = 0
 
                         for job_id, job_data in results.items():
                             if job_id not in all_new_jobs:
                                 # Apply experience filter
                                 if not filter_high_experience_jobs(job_data):
                                     high_exp_filtered += 1
-                                    continue
-
-                                # Apply German language filter (only for German jobs)
-                                if country == "Germany" and not filter_german_language_requirement(job_data):
-                                    german_lang_filtered += 1
                                     continue
 
                                 # Job passed all filters
@@ -390,8 +384,6 @@ def run_multi_country_job_search():
 
                         if high_exp_filtered > 0:
                             print(f"      🚫 Filtered out {high_exp_filtered} high-experience jobs")
-                        if german_lang_filtered > 0:
-                            print(f"      🇩🇪 Filtered out {german_lang_filtered} German-language-required jobs")
                         print(f"      ✅ Added {filtered_jobs} suitable jobs")
 
                         country_results[country]["jobs"] += filtered_jobs
@@ -414,7 +406,7 @@ def run_multi_country_job_search():
         # Limit jobs to 20 per country (except Ireland - no limit)
         print(f"\n✂️ Applying job limits per country...")
         print(f"   • Ireland: Unlimited (all jobs kept)")
-        print(f"   • Spain, UK, Germany: 20 jobs each (most recent)")
+        print(f"   • Spain, Panama, Chile: 20 jobs each (most recent)")
         categorized_jobs = limit_jobs_per_country(
             categorized_jobs,
             max_jobs_per_country=20,
@@ -478,7 +470,6 @@ def run_multi_country_job_search():
                 print(f"   • Countries active: {len([c for c, s in categorized_jobs['_metadata']['country_daily_stats'].items() if s['new_jobs'] + s['last_24h_jobs'] > 0])}/4")
                 print(f"   • Total job opportunities: {new_count + last_24h_count}")
                 print(f"   • Experience filtering: Jobs requiring 5+ years filtered out automatically")
-                print(f"   • German language filter: Jobs requiring proficient German filtered for Germany")
 
                 print(f"\n📝 Next steps:")
                 print(f"   1. git add jobs_database.json")

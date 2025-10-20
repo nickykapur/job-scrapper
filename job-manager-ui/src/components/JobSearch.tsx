@@ -25,8 +25,8 @@ const countries = [
   { value: 'Dublin, County Dublin, Ireland', label: 'Ireland (Dublin)' },
   { value: 'Barcelona, Catalonia, Spain', label: 'Spain (Barcelona)' },
   { value: 'Madrid, Community of Madrid, Spain', label: 'Spain (Madrid)' },
-  { value: 'Berlin, Germany', label: 'Germany (Berlin)' },
-  { value: 'London, England, United Kingdom', label: 'United Kingdom (London)' },
+  { value: 'Panama City, Panama', label: 'Panama (Panama City)' },
+  { value: 'Santiago, Chile', label: 'Chile (Santiago)' },
 ];
 
 const JobSearch: React.FC<JobSearchProps> = ({ onSearchComplete }) => {
