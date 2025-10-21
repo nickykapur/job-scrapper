@@ -14,6 +14,36 @@ import subprocess
 from datetime import datetime, timedelta
 from linkedin_job_scraper import LinkedInJobScraper
 import re
+import requests
+
+def delete_country_jobs_from_railway(railway_url, country):
+    """Delete all jobs for a specific country from Railway database"""
+    try:
+        # Normalize Railway URL
+        if not railway_url.startswith('http'):
+            railway_url = f'https://{railway_url}'
+
+        api_url = f"{railway_url}/api/jobs/by-country/{country}"
+        print(f"🗑️  Deleting {country} jobs from Railway: {api_url}")
+
+        response = requests.delete(api_url, timeout=30)
+
+        if response.status_code == 200:
+            result = response.json()
+            print(f"   ✅ Deleted {result.get('jobs_deleted', 0)} jobs from {country}")
+            print(f"   📊 Total jobs remaining in database: {result.get('total_jobs_in_database', 0)}")
+            return True
+        else:
+            print(f"   ❌ Delete failed: {response.status_code}")
+            print(f"   Response: {response.text}")
+            return False
+
+    except requests.exceptions.Timeout:
+        print(f"   ⏰ Delete request timed out after 30 seconds")
+        return False
+    except Exception as e:
+        print(f"   ❌ Delete error: {e}")
+        return False
 
 def sync_to_railway(railway_url):
     """Sync to Railway using the sync script"""
@@ -46,21 +76,86 @@ def sync_to_railway(railway_url):
         print(f"❌ Railway sync error: {e}")
         return False
 
-def load_existing_jobs(fresh_start=False):
-    """Load existing jobs from database"""
-    if fresh_start:
-        print("🆕 Starting fresh - ignoring existing jobs")
+def load_existing_jobs_from_railway(railway_url):
+    """Load existing jobs from Railway database via API"""
+    try:
+        # Normalize Railway URL
+        if not railway_url.startswith('http'):
+            railway_url = f'https://{railway_url}'
+
+        api_url = f"{railway_url}/api/jobs"
+        print(f"📡 Fetching jobs from Railway: {api_url}")
+
+        response = requests.get(api_url, timeout=30)
+
+        if response.status_code == 200:
+            jobs_data = response.json()
+            actual_jobs = {k: v for k, v in jobs_data.items() if not k.startswith('_')}
+            print(f"   ✅ Loaded {len(actual_jobs)} jobs from Railway database")
+            return jobs_data
+        else:
+            print(f"   ❌ Failed to load jobs: {response.status_code}")
+            return {}
+
+    except requests.exceptions.Timeout:
+        print(f"   ⏰ Request timed out after 30 seconds")
+        return {}
+    except Exception as e:
+        print(f"   ❌ Error loading jobs from Railway: {e}")
         return {}
 
-    jobs_file = "jobs_database.json"
-    if os.path.exists(jobs_file):
-        try:
-            with open(jobs_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except Exception as e:
-            print(f"❌ Error loading existing jobs: {e}")
-            return {}
-    return {}
+def check_country_job_counts(existing_jobs):
+    """Check job counts per country and identify countries that need cleanup"""
+    country_counts = {}
+
+    for job_id, job_data in existing_jobs.items():
+        if job_id.startswith("_"):
+            continue
+
+        country = job_data.get("country", "Unknown")
+        if country not in country_counts:
+            country_counts[country] = 0
+        country_counts[country] += 1
+
+    return country_counts
+
+def cleanup_countries_with_excess_jobs(existing_jobs, threshold=200, railway_url=None):
+    """Remove all jobs for countries that have more than the threshold from Railway database
+
+    Args:
+        existing_jobs: Dictionary of existing jobs from Railway
+        threshold: Maximum number of jobs per country before cleanup (default: 200)
+        railway_url: Railway URL to delete jobs from database (required)
+
+    Returns:
+        List of countries that were cleaned
+    """
+    country_counts = check_country_job_counts(existing_jobs)
+    countries_to_clean = []
+
+    # Identify countries that need cleanup
+    for country, count in country_counts.items():
+        if count > threshold:
+            countries_to_clean.append(country)
+
+    if not countries_to_clean:
+        return []
+
+    print(f"\n🧹 Cleanup Required:")
+    for country in countries_to_clean:
+        print(f"   ⚠️  {country}: {country_counts[country]} jobs (threshold: {threshold})")
+
+    # Delete from Railway database
+    if railway_url:
+        print(f"\n🌐 Deleting from Railway database...")
+        for country in countries_to_clean:
+            delete_country_jobs_from_railway(railway_url, country)
+    else:
+        print(f"\n⚠️  No Railway URL provided - skipping deletion")
+        return []
+
+    print(f"\n✅ Cleanup complete - {len(countries_to_clean)} countries cleaned")
+    return countries_to_clean
 
 def save_jobs_with_categories(jobs_data):
     """Save jobs with categorization metadata"""
@@ -300,12 +395,37 @@ def run_multi_country_job_search():
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("🎯 Target: Ireland, Spain, Panama, Chile - Software Jobs - Last 24 Hours")
 
-    # Load existing jobs (set fresh_start=True to ignore old jobs)
-    fresh_start = True  # Change to False if you want to keep building on existing jobs
-    existing_jobs = load_existing_jobs(fresh_start=fresh_start)
+    # Railway configuration
+    railway_url = "web-production-110bb.up.railway.app"
+
+    # Load existing jobs from Railway database
+    print(f"\n🔄 Checking Railway database for existing jobs...")
+    existing_jobs = load_existing_jobs_from_railway(railway_url)
     old_count = len([j for k, j in existing_jobs.items() if not k.startswith("_")])
 
     print(f"📊 Current database: {old_count} total jobs")
+
+    # Check for countries with excess jobs and clean them up
+    if old_count > 0:
+        print(f"\n🔍 Checking for countries with excessive job accumulation...")
+        country_counts = check_country_job_counts(existing_jobs)
+        print(f"📊 Current jobs per country:")
+        for country, count in sorted(country_counts.items(), key=lambda x: x[1], reverse=True):
+            print(f"   • {country}: {count} jobs")
+
+        # Clean up countries with more than 200 jobs from Railway database
+        countries_cleaned = cleanup_countries_with_excess_jobs(
+            existing_jobs,
+            threshold=200,
+            railway_url=railway_url
+        )
+
+        if countries_cleaned:
+            print(f"\n🔄 Will refetch fresh data for: {', '.join(countries_cleaned)}")
+            # After cleanup, reload jobs to get updated state
+            existing_jobs = load_existing_jobs_from_railway(railway_url)
+        else:
+            print(f"\n✅ No cleanup needed - all countries within limits")
 
     # Multi-country search configuration
     # Limited to main locations for faster scraping
