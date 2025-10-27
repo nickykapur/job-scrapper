@@ -4,8 +4,10 @@ FROM node:18-alpine as frontend-build
 WORKDIR /app/frontend
 
 # Copy package files
-COPY job-manager-ui/package*.json ./
-RUN npm ci --silent
+COPY job-manager-ui/package.json job-manager-ui/package-lock.json ./
+
+# Install dependencies
+RUN npm ci --legacy-peer-deps --silent
 
 # Copy source code and build
 COPY job-manager-ui/ ./
