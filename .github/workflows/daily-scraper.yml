@@ -1,13 +1,12 @@
-name: Daily Multi-Country Job Scraper
+name: Job Scraper
 
 on:
   schedule:
-    # Runs at 9 AM, 11 AM, 1 PM, 3 PM, 4 PM, 6 PM, 8 PM Dublin time (UTC/UTC+1)
-    # Dublin is UTC+0 (winter) or UTC+1 (summer - IST)
-    # Currently using UTC times: 9, 11, 13, 15, 16, 18, 20
+    # Runs at 9 AM, 11 AM, 1 PM, 3 PM, 4 PM, 6 PM, 8 PM Dublin time
+    # Dublin is UTC+0 (winter) or UTC+1 (summer)
+    # Using UTC times: 9, 11, 13, 15, 16, 18, 20
     - cron: '0 9,11,13,15,16,18,20 * * *'
 
-  # Allow manual trigger from GitHub Actions tab
   workflow_dispatch:
 
 jobs:
@@ -28,15 +27,16 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run multi-country scraper and sync to Railway
+      - name: Run job scraper
         run: |
           python daily_multi_country_update.py
         env:
-          # Railway URL for syncing (already in your script at line 380)
           RAILWAY_URL: https://web-production-110bb.up.railway.app
-        # Scraper configuration:
-        # - Scrapes Ireland, Spain, Panama, and Chile
-        # - Job limits per session:
-        #   * Ireland: UNLIMITED (all jobs kept)
-        #   * Spain, Panama, Chile: 20 most recent jobs each
+        # Configuration:
+        # - Targets: Ireland, Spain, Panama, Chile, Netherlands, Germany, Sweden
+        # - Automatic cleanup: Removes jobs > 2 days old if database exceeds 300 jobs
+        # - Applied jobs are never removed
+        # - Ireland has unlimited job storage
+        # - Other countries limited to 20 most recent jobs per session
         # - Filters out jobs requiring 5+ years experience
+        # - Netherlands/Germany/Sweden filtered by top tech companies only

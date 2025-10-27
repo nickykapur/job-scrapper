@@ -31,6 +31,35 @@ class LinkedInJobScraper:
             'BENDING SPOONS',
             'Bending Spoons'
         ]
+
+        # Top tech companies by country (for filtering)
+        self.top_tech_companies = {
+            'Netherlands': [
+                'Booking.com', 'Booking', 'Adyen', 'Elastic', 'TomTom', 'Mollie',
+                'WeTransfer', 'Picnic', 'Backbase', 'Exact', 'Coolblue',
+                'Uber', 'Netflix', 'Spotify', 'Databricks', 'Atlassian',
+                'Salesforce', 'Google', 'Meta', 'Amazon', 'Microsoft'
+            ],
+            'Germany': [
+                'SAP', 'Zalando', 'Delivery Hero', 'N26', 'SoundCloud',
+                'HelloFresh', 'Auto1', 'FlixBus', 'Celonis', 'Personio',
+                'Contentful', 'Adjust', 'GetYourGuide', 'Babbel', 'Trade Republic',
+                'Google', 'Amazon', 'Microsoft', 'Apple', 'Meta',
+                'Stripe', 'Spotify', 'Tesla', 'Siemens', 'BMW'
+            ],
+            'Sweden': [
+                'Spotify', 'Klarna', 'King', 'Ericsson', 'Mojang',
+                'iZettle', 'Truecaller', 'Tink', 'Northvolt', 'Paradox Interactive',
+                'Epidemic Sound', 'Einride', 'Polestar', 'Volvo Cars', 'Volvo',
+                'Google', 'Amazon', 'Microsoft', 'Apple', 'Meta', 'Unity'
+            ],
+            # Existing countries - no filtering
+            'Ireland': [],
+            'Spain': [],
+            'Panama': [],
+            'Chile': [],
+            'Switzerland': []
+        }
         
     def generate_job_id(self, title, company, location):
         """Generate a unique ID for a job based on title, company, and location"""
@@ -334,13 +363,42 @@ class LinkedInJobScraper:
         """Check if a company is in the exclusion list"""
         if not company:
             return False
-            
+
         company_lower = company.lower().strip()
-        
+
         for excluded in self.excluded_companies:
             if excluded.lower() in company_lower:
                 return True
-                
+
+        return False
+
+    def is_top_tech_company(self, company, country):
+        """Check if a company is in the top tech companies list for the given country
+
+        Args:
+            company: Company name to check
+            country: Country name (e.g., 'Netherlands', 'Germany', 'Sweden')
+
+        Returns:
+            True if company is in top tech list for country, or if country has no restrictions
+        """
+        if not company or not country:
+            return True  # Default to including if info missing
+
+        # If country has no restriction list, include all companies
+        if country not in self.top_tech_companies or not self.top_tech_companies[country]:
+            return True
+
+        company_lower = company.lower().strip()
+
+        # Check if company matches any in the top tech list
+        for top_company in self.top_tech_companies[country]:
+            top_company_lower = top_company.lower()
+
+            # Flexible matching: check if either name contains the other
+            if top_company_lower in company_lower or company_lower in top_company_lower:
+                return True
+
         return False
 
     def preserve_applied_status(self, job_id, new_job_data):

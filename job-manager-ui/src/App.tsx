@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 // Optimized imports to reduce bundle size
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import toast, { Toaster } from 'react-hot-toast';
 import Container from '@mui/material/Container';
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
@@ -197,7 +198,7 @@ function App() {
   
   // Lazy theme creation to avoid heavy computation on every render
   const theme = useMemo(() => {
-    console.log(`🎨 Creating ${darkMode ? 'dark' : 'light'} theme`);
+    console.log(`[THEME] Creating ${darkMode ? 'dark' : 'light'} theme`);
     return createAppTheme(darkMode ? 'dark' : 'light');
   }, [darkMode]);
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -211,6 +212,47 @@ function App() {
 
 
   const showNotification = (message: string, severity: 'success' | 'error' | 'info' = 'info') => {
+    // Use react-hot-toast for better animations
+    if (severity === 'success') {
+      toast.success(message, {
+        duration: 3000,
+        position: 'bottom-right',
+        style: {
+          background: darkMode ? '#1e1e1e' : '#fff',
+          color: darkMode ? '#fff' : '#000',
+          border: `1px solid ${darkMode ? '#4caf50' : '#4caf50'}`,
+        },
+        iconTheme: {
+          primary: '#4caf50',
+          secondary: '#fff',
+        },
+      });
+    } else if (severity === 'error') {
+      toast.error(message, {
+        duration: 4000,
+        position: 'bottom-right',
+        style: {
+          background: darkMode ? '#1e1e1e' : '#fff',
+          color: darkMode ? '#fff' : '#000',
+          border: `1px solid ${darkMode ? '#f44336' : '#f44336'}`,
+        },
+        iconTheme: {
+          primary: '#f44336',
+          secondary: '#fff',
+        },
+      });
+    } else {
+      toast(message, {
+        duration: 3000,
+        position: 'bottom-right',
+        style: {
+          background: darkMode ? '#1e1e1e' : '#fff',
+          color: darkMode ? '#fff' : '#000',
+          border: `1px solid ${darkMode ? '#90caf9' : '#1976d2'}`,
+        },
+      });
+    }
+    // Also set for old system compatibility
     setNotification({ message, severity });
   };
 
@@ -225,31 +267,31 @@ function App() {
   const loadJobs = useCallback(async (silent = false) => {
     if (!silent) setIsRefreshing(true);
     try {
-      console.log('🔄 Loading jobs from API...');
+      console.log('[API] Loading jobs...');
       const jobsData = await jobApi.getJobs();
-      console.log('✅ Jobs loaded successfully:', Object.keys(jobsData).length, 'jobs');
+      console.log('[API] Jobs loaded:', Object.keys(jobsData).length, 'total');
 
-      // DEBUG: Check for rejected jobs in the data
+      // Check for rejected jobs in the data
       const rejectedJobs = Object.entries(jobsData).filter(([key, job]) =>
         !key.startsWith('_') && job.rejected === true
       );
-      console.log(`🚫 DEBUG: Found ${rejectedJobs.length} rejected jobs in API response`);
-      console.log(`🎯 DEBUG: These rejected jobs will be hidden from UI unless viewing 'rejected' filter`);
+      console.log(`[DEBUG] Found ${rejectedJobs.length} rejected jobs in API response`);
+      console.log(`[DEBUG] Rejected jobs will be hidden unless viewing 'rejected' filter`);
       if (rejectedJobs.length > 0) {
-        console.log('🚫 DEBUG: Rejected jobs:', rejectedJobs.map(([id, job]) => ({
+        console.log('[DEBUG] Rejected jobs:', rejectedJobs.map(([id, job]) => ({
           id,
           title: job.title,
           rejected: job.rejected
         })));
       }
 
-      console.log('📋 Jobs data received:', jobsData);
+      console.log('[DATA] Jobs data received:', jobsData);
 
-      // DEBUG: Check first job's country data
+      // Check first job's country data
       const firstJobId = Object.keys(jobsData).find(k => !k.startsWith('_'));
       if (firstJobId) {
         const firstJob = jobsData[firstJobId];
-        console.log('🔍 DEBUG - First job data:');
+        console.log('[DEBUG] First job data:');
         console.log('  ID:', firstJobId);
         console.log('  Title:', firstJob.title);
         console.log('  Location:', firstJob.location);
@@ -340,20 +382,20 @@ function App() {
     }));
 
     try {
-      console.log(`🚫 DEBUG: Rejecting job ${jobId}...`);
-      console.log(`🚫 DEBUG: Job data before reject:`, job);
+      console.log(`[REJECT] Rejecting job ${jobId}...`);
+      console.log(`[REJECT] Job data before reject:`, job);
 
       // Try to reject job via cloud API first
       await jobApi.rejectJob(jobId);
 
-      console.log(`✅ DEBUG: Job ${jobId} rejected successfully via API`);
+      console.log(`[REJECT] Job ${jobId} rejected successfully via API`);
       showNotification('Job rejected and saved to cloud', 'success');
 
       // No need to reload - optimistic update already done
     } catch (err) {
       // If cloud API fails, revert the optimistic update
-      console.error('❌ DEBUG: Cloud API reject failed:', err);
-      console.log(`🔄 DEBUG: Reverting optimistic update for job ${jobId}`);
+      console.error('[ERROR] Cloud API reject failed:', err);
+      console.log(`[REJECT] Reverting optimistic update for job ${jobId}`);
 
       // Revert the optimistic update
       setJobs(prev => ({
@@ -921,7 +963,7 @@ function App() {
           <Alert
             onClose={() => setNotification(null)}
             severity={notification?.severity}
-            sx={{ 
+            sx={{
               width: '100%',
               borderRadius: 2,
               boxShadow: '0 4px 16px rgba(0,0,0,0.15)'
@@ -930,6 +972,34 @@ function App() {
             {notification?.message}
           </Alert>
         </Snackbar>
+
+        {/* React Hot Toast Container */}
+        <Toaster
+          position="bottom-right"
+          toastOptions={{
+            duration: 3000,
+            style: {
+              background: darkMode ? '#1e1e1e' : '#fff',
+              color: darkMode ? '#fff' : '#000',
+              borderRadius: '8px',
+              padding: '16px',
+              fontSize: '14px',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            },
+            success: {
+              iconTheme: {
+                primary: '#4caf50',
+                secondary: '#fff',
+              },
+            },
+            error: {
+              iconTheme: {
+                primary: '#f44336',
+                secondary: '#fff',
+              },
+            },
+          }}
+        />
       </Box>
     </ThemeProvider>
   );

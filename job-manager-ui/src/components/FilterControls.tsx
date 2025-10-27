@@ -62,11 +62,11 @@ export const FilterControls: React.FC<FilterControlsProps> = ({
               label="Filter by Status"
               onChange={(e) => onFiltersChange({ ...filters, status: e.target.value as any })}
             >
-              <MenuItem value="all">📋 All Jobs</MenuItem>
-              <MenuItem value="new">✨ New Only</MenuItem>
-              <MenuItem value="applied">✅ Applied</MenuItem>
-              <MenuItem value="not-applied">📝 Not Applied</MenuItem>
-              <MenuItem value="rejected">🚫 Rejected</MenuItem>
+              <MenuItem value="all">All Jobs</MenuItem>
+              <MenuItem value="new">New Only</MenuItem>
+              <MenuItem value="applied">Applied</MenuItem>
+              <MenuItem value="not-applied">Not Applied</MenuItem>
+              <MenuItem value="rejected">Rejected</MenuItem>
             </Select>
           </FormControl>
 
@@ -86,9 +86,9 @@ export const FilterControls: React.FC<FilterControlsProps> = ({
               label="Sort by"
               onChange={(e) => onFiltersChange({ ...filters, sort: e.target.value as any })}
             >
-              <MenuItem value="newest">🕐 Newest First</MenuItem>
-              <MenuItem value="oldest">📅 Oldest First</MenuItem>
-              <MenuItem value="company">🏢 Company A-Z</MenuItem>
+              <MenuItem value="newest">Newest First</MenuItem>
+              <MenuItem value="oldest">Oldest First</MenuItem>
+              <MenuItem value="company">Company A-Z</MenuItem>
             </Select>
           </FormControl>
         </Stack>

@@ -1,23 +1,18 @@
-# LinkedIn Job Bot
+# Job Application Tracker
 
-A Python bot that scrapes LinkedIn for jobs and tracks your application status.
+Automated job search and application tracking system for LinkedIn.
 
 ## Features
 
-- Search LinkedIn jobs by keywords and location
-- Filter jobs posted in the last 7 days
-- Track new vs existing jobs
-- Mark jobs as applied and maintain application status
-- Persistent job database with JSON storage
-- Export results to JSON format
-- Command-line interface with multiple commands
-- Headless browser support
-- Rate limiting and respectful scraping
+- Multi-country job search (7 countries)
+- Automated filtering by experience level
+- Company-specific targeting for key markets
+- Application status tracking
+- Web-based management interface
+- Automated database cleanup
+- Railway cloud deployment
 
 ## Installation
-
-1. Clone this repository or download the files
-2. Install the required dependencies:
 
 ```bash
 pip install -r requirements.txt
@@ -25,136 +20,80 @@ pip install -r requirements.txt
 
 ## Usage
 
-### Search for Jobs
+### Automated Scraping (GitHub Actions)
+
+The system runs automatically via GitHub Actions:
+- Executes 7 times daily
+- Targets 7 countries
+- Automatic cleanup of jobs > 2 days old
+- Syncs to Railway cloud database
+
+### Manual Scraping
 
 ```bash
-# Basic search (backward compatible)
-python3 main.py "Python Developer"
-
-# Using search command
-python3 main.py search "Python Developer"
-
-# Search with custom location
-python3 main.py search "Data Scientist" -l "Remote"
-
-# Show browser window (for debugging)
-python3 main.py search "DevOps Engineer" --show-browser
+python3 daily_multi_country_update.py
 ```
 
-### Mark Jobs as Applied
+### Database Cleanup
 
 ```bash
-# Mark a job as applied using its ID
-python3 main.py apply 1a2b3c4d5e6f
-
-# The job ID is shown in brackets in the search results
+python3 cleanup_old_jobs.py
 ```
 
-### Command Line Arguments
-
-#### Search Command
-- `keywords`: Job search keywords (required)
-- `-l, --location`: Job location (default: Dublin, County Dublin, Ireland)
-- `-o, --output`: Output file name (default: linkedin_jobs.json)
-- `--headless`: Run browser in headless mode (default: True)
-- `--show-browser`: Show browser window for debugging
-
-#### Apply Command
-- `job_id`: The unique ID of the job to mark as applied
-
-## Examples
+### Web Interface
 
 ```bash
-# Search for Python developer jobs in Dublin
-python3 main.py search "Python Developer"
-
-# Search for remote data science jobs
-python3 main.py search "Data Scientist" -l "Remote"
-
-# Search for frontend jobs in San Francisco
-python3 main.py search "Frontend Developer" -l "San Francisco"
-
-# Mark a specific job as applied
-python3 main.py apply 1a2b3c4d5e6f
-
-# Search and show browser for debugging
-python3 main.py search "Software Engineer" --show-browser
+cd job-manager-ui
+npm install
+npm run dev
 ```
 
-## Output
+Access at http://localhost:5173
 
-The bot will:
-1. Display statistics about new vs existing jobs
-2. Show applied status for each job
-3. Display a detailed summary of found jobs in the terminal
-4. Save job information to persistent database (`jobs_database.json`)
-5. Save current search results to output file
+## Configuration
 
-### Terminal Output Example
+### Target Countries
+- Ireland (unlimited storage)
+- Spain, Panama, Chile (20 jobs each)
+- Netherlands, Germany, Sweden (top tech companies only)
 
-```
-=== Job Search Results ===
-📊 Total: 15 | 🆕 New: 3 | 🔄 Existing: 12
-✅ Applied: 5 | ⏳ Not Applied: 10
-============================================================
+### Filters
+- Experience: < 5 years
+- Age: < 2 days (with automatic cleanup)
+- Language: No German fluency requirement
 
-1. [a1b2c3d4e5f6] Senior Python Developer 🆕 ⏳
-   Company: Tech Company Inc.
-   Location: Dublin, County Dublin, Ireland
-   Posted: 2 days ago
-   URL: https://linkedin.com/jobs/view/...
-------------------------------------------------------------
+### Database Limits
+- Maximum: 300 jobs
+- Automatic cleanup triggers when exceeded
+- Applied jobs never removed
 
-2. [f6e5d4c3b2a1] Data Scientist ✅
-   Company: Data Corp
-   Location: Dublin, County Dublin, Ireland
-   Posted: 1 day ago
-   URL: https://linkedin.com/jobs/view/...
-------------------------------------------------------------
-```
+## Architecture
 
-### Icons Legend
-- 🆕 = New job (first time seeing this job)
-- 🔄 = Existing job (seen before)
-- ✅ = Applied to this job
-- ⏳ = Not applied yet
+- **Backend**: Python with Selenium
+- **Frontend**: React + TypeScript + MUI
+- **Database**: JSON file storage
+- **Deployment**: Railway (cloud)
+- **Automation**: GitHub Actions
 
-### JSON Database Format
+## Development
 
-The bot maintains a persistent database (`jobs_database.json`) with all tracked jobs:
+```bash
+# Run scraper locally
+python3 daily_multi_country_update.py
 
-```json
-{
-  "a1b2c3d4e5f6": {
-    "id": "a1b2c3d4e5f6",
-    "title": "Senior Python Developer",
-    "company": "Tech Company Inc.",
-    "location": "Dublin, County Dublin, Ireland",
-    "posted_date": "2 days ago",
-    "job_url": "https://linkedin.com/jobs/view/...",
-    "scraped_at": "2023-12-07T10:30:00",
-    "applied": false,
-    "is_new": true
-  }
-}
+# Start web interface
+cd job-manager-ui && npm run dev
+
+# Clean database
+python3 cleanup_old_jobs.py
+
+# Sync to Railway
+python3 sync_to_railway.py
 ```
 
-## Important Notes
+## Notes
 
-- This bot is for educational and personal use only
-- Respect LinkedIn's terms of service and rate limits
-- The bot includes delays and respectful scraping practices
-- LinkedIn may block automated access - use responsibly
-- Consider using LinkedIn's official API for production use
-
-## Troubleshooting
-
-1. **Browser Issues**: Make sure Chrome is installed on your system
-2. **No Jobs Found**: Try different keywords or broader location terms
-3. **Blocked by LinkedIn**: Wait some time before running again, or try with `--show-browser` to see what's happening
-
-## Requirements
-
-- Python 3.7+
-- Chrome browser
-- Internet connection
+- Chrome/Firefox browser required
+- Uses headless mode by default
+- Rate limiting implemented
+- Respects LinkedIn ToS

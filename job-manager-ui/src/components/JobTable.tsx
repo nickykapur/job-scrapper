@@ -20,6 +20,8 @@ import {
   InputLabel,
   Stack,
   Tooltip,
+  TablePagination,
+  CircularProgress,
 } from '@mui/material';
 import {
   OpenInNew as OpenIcon,
@@ -30,7 +32,9 @@ import {
   Schedule as TimeIcon,
   FilterList as FilterIcon,
   Bolt as EasyApplyIcon,
+  CheckCircle as SuccessIcon,
 } from '@mui/icons-material';
+import { motion, AnimatePresence } from 'framer-motion';
 import type { Job } from '../types';
 
 interface JobTableProps {
@@ -43,6 +47,50 @@ interface JobTableProps {
 type SortField = 'title' | 'company' | 'location' | 'posted_date' | 'country';
 type SortDirection = 'asc' | 'desc';
 
+// Animation variants for smooth transitions
+const rowVariants = {
+  hidden: {
+    opacity: 0,
+    y: 20,
+    scale: 0.95
+  },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      duration: 0.3,
+      ease: [0.4, 0, 0.2, 1]
+    }
+  },
+  exit: {
+    opacity: 0,
+    x: -100,
+    scale: 0.95,
+    transition: {
+      duration: 0.2,
+      ease: [0.4, 0, 1, 1]
+    }
+  }
+};
+
+const buttonVariants = {
+  idle: { scale: 1 },
+  hover: { scale: 1.05, transition: { duration: 0.2 } },
+  tap: { scale: 0.95, transition: { duration: 0.1 } },
+  loading: {
+    scale: 1,
+    rotate: 360,
+    transition: {
+      rotate: { repeat: Infinity, duration: 1, ease: "linear" }
+    }
+  },
+  success: {
+    scale: [1, 1.2, 1],
+    transition: { duration: 0.3 }
+  }
+};
+
 const JobTable: React.FC<JobTableProps> = ({
   jobs,
   onApplyAndOpen,
@@ -52,6 +100,9 @@ const JobTable: React.FC<JobTableProps> = ({
   const [sortField, setSortField] = useState<SortField>('posted_date');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(50);
+  const [actionStates, setActionStates] = useState<Record<string, 'idle' | 'applying' | 'rejecting' | 'success'>>({});
 
   // Convert jobs to array and filter
   const jobsArray = useMemo(() => {
@@ -99,6 +150,38 @@ const JobTable: React.FC<JobTableProps> = ({
       setSortField(field);
       setSortDirection('asc');
     }
+  };
+
+  const handleChangePage = (_event: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  // Get paginated jobs
+  const paginatedJobs = useMemo(() => {
+    const startIndex = page * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    return filteredAndSortedJobs.slice(startIndex, endIndex);
+  }, [filteredAndSortedJobs, page, rowsPerPage]);
+
+  // Enhanced handlers with animation states
+  const handleApplyAndOpen = async (jobId: string, jobUrl: string) => {
+    setActionStates(prev => ({ ...prev, [jobId]: 'applying' }));
+    await onApplyAndOpen(jobId, jobUrl);
+    setActionStates(prev => ({ ...prev, [jobId]: 'success' }));
+    setTimeout(() => {
+      setActionStates(prev => ({ ...prev, [jobId]: 'idle' }));
+    }, 1000);
+  };
+
+  const handleReject = async (jobId: string) => {
+    setActionStates(prev => ({ ...prev, [jobId]: 'rejecting' }));
+    await onRejectJob(jobId);
+    // Keep rejecting state until component unmounts
   };
 
 
@@ -174,14 +257,27 @@ const JobTable: React.FC<JobTableProps> = ({
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredAndSortedJobs.map((job: any) => (
-              <TableRow
-                key={job.id}
-                sx={{
-                  '&:hover': { bgcolor: 'action.hover' },
-                  '&:nth-of-type(even)': { bgcolor: 'action.selected' },
-                }}
-              >
+            <AnimatePresence mode="popLayout">
+              {paginatedJobs.map((job: any, index: number) => (
+                <TableRow
+                  key={job.id}
+                  component={motion.tr}
+                  variants={rowVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  custom={index}
+                  layout
+                  sx={{
+                    '&:hover': {
+                      bgcolor: 'action.hover',
+                      transform: 'scale(1.01)',
+                      transition: 'all 0.2s ease',
+                    },
+                    '&:nth-of-type(even)': { bgcolor: 'action.selected' },
+                    transition: 'background-color 0.2s ease',
+                  }}
+                >
                 <TableCell>
                   <Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
@@ -227,54 +323,121 @@ const JobTable: React.FC<JobTableProps> = ({
                 <TableCell>
                   <Stack direction="row" spacing={1} justifyContent="center">
                     <Tooltip title="Apply & Open">
-                      <IconButton
-                        size="small"
-                        onClick={() => onApplyAndOpen(job.id, job.job_url)}
-                        disabled={updatingJobs.has(job.id)}
-                        sx={{
-                          bgcolor: 'success.main',
-                          color: 'white',
-                          '&:hover': { bgcolor: 'success.dark' },
-                        }}
+                      <Box
+                        component={motion.div}
+                        variants={buttonVariants}
+                        initial="idle"
+                        whileHover="hover"
+                        whileTap="tap"
+                        animate={
+                          actionStates[job.id] === 'applying' ? 'loading' :
+                          actionStates[job.id] === 'success' ? 'success' : 'idle'
+                        }
                       >
-                        {updatingJobs.has(job.id) ? <TimeIcon /> : <ApplyIcon />}
-                      </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleApplyAndOpen(job.id, job.job_url)}
+                          disabled={updatingJobs.has(job.id) || actionStates[job.id] === 'applying'}
+                          sx={{
+                            bgcolor: actionStates[job.id] === 'success' ? 'success.light' : 'success.main',
+                            color: 'white',
+                            '&:hover': { bgcolor: 'success.dark' },
+                            '&:disabled': {
+                              bgcolor: 'success.light',
+                              opacity: 0.7,
+                            },
+                            transition: 'all 0.3s ease',
+                          }}
+                        >
+                          {actionStates[job.id] === 'applying' ? (
+                            <CircularProgress size={20} sx={{ color: 'white' }} />
+                          ) : actionStates[job.id] === 'success' ? (
+                            <SuccessIcon />
+                          ) : (
+                            <ApplyIcon />
+                          )}
+                        </IconButton>
+                      </Box>
                     </Tooltip>
 
                     <Tooltip title="Reject Job">
-                      <IconButton
-                        size="small"
-                        onClick={() => onRejectJob(job.id)}
-                        disabled={updatingJobs.has(job.id)}
-                        sx={{
-                          bgcolor: 'error.main',
-                          color: 'white',
-                          '&:hover': { bgcolor: 'error.dark' },
-                        }}
+                      <Box
+                        component={motion.div}
+                        variants={buttonVariants}
+                        initial="idle"
+                        whileHover="hover"
+                        whileTap="tap"
+                        animate={actionStates[job.id] === 'rejecting' ? 'exit' : 'idle'}
                       >
-                        <RejectIcon />
-                      </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleReject(job.id)}
+                          disabled={updatingJobs.has(job.id) || actionStates[job.id] === 'rejecting'}
+                          sx={{
+                            bgcolor: 'error.main',
+                            color: 'white',
+                            '&:hover': { bgcolor: 'error.dark' },
+                            '&:disabled': {
+                              bgcolor: 'error.light',
+                              opacity: 0.7,
+                            },
+                            transition: 'all 0.3s ease',
+                          }}
+                        >
+                          {actionStates[job.id] === 'rejecting' ? (
+                            <CircularProgress size={20} sx={{ color: 'white' }} />
+                          ) : (
+                            <RejectIcon />
+                          )}
+                        </IconButton>
+                      </Box>
                     </Tooltip>
 
                     <Tooltip title="Open Job">
-                      <IconButton
-                        size="small"
-                        onClick={() => window.open(job.job_url, '_blank')}
-                        sx={{
-                          bgcolor: 'primary.main',
-                          color: 'white',
-                          '&:hover': { bgcolor: 'primary.dark' },
-                        }}
+                      <Box
+                        component={motion.div}
+                        variants={buttonVariants}
+                        initial="idle"
+                        whileHover="hover"
+                        whileTap="tap"
                       >
-                        <OpenIcon />
-                      </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => window.open(job.job_url, '_blank')}
+                          sx={{
+                            bgcolor: 'primary.main',
+                            color: 'white',
+                            '&:hover': { bgcolor: 'primary.dark' },
+                            transition: 'all 0.3s ease',
+                          }}
+                        >
+                          <OpenIcon />
+                        </IconButton>
+                      </Box>
                     </Tooltip>
                   </Stack>
                 </TableCell>
               </TableRow>
             ))}
+            </AnimatePresence>
           </TableBody>
         </Table>
+        <TablePagination
+          rowsPerPageOptions={[10, 25, 50, 100]}
+          component="div"
+          count={filteredAndSortedJobs.length}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+          sx={{
+            borderTop: 1,
+            borderColor: 'divider',
+            '& .MuiTablePagination-toolbar': {
+              minHeight: 56,
+            },
+          }}
+        />
       </TableContainer>
     </Box>
   );
