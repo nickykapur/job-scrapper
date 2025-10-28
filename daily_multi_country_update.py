@@ -90,8 +90,26 @@ def load_existing_jobs_from_railway(railway_url):
 
         if response.status_code == 200:
             jobs_data = response.json()
+
+            # Fix missing country fields by deriving from location
+            fixed_count = 0
+            for job_id, job_data in jobs_data.items():
+                if job_id.startswith('_'):  # Skip metadata
+                    continue
+
+                # If country is missing or "Unknown", try to derive it from location
+                if not job_data.get('country') or job_data.get('country') == 'Unknown':
+                    location = job_data.get('location', '')
+                    if location:
+                        derived_country = get_country_from_location(location)
+                        if derived_country != 'Unknown':
+                            job_data['country'] = derived_country
+                            fixed_count += 1
+
             actual_jobs = {k: v for k, v in jobs_data.items() if not k.startswith('_')}
             print(f"   [OK] Loaded {len(actual_jobs)} jobs from Railway database")
+            if fixed_count > 0:
+                print(f"   [FIX] Mapped {fixed_count} jobs from location to country")
             return jobs_data
         else:
             print(f"   [ERROR] Failed to load jobs: {response.status_code}")
@@ -565,8 +583,9 @@ def run_multi_country_job_search():
         {"location": "Stockholm, Sweden", "country": "Sweden"},
     ]
 
-    # Search terms
-    search_terms = [
+    # Search terms - Multi-user configuration
+    # Software Engineering (User 1)
+    software_search_terms = [
         "Software Engineer",
         "Python Developer",
         "React Developer",
@@ -575,9 +594,23 @@ def run_multi_country_job_search():
         "Frontend Developer",
         "JavaScript Developer",
         "Node.js Developer",
-        "Senior Software Engineer",
         "Junior Software Engineer"
     ]
+
+    # HR/Recruitment (User 2)
+    hr_search_terms = [
+        "HR Officer",
+        "Talent Acquisition Coordinator",
+        "HR Coordinator",
+        "HR Generalist",
+        "Junior Recruiter",
+        "Recruitment Coordinator",
+        "People Operations",
+        "HR Assistant"
+    ]
+
+    # Combine all search terms for comprehensive scraping
+    search_terms = software_search_terms + hr_search_terms
 
     # Initialize scraper
     scraper = LinkedInJobScraper(headless=True)

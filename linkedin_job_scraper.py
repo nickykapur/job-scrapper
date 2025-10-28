@@ -274,89 +274,101 @@ class LinkedInJobScraper:
         return jobs_dict
     
     def is_software_related_job(self, title):
-        """Check if a job title is software/tech related - Updated to match your CV profile"""
+        """Check if a job title is relevant (software OR HR/recruitment)"""
         if not title:
             return False
-            
+
         title_lower = title.lower()
-        
-        # Software-related keywords based on your CV skills
+
+        # Software-related keywords
         software_keywords = [
             # Core programming roles
-            'software', 'developer', 'engineer', 'programming', 'programmer', 
+            'software', 'developer', 'engineer', 'programming', 'programmer',
             'development', 'coding', 'technical',
-            
-            # Languages you know: Python, R, Javascript, HTML, Typescript, C++, Java
+
+            # Languages
             'python', 'java', 'javascript', 'typescript', 'c++', 'html', 'css',
-            
-            # Frameworks you use: React, Angular, Express, NodeJS
+
+            # Frameworks
             'react', 'angular', 'vue', 'node', 'nodejs', 'express', 'frontend', 'backend',
             'full stack', 'fullstack', 'full-stack',
-            
-            # Cloud platforms you know: AWS, Firebase, Azure
+
+            # Cloud platforms
             'cloud', 'aws', 'azure', 'firebase', 'lambda', 'devops', 'infrastructure',
-            
-            # Data skills: Data Science, Machine Learning, Analytics
+
+            # Data skills
             'data', 'analytics', 'machine learning', 'ai', 'artificial intelligence',
             'data science', 'data engineer', 'tableau', 'visualization',
-            
-            # Database: SQL, NoSQL
+
+            # Database
             'database', 'sql', 'nosql', 'mysql', 'mongodb', 'oracle',
-            
-            # Mobile development: React Native mentioned in CV
+
+            # Mobile development
             'mobile', 'react native', 'ios', 'android',
-            
-            # Leadership roles you've held: Technical Lead
+
+            # Leadership roles
             'technical lead', 'tech lead', 'lead developer', 'senior', 'principal',
             'architect', 'staff engineer', 'team lead',
-            
-            # Testing experience from CV
+
+            # Testing
             'qa', 'quality assurance', 'test', 'testing', 'automation',
-            
+
             # Other tech roles
             'web developer', 'api', 'microservices', 'integration', 'platform',
             'system', 'application', 'solution', 'product engineer'
         ]
-        
-        # More focused exclusions - only clear non-tech roles
+
+        # HR/Recruitment keywords (User 2)
+        hr_keywords = [
+            'hr officer', 'hr coordinator', 'hr generalist', 'hr specialist',
+            'talent acquisition', 'recruiter', 'recruitment', 'recruiting',
+            'people operations', 'people ops', 'people partner', 'hr business partner',
+            'hr assistant', 'hr administrator', 'talent coordinator',
+            'recruiting coordinator', 'recruitment consultant', 'talent specialist',
+            'human resources', 'employee relations', 'hr manager'
+        ]
+
+        # Strict exclusions - jobs that are clearly not relevant
         exclude_keywords = [
             # Sales/Marketing (unless technical)
             'account manager', 'sales rep', 'marketing coordinator', 'business development rep',
-            
-            # Administrative
-            'hr', 'human resources', 'finance', 'accounting', 'legal', 'admin assistant',
+
+            # Administrative (non-HR)
+            'finance', 'accounting', 'legal', 'admin assistant',
             'customer service rep', 'receptionist', 'office manager',
-            
+
             # Manual labor
             'warehouse', 'logistics coordinator', 'construction', 'driver', 'delivery',
             'maintenance tech', 'security guard', 'cleaner', 'janitor',
-            
-            # Non-technical business roles
-            'consultant' # Be careful - some are technical consultants
         ]
-        
+
         # Special handling for borderline cases
         borderline_positive = [
-            'marketing tools', 'finance automation', 'revenue', 'compiler', 
+            'marketing tools', 'finance automation', 'revenue', 'compiler',
             'infrastructure', 'operations', 'integration', 'reliability',
             'workday', 'salesforce', 'data operations'
         ]
-        
+
         # Check if it contains borderline positive terms
         for positive in borderline_positive:
             if positive in title_lower:
                 return True
-        
+
         # Check for hard exclusions
         for exclude in exclude_keywords:
             if exclude in title_lower and 'engineer' not in title_lower and 'developer' not in title_lower:
                 return False
-        
+
         # Check for software keywords
         for keyword in software_keywords:
             if keyword in title_lower:
                 return True
-                
+
+        # Check for HR keywords
+        for keyword in hr_keywords:
+            if keyword in title_lower:
+                return True
+
         return False
 
     def is_excluded_company(self, company):
@@ -400,6 +412,66 @@ class LinkedInJobScraper:
                 return True
 
         return False
+
+    def get_country_from_location(self, location):
+        """Extract country name from location string"""
+        location_lower = location.lower()
+        if "ireland" in location_lower:
+            return "Ireland"
+        elif "spain" in location_lower:
+            return "Spain"
+        elif "panama" in location_lower:
+            return "Panama"
+        elif "chile" in location_lower:
+            return "Chile"
+        elif "switzerland" in location_lower:
+            return "Switzerland"
+        elif "netherlands" in location_lower or "amsterdam" in location_lower:
+            return "Netherlands"
+        elif "germany" in location_lower or "berlin" in location_lower or "munich" in location_lower:
+            return "Germany"
+        elif "sweden" in location_lower or "stockholm" in location_lower:
+            return "Sweden"
+        elif "france" in location_lower:
+            return "France"
+        elif "italy" in location_lower:
+            return "Italy"
+        elif "remote" in location_lower or "anywhere" in location_lower:
+            return "Remote"
+        else:
+            return "Unknown"
+
+    def detect_job_type(self, title, description=""):
+        """Detect job type from title and description"""
+        text = f"{title} {description}".lower()
+
+        # HR/Recruitment keywords
+        hr_keywords = [
+            'hr officer', 'hr coordinator', 'hr generalist', 'hr specialist',
+            'talent acquisition', 'recruiter', 'recruitment', 'recruiting',
+            'people operations', 'people ops', 'people partner',
+            'hr assistant', 'human resources'
+        ]
+
+        # Software keywords
+        software_keywords = [
+            'software', 'developer', 'engineer', 'programming', 'programmer',
+            'frontend', 'backend', 'full stack', 'devops', 'react', 'python',
+            'javascript', 'node', 'java', 'web developer'
+        ]
+
+        # Check for HR first (more specific)
+        for keyword in hr_keywords:
+            if keyword in text:
+                return 'hr'
+
+        # Check for software
+        for keyword in software_keywords:
+            if keyword in text:
+                return 'software'
+
+        # Default
+        return 'other'
 
     def preserve_applied_status(self, job_id, new_job_data):
         """Preserve the applied and rejected status from existing jobs when updating"""
@@ -604,12 +676,20 @@ class LinkedInJobScraper:
             # Detect Easy Apply status
             easy_apply = self.detect_easy_apply(card)
 
+            # Derive country from location
+            country = self.get_country_from_location(location or "")
+
+            # Detect job type (software, hr, or other)
+            job_type = self.detect_job_type(title)
+
             # Create job data
             job_data = {
                 "id": job_id,
                 "title": title,
                 "company": company or "Unknown Company",
                 "location": location or "Unknown Location",
+                "country": country,  # Add country field
+                "job_type": job_type,  # Add job type classification
                 "posted_date": posted_date or "Unknown",
                 "job_url": job_url,
                 "scraped_at": datetime.now().isoformat(),

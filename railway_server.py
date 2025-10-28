@@ -24,7 +24,21 @@ except ImportError as e:
     print(f"⚠️  Database models not available: {e}")
     DATABASE_AVAILABLE = False
 
+# Import authentication routes
+try:
+    from auth_routes import router as auth_router
+    AUTH_AVAILABLE = True
+    print("✅ Authentication routes imported successfully")
+except ImportError as e:
+    print(f"⚠️  Authentication routes not available: {e}")
+    AUTH_AVAILABLE = False
+
 app = FastAPI(title="LinkedIn Job Manager", version="1.0.0")
+
+# Include authentication router if available
+if AUTH_AVAILABLE:
+    app.include_router(auth_router)
+    print("✅ Authentication routes registered")
 
 # Initialize database
 db = None
@@ -358,19 +372,19 @@ async def delete_jobs_by_country(country: str):
 
         # Count before deletion
         total_before = await conn.fetchval(
-            "SELECT COUNT(*) FROM jobs WHERE data->>'country' = $1",
+            "SELECT COUNT(*) FROM jobs WHERE country = $1",
             country
         )
 
         # Delete jobs from specified country
         await conn.execute(
-            "DELETE FROM jobs WHERE data->>'country' = $1",
+            "DELETE FROM jobs WHERE country = $1",
             country
         )
 
         # Count after deletion to verify
         total_after = await conn.fetchval(
-            "SELECT COUNT(*) FROM jobs WHERE data->>'country' = $1",
+            "SELECT COUNT(*) FROM jobs WHERE country = $1",
             country
         )
 
