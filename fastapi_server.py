@@ -22,6 +22,20 @@ except ImportError:
     db = None
     USE_DATABASE = False
 
+# Import authentication routes
+try:
+    from auth_routes import router as auth_router
+    AUTH_AVAILABLE = True
+    print("✅ Authentication routes imported successfully")
+except ImportError as e:
+    print(f"⚠️  Authentication routes not available: {e}")
+    AUTH_AVAILABLE = False
+
+# Include authentication router if available
+if AUTH_AVAILABLE:
+    app.include_router(auth_router)
+    print("✅ Authentication routes registered")
+
 # Enable CORS for React frontend
 app.add_middleware(
     CORSMiddleware,
