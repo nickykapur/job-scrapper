@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 // Optimized imports to reduce bundle size
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -19,6 +20,8 @@ import ListItem from '@mui/material/ListItem';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import useMediaQuery from '@mui/material/useMediaQuery';
+import Avatar from '@mui/material/Avatar';
+import Divider from '@mui/material/Divider';
 // Optimized icon imports to reduce bundle size
 import WorkIcon from '@mui/icons-material/Work';
 import DarkIcon from '@mui/icons-material/Brightness4';
@@ -32,6 +35,8 @@ import MenuIcon from '@mui/icons-material/Menu';
 import TrainingIcon from '@mui/icons-material/School';
 import SystemDesignIcon from '@mui/icons-material/Architecture';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import LogoutIcon from '@mui/icons-material/Logout';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import { JobCard } from './components/JobCard';
 import { StatsCards } from './components/StatsCards';
 import { FilterControls } from './components/FilterControls';
@@ -42,6 +47,7 @@ import { SystemDesign } from './components/SystemDesign';
 import JobSearch from './components/JobSearch';
 import CountryStats from './components/CountryStats';
 import { jobApi } from './services/api';
+import { useAuth } from './contexts/AuthContext';
 import type { Job, JobStats, FilterState } from './types';
 
 const createAppTheme = (mode: 'light' | 'dark') => createTheme({
@@ -182,6 +188,9 @@ const AUTO_REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
 const DRAWER_WIDTH = 280;
 
 function App() {
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+
   const [darkMode, setDarkMode] = useState(true); // Default to dark mode
   const [jobs, setJobs] = useState<Record<string, Job>>({});
   const [loading, setLoading] = useState(true);
@@ -595,6 +604,23 @@ function App() {
         </Typography>
       </Box>
 
+      {/* User Info */}
+      <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider', bgcolor: 'action.hover' }}>
+        <Box display="flex" alignItems="center" gap={1.5}>
+          <Avatar sx={{ width: 40, height: 40, bgcolor: 'primary.main' }}>
+            <AccountCircleIcon />
+          </Avatar>
+          <Box flex={1} minWidth={0}>
+            <Typography variant="subtitle2" fontWeight={600} noWrap>
+              {user?.username || 'User'}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" noWrap>
+              {user?.email || ''}
+            </Typography>
+          </Box>
+        </Box>
+      </Box>
+
       {/* Navigation */}
       <Box sx={{ flex: 1, py: 1 }}>
         <Typography variant="overline" sx={{ px: 3, py: 1, color: 'text.secondary', fontWeight: 600, fontSize: '0.75rem' }}>
@@ -760,8 +786,10 @@ function App() {
 
         <ListItem
           button
+          onClick={() => navigate('/settings')}
           sx={{
             borderRadius: 2,
+            mb: 1,
             '&:hover': {
               bgcolor: 'action.hover',
             },
@@ -773,6 +801,29 @@ function App() {
           <ListItemText
             primary="Settings"
             primaryTypographyProps={{ fontSize: '0.875rem' }}
+          />
+        </ListItem>
+
+        <ListItem
+          button
+          onClick={async () => {
+            await logout();
+            navigate('/login');
+          }}
+          sx={{
+            borderRadius: 2,
+            bgcolor: 'error.light',
+            '&:hover': {
+              bgcolor: 'error.main',
+            },
+          }}
+        >
+          <ListItemIcon sx={{ minWidth: 40 }}>
+            <LogoutIcon sx={{ color: 'error.contrastText' }} />
+          </ListItemIcon>
+          <ListItemText
+            primary="Logout"
+            primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 600, color: 'error.contrastText' }}
           />
         </ListItem>
       </Box>
