@@ -4,7 +4,7 @@ Ultra-minimal LinkedIn Job Manager for Railway
 Just serves existing job database - no React build needed
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -272,10 +272,93 @@ async def health():
         "database_type": "postgresql" if (db and db.use_postgres) else "json_fallback"
     }
 
+async def get_current_user_optional(authorization: Optional[str] = Header(None)):
+    """Optional authentication - returns user if authenticated, None otherwise"""
+    if not authorization or not AUTH_AVAILABLE:
+        return None
+
+    try:
+        from auth_utils import decode_access_token
+        # Remove 'Bearer ' prefix
+        token = authorization.replace("Bearer ", "")
+        payload = decode_access_token(token)
+        return payload
+    except:
+        return None
+
 @app.get("/api/jobs")
-async def get_jobs_api():
-    """Get all jobs from database - proper API endpoint"""
-    return await load_jobs()
+async def get_jobs_api(current_user: Optional[Dict[str, Any]] = Depends(get_current_user_optional)):
+    """Get all jobs from database - filtered by user preferences if authenticated"""
+    all_jobs = await load_jobs()
+
+    # If user is not authenticated, return all jobs
+    if not current_user:
+        return all_jobs
+
+    # If authenticated, filter by user preferences
+    try:
+        if AUTH_AVAILABLE:
+            from user_database import UserDatabase
+            user_db = UserDatabase()
+            preferences = await user_db.get_user_preferences(current_user['user_id'])
+
+            if preferences:
+                filtered_jobs = {}
+
+                for job_id, job_data in all_jobs.items():
+                    # Skip metadata
+                    if job_id.startswith('_'):
+                        filtered_jobs[job_id] = job_data
+                        continue
+
+                    # Filter by job type if specified
+                    if preferences.get('job_types'):
+                        job_type = job_data.get('job_type', 'other')
+                        if job_type not in preferences['job_types']:
+                            continue
+
+                    # Filter by experience level if specified
+                    if preferences.get('experience_levels'):
+                        job_level = job_data.get('experience_level', 'unknown')
+                        if job_level not in preferences['experience_levels']:
+                            continue
+
+                    # Filter by country if specified
+                    if preferences.get('preferred_countries'):
+                        job_country = job_data.get('country', 'Unknown')
+                        if job_country not in preferences['preferred_countries']:
+                            continue
+
+                    # Check excluded keywords
+                    if preferences.get('excluded_keywords'):
+                        title_desc = f"{job_data.get('title', '')} {job_data.get('description', '')}".lower()
+                        if any(keyword.lower() in title_desc for keyword in preferences['excluded_keywords']):
+                            continue
+
+                    # Check included keywords (if any specified, job must match at least one)
+                    if preferences.get('keywords'):
+                        title_desc = f"{job_data.get('title', '')} {job_data.get('description', '')}".lower()
+                        if not any(keyword.lower() in title_desc for keyword in preferences['keywords']):
+                            continue
+
+                    # Filter by remote if specified
+                    if preferences.get('remote_only'):
+                        if not job_data.get('is_remote', False):
+                            continue
+
+                    # Filter by easy apply if specified
+                    if preferences.get('easy_apply_only'):
+                        if not job_data.get('easy_apply', False):
+                            continue
+
+                    filtered_jobs[job_id] = job_data
+
+                return filtered_jobs
+    except Exception as e:
+        print(f"Error filtering jobs by preferences: {e}")
+        # On error, return all jobs
+
+    return all_jobs
 
 @app.get("/api/jobs/{job_id}")
 async def get_job_by_id(job_id: str):
