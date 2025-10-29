@@ -2,7 +2,12 @@
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 python-multipart==0.0.6
-pydantic==2.5.0
+pydantic[email]==2.5.0
+
+# Authentication Requirements
+python-jose[cryptography]==3.3.0
+passlib==1.7.4
+bcrypt==4.0.1
 
 # Database Requirements
 asyncpg==0.29.0  # PostgreSQL async driver
