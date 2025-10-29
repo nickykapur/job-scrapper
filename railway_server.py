@@ -312,10 +312,11 @@ async def get_jobs_api(current_user: Optional[Dict[str, Any]] = Depends(get_curr
                         continue
 
                     # Get job details for filtering
-                    title = job_data.get('title', '').lower()
+                    title = job_data.get('title', '')
+                    title_lower = title.lower()
                     description = job_data.get('description', '').lower()
                     location = job_data.get('location', '').lower()
-                    title_desc = f"{title} {description} {location}"
+                    title_desc = f"{title_lower} {description} {location}"
 
                     # Filter by job type - check title/description if job_type field missing
                     if preferences.get('job_types'):
@@ -329,12 +330,27 @@ async def get_jobs_api(current_user: Optional[Dict[str, Any]] = Depends(get_curr
                             type_match = False
                             for pref_type in preferences['job_types']:
                                 if pref_type == 'software':
-                                    sw_keywords = ['software', 'developer', 'engineer', 'programmer', 'full stack', 'backend', 'frontend', 'react', 'python', 'javascript', 'java ', 'node.js', '.net']
+                                    # More specific software keywords to avoid catching HR/other engineers
+                                    sw_keywords = [
+                                        'software engineer', 'software developer', 'developer', 'programmer',
+                                        'full stack', 'full-stack', 'backend', 'frontend', 'front-end', 'back-end',
+                                        'react', 'angular', 'vue', 'python', 'javascript', 'typescript', 'java developer',
+                                        'node.js', 'nodejs', '.net', 'dotnet', 'web developer', 'mobile developer',
+                                        'devops', 'sre', 'cloud engineer', 'data engineer', 'ml engineer', 'ai engineer',
+                                        'software architect', 'tech lead'
+                                    ]
+                                    # Exclude HR/non-software jobs
+                                    if any(exclude in title_lower for exclude in ['hr ', ' hr', 'human resources', 'recruitment', 'talent acquisition']):
+                                        break
                                     if any(kw in title_desc for kw in sw_keywords):
                                         type_match = True
                                         break
                                 elif pref_type == 'hr':
-                                    hr_keywords = ['hr ', 'human resources', 'recruiter', 'recruitment', 'talent acquisition', 'people operations', 'hr officer', 'hr coordinator', 'hr generalist']
+                                    hr_keywords = [' hr ', 'human resources', 'recruiter', 'recruitment', 'recruiting', 'talent acquisition', 'talent', 'people operations', 'people', 'hr officer', 'hr coordinator', 'hr generalist', 'hr manager', 'hr business partner', 'hr specialist', 'people partner', 'talent sourcer', 'hr assistant']
+                                    # Also check for HR at start/end of title
+                                    if title.startswith('hr ') or title.endswith(' hr') or ' hr ' in title:
+                                        type_match = True
+                                        break
                                     if any(kw in title_desc for kw in hr_keywords):
                                         type_match = True
                                         break
@@ -351,8 +367,16 @@ async def get_jobs_api(current_user: Optional[Dict[str, Any]] = Depends(get_curr
                             # Detect level from title
                             level_match = False
                             if any(lvl in ['entry', 'junior'] for lvl in preferences['experience_levels']):
-                                # Check if it's NOT senior/lead/principal
-                                if not any(word in title for word in ['senior', 'lead', 'principal', 'staff', 'director', 'head of', 'manager']):
+                                # For HR jobs, "Manager" doesn't always mean senior
+                                # Check for truly senior indicators
+                                senior_indicators = ['senior', 'sr.', 'lead', 'principal', 'staff', 'director', 'head of', 'chief', 'vp']
+                                # Exception: HR Manager, Talent Manager, People Manager are often mid-level
+                                hr_manager_titles = ['hr manager', 'talent manager', 'people manager', 'recruitment manager', 'talent acquisition manager']
+
+                                is_hr_manager = any(hr_title in title_lower for hr_title in hr_manager_titles)
+                                has_senior_indicator = any(word in title for word in senior_indicators)
+
+                                if is_hr_manager or not has_senior_indicator:
                                     level_match = True
                             if any(lvl in ['mid', 'senior'] for lvl in preferences['experience_levels']):
                                 level_match = True  # Allow mid/senior to see all
@@ -381,10 +405,10 @@ async def get_jobs_api(current_user: Optional[Dict[str, Any]] = Depends(get_curr
                         if any(keyword.lower() in title_desc for keyword in preferences['excluded_keywords']):
                             continue
 
-                    # Check included keywords (if any specified, job must match at least one)
-                    if preferences.get('keywords'):
-                        if not any(keyword.lower() in title_desc for keyword in preferences['keywords']):
-                            continue
+                    # Check included keywords - OPTIONAL if job_type already matched
+                    # If user has specific keywords, use them as additional boost, not hard requirement
+                    # This allows HR jobs to show even if they don't exactly match the keyword list
+                    # Keywords are now just preferences, not filters
 
                     # Filter by remote if specified
                     if preferences.get('remote_only'):
