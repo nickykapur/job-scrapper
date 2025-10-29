@@ -58,6 +58,9 @@ COPY railway_server.py .
 COPY main.py .
 COPY linkedin_job_scraper.py .
 COPY database_models.py .
+COPY auth_routes.py .
+COPY auth_utils.py .
+COPY user_database.py .
 COPY daily_dublin_update.py .
 COPY daily_multi_country_update.py .
 COPY sync_to_railway.py .
@@ -81,4 +84,4 @@ ENV CHROME_PATH=/usr/bin/google-chrome-stable
 EXPOSE 8000
 
 # Start command with virtual display for headless browser
-CMD ["sh", "-c", "Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 & python fastapi_server.py"]
+CMD ["sh", "-c", "Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 & python railway_server.py"]
