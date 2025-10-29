@@ -311,39 +311,84 @@ async def get_jobs_api(current_user: Optional[Dict[str, Any]] = Depends(get_curr
                         filtered_jobs[job_id] = job_data
                         continue
 
-                    # Filter by job type if specified
+                    # Get job details for filtering
+                    title = job_data.get('title', '').lower()
+                    description = job_data.get('description', '').lower()
+                    location = job_data.get('location', '').lower()
+                    title_desc = f"{title} {description} {location}"
+
+                    # Filter by job type - check title/description if job_type field missing
                     if preferences.get('job_types'):
-                        job_type = job_data.get('job_type', 'other')
-                        if job_type not in preferences['job_types']:
-                            continue
+                        job_type = job_data.get('job_type')
 
-                    # Filter by experience level if specified
+                        # If job_type field exists, use it
+                        if job_type and job_type not in preferences['job_types']:
+                            continue
+                        # If job_type field missing, detect from title/description
+                        elif not job_type:
+                            type_match = False
+                            for pref_type in preferences['job_types']:
+                                if pref_type == 'software':
+                                    sw_keywords = ['software', 'developer', 'engineer', 'programmer', 'full stack', 'backend', 'frontend', 'react', 'python', 'javascript', 'java ', 'node.js', '.net']
+                                    if any(kw in title_desc for kw in sw_keywords):
+                                        type_match = True
+                                        break
+                                elif pref_type == 'hr':
+                                    hr_keywords = ['hr ', 'human resources', 'recruiter', 'recruitment', 'talent acquisition', 'people operations', 'hr officer', 'hr coordinator', 'hr generalist']
+                                    if any(kw in title_desc for kw in hr_keywords):
+                                        type_match = True
+                                        break
+                            if not type_match:
+                                continue
+
+                    # Filter by experience level - detect from title if field missing
                     if preferences.get('experience_levels'):
-                        job_level = job_data.get('experience_level', 'unknown')
-                        if job_level not in preferences['experience_levels']:
-                            continue
+                        job_level = job_data.get('experience_level')
 
-                    # Filter by country if specified
-                    if preferences.get('preferred_countries'):
-                        job_country = job_data.get('country', 'Unknown')
-                        if job_country not in preferences['preferred_countries']:
+                        if job_level and job_level not in preferences['experience_levels']:
                             continue
+                        elif not job_level:
+                            # Detect level from title
+                            level_match = False
+                            if any(lvl in ['entry', 'junior'] for lvl in preferences['experience_levels']):
+                                # Check if it's NOT senior/lead/principal
+                                if not any(word in title for word in ['senior', 'lead', 'principal', 'staff', 'director', 'head of', 'manager']):
+                                    level_match = True
+                            if any(lvl in ['mid', 'senior'] for lvl in preferences['experience_levels']):
+                                level_match = True  # Allow mid/senior to see all
+
+                            if not level_match:
+                                continue
+
+                    # Filter by country - check location string if country field missing
+                    if preferences.get('preferred_countries'):
+                        job_country = job_data.get('country')
+
+                        if job_country and job_country not in preferences['preferred_countries']:
+                            continue
+                        elif not job_country:
+                            # Check location string
+                            country_match = False
+                            for country in preferences['preferred_countries']:
+                                if country.lower() in location or country.lower() == 'remote' and 'remote' in location:
+                                    country_match = True
+                                    break
+                            if not country_match:
+                                continue
 
                     # Check excluded keywords
                     if preferences.get('excluded_keywords'):
-                        title_desc = f"{job_data.get('title', '')} {job_data.get('description', '')}".lower()
                         if any(keyword.lower() in title_desc for keyword in preferences['excluded_keywords']):
                             continue
 
                     # Check included keywords (if any specified, job must match at least one)
                     if preferences.get('keywords'):
-                        title_desc = f"{job_data.get('title', '')} {job_data.get('description', '')}".lower()
                         if not any(keyword.lower() in title_desc for keyword in preferences['keywords']):
                             continue
 
                     # Filter by remote if specified
                     if preferences.get('remote_only'):
-                        if not job_data.get('is_remote', False):
+                        if not job_data.get('is_remote', False) and 'remote' not in location:
                             continue
 
                     # Filter by easy apply if specified
