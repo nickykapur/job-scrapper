@@ -473,6 +473,23 @@ class LinkedInJobScraper:
         # Default
         return 'other'
 
+    def detect_experience_level(self, title):
+        """Detect experience level from job title"""
+        title_lower = title.lower()
+
+        # Senior level indicators
+        senior_keywords = ['senior', 'sr.', 'lead', 'principal', 'staff', 'director', 'head of', 'chief', 'vp', 'vice president']
+        if any(keyword in title_lower for keyword in senior_keywords):
+            return 'senior'
+
+        # Junior level indicators
+        junior_keywords = ['junior', 'jr.', 'entry', 'entry-level', 'graduate', 'intern', 'trainee', 'associate']
+        if any(keyword in title_lower for keyword in junior_keywords):
+            return 'junior'
+
+        # If no specific indicator, assume mid-level
+        return 'mid'
+
     def preserve_applied_status(self, job_id, new_job_data):
         """Preserve the applied and rejected status from existing jobs when updating"""
         if job_id in self.existing_jobs:
@@ -682,6 +699,9 @@ class LinkedInJobScraper:
             # Detect job type (software, hr, or other)
             job_type = self.detect_job_type(title)
 
+            # Detect experience level (senior, mid, junior)
+            experience_level = self.detect_experience_level(title)
+
             # Create job data
             job_data = {
                 "id": job_id,
@@ -690,6 +710,7 @@ class LinkedInJobScraper:
                 "location": location or "Unknown Location",
                 "country": country,  # Add country field
                 "job_type": job_type,  # Add job type classification
+                "experience_level": experience_level,  # Add experience level
                 "posted_date": posted_date or "Unknown",
                 "job_url": job_url,
                 "scraped_at": datetime.now().isoformat(),
