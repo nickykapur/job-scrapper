@@ -500,7 +500,7 @@ def run_multi_country_job_search():
 
     print("[MULTI] Starting Multi-Country Job Search (Last 24 Hours)")
     print(f"[DATE] {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print("[TARGET] Target: Ireland, Spain, Panama, Chile, Netherlands, Germany, Sweden - Software Jobs - Last 24 Hours")
+    print("[TARGET] Target: Ireland, Spain, Panama, Chile, Netherlands, Germany, Sweden - Software & HR Jobs - Last 24 Hours")
 
     # Railway configuration
     railway_url = "web-production-110bb.up.railway.app"
@@ -597,16 +597,24 @@ def run_multi_country_job_search():
         "Junior Software Engineer"
     ]
 
-    # HR/Recruitment (User 2)
+    # HR/Recruitment (User 2) - Expanded for better coverage
     hr_search_terms = [
         "HR Officer",
         "Talent Acquisition Coordinator",
+        "Talent Acquisition Specialist",
         "HR Coordinator",
         "HR Generalist",
+        "HR Specialist",
         "Junior Recruiter",
+        "Recruiter",
         "Recruitment Coordinator",
         "People Operations",
-        "HR Assistant"
+        "People Partner",
+        "HR Assistant",
+        "HR Manager",
+        "Talent Manager",
+        "HR Business Partner",
+        "Talent Sourcer"
     ]
 
     # Combine all search terms for comprehensive scraping
@@ -658,11 +666,8 @@ def run_multi_country_job_search():
                                     high_exp_filtered += 1
                                     continue
 
-                                # Apply top tech company filter for new countries
-                                company = job_data.get('company', '')
-                                if not scraper.is_top_tech_company(company, country):
-                                    company_filtered += 1
-                                    continue
+                                # REMOVED: Company filter - now accepting all companies
+                                # This ensures we get 20 jobs per country regardless of company
 
                                 # Job passed all filters
                                 job_data["country"] = country
@@ -673,8 +678,6 @@ def run_multi_country_job_search():
 
                         if high_exp_filtered > 0:
                             print(f"      [REJECT] Filtered out {high_exp_filtered} high-experience jobs")
-                        if company_filtered > 0:
-                            print(f"      [COMPANY] Filtered out {company_filtered} jobs (not top tech companies)")
                         print(f"      [OK] Added {filtered_jobs} suitable jobs")
 
                         country_results[country]["jobs"] += filtered_jobs
