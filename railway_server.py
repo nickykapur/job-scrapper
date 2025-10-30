@@ -694,6 +694,87 @@ async def migrate_database_schema():
         print(f"❌ Migration failed: {e}")
         raise HTTPException(status_code=500, detail=f"Migration failed: {str(e)}")
 
+@app.post("/api/backfill-job-fields")
+async def backfill_job_fields():
+    """Backfill country, job_type, experience_level for existing jobs (run once after migration)"""
+    if not db or not DATABASE_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    try:
+        from linkedin_job_scraper import LinkedInJobScraper
+
+        conn = await db.get_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+
+        # Get all jobs without country
+        jobs = await conn.fetch("SELECT id, title, location FROM jobs WHERE country IS NULL OR job_type IS NULL")
+
+        print(f"📊 Backfilling {len(jobs)} jobs...")
+
+        scraper = LinkedInJobScraper(headless=False)  # Don't need browser
+        updated = 0
+
+        for job in jobs:
+            try:
+                job_id = job['id']
+                title = job['title']
+                location = job['location'] or ""
+
+                # Extract fields
+                country = scraper.get_country_from_location(location)
+                job_type = scraper.detect_job_type(title)
+                experience_level = scraper.detect_experience_level(title)
+
+                # Update
+                await conn.execute("""
+                    UPDATE jobs
+                    SET country = $2, job_type = $3, experience_level = $4
+                    WHERE id = $1
+                """, job_id, country, job_type, experience_level)
+
+                updated += 1
+
+                if updated % 50 == 0:
+                    print(f"   ✅ Updated {updated}/{len(jobs)} jobs...")
+
+            except Exception as e:
+                print(f"   ⚠️ Error updating job {job_id}: {e}")
+                continue
+
+        # Get distribution
+        country_counts = await conn.fetch("""
+            SELECT country, COUNT(*) as count
+            FROM jobs
+            WHERE country IS NOT NULL
+            GROUP BY country
+            ORDER BY count DESC
+        """)
+
+        type_counts = await conn.fetch("""
+            SELECT job_type, COUNT(*) as count
+            FROM jobs
+            WHERE job_type IS NOT NULL
+            GROUP BY job_type
+            ORDER BY count DESC
+        """)
+
+        await conn.close()
+        scraper.close()
+
+        return {
+            "success": True,
+            "message": f"Backfilled {updated} jobs",
+            "jobs_updated": updated,
+            "jobs_total": len(jobs),
+            "country_distribution": [{"country": r['country'], "count": r['count']} for r in country_counts],
+            "type_distribution": [{"type": r['job_type'], "count": r['count']} for r in type_counts]
+        }
+
+    except Exception as e:
+        print(f"❌ Backfill failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Backfill failed: {str(e)}")
+
 @app.get("/jobs_database.json")
 async def get_jobs_legacy():
     """Legacy endpoint - redirects to proper API"""

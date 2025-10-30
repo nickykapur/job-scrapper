@@ -40,12 +40,22 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run scraper for ${{ matrix.country.name }}
+        id: scrape
         run: |
           python daily_single_country_scraper.py \
             --location "${{ matrix.country.location }}" \
             --country "${{ matrix.country.name }}"
         env:
           RAILWAY_URL: https://web-production-110bb.up.railway.app
+
+      - name: Country completion notification
+        if: always()
+        run: |
+          if [ "${{ steps.scrape.outcome }}" == "success" ]; then
+            echo "::notice title=${{ matrix.country.name }} ✅::Completed - ${{ steps.scrape.outputs.jobs_found }} jobs found"
+          else
+            echo "::error title=${{ matrix.country.name }} ❌::Scraping failed"
+          fi
 
   # Cleanup job - runs after all countries finish
   cleanup:
@@ -114,15 +124,31 @@ jobs:
             -H "Content-Type: application/json" \
             -d "$PAYLOAD"
 
-      - name: Summary comment
+      - name: Create summary and notification
         run: |
-          echo "### 🎉 Scraping Complete!" >> $GITHUB_STEP_SUMMARY
+          # Create GitHub Actions summary
+          echo "### 🎉 Job Scraping Complete!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Total Jobs:** ${{ steps.cleanup.outputs.total_jobs }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Jobs Cleaned:** ${{ steps.cleanup.outputs.jobs_deleted }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Status:** All 7 countries processed" >> $GITHUB_STEP_SUMMARY
+          echo "#### 📊 Results:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Total Jobs in Database:** ${{ steps.cleanup.outputs.total_jobs }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Old Jobs Cleaned:** ${{ steps.cleanup.outputs.jobs_deleted }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Countries Processed:** 7" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "View jobs: https://web-production-110bb.up.railway.app" >> $GITHUB_STEP_SUMMARY
+          echo "#### 🌍 Country Results:" >> $GITHUB_STEP_SUMMARY
+          echo "Check individual job logs above for details per country" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### 🔗 Links:" >> $GITHUB_STEP_SUMMARY
+          echo "- [View Jobs (Software)](https://web-production-110bb.up.railway.app)" >> $GITHUB_STEP_SUMMARY
+          echo "- [View Jobs (HR)](https://web-production-110bb.up.railway.app)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "⏰ Next run: Check cron schedule" >> $GITHUB_STEP_SUMMARY
+
+          # Send notification via GitHub Actions (appears in mobile app)
+          if [ "${{ needs.scrape-country.result }}" == "success" ]; then
+            echo "::notice title=✅ Scraping Complete::All 7 countries processed successfully. Total jobs: ${{ steps.cleanup.outputs.total_jobs }}"
+          else
+            echo "::warning title=⚠️ Scraping Complete with Issues::Some countries failed. Check logs. Total jobs: ${{ steps.cleanup.outputs.total_jobs }}"
+          fi
 
 # Speed: 7 parallel jobs × 5 minutes = ~5-7 minutes total
 # PUBLIC repos get UNLIMITED GitHub Actions minutes - completely FREE!

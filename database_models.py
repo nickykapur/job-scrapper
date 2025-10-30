@@ -426,14 +426,20 @@ class JobDatabase:
                     posted_date = str(job_data['posted_date'])[:100] if job_data.get('posted_date') else ''
                     category = str(job_data.get('category', ''))[:50] if job_data.get('category') else None
 
-                    # Use simpler UPDATE with only core fields
+                    # Update with all fields including country, job_type, experience_level
                     easy_apply_bool = bool(job_data.get('easy_apply', False))
+                    country = str(job_data.get('country', ''))[:100] if job_data.get('country') else None
+                    job_type = str(job_data.get('job_type', ''))[:50] if job_data.get('job_type') else None
+                    experience_level = str(job_data.get('experience_level', ''))[:50] if job_data.get('experience_level') else None
+
                     await conn.execute("""
                         UPDATE jobs SET
                             title = $2, company = $3, location = $4, posted_date = $5,
-                            job_url = $6, is_new = $7, easy_apply = $8
+                            job_url = $6, is_new = $7, easy_apply = $8,
+                            country = $9, job_type = $10, experience_level = $11
                         WHERE id = $1
-                    """, job_id, title, company, location, posted_date, job_data['job_url'], is_new_bool, easy_apply_bool)
+                    """, job_id, title, company, location, posted_date, job_data['job_url'], is_new_bool, easy_apply_bool,
+                         country, job_type, experience_level)
                     updated_jobs += 1
                 else:
                     # Insert new job
@@ -451,12 +457,18 @@ class JobDatabase:
                     posted_date = str(job_data['posted_date'])[:100] if job_data.get('posted_date') else ''
                     category = str(job_data.get('category', ''))[:50] if job_data.get('category') else None
 
-                    # Use simpler INSERT with only core fields to avoid schema mismatches
+                    # Extract new fields
+                    country = str(job_data.get('country', ''))[:100] if job_data.get('country') else None
+                    job_type = str(job_data.get('job_type', ''))[:50] if job_data.get('job_type') else None
+                    experience_level = str(job_data.get('experience_level', ''))[:50] if job_data.get('experience_level') else None
+
+                    # INSERT with all fields including country, job_type, experience_level
                     easy_apply_bool = bool(job_data.get('easy_apply', False))
                     await conn.execute("""
-                        INSERT INTO jobs (id, title, company, location, posted_date, job_url, applied, is_new, easy_apply)
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-                    """, job_id, title, company, location, posted_date, job_data['job_url'], applied_bool, is_new_bool, easy_apply_bool)
+                        INSERT INTO jobs (id, title, company, location, posted_date, job_url, applied, is_new, easy_apply, country, job_type, experience_level)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                    """, job_id, title, company, location, posted_date, job_data['job_url'], applied_bool, is_new_bool, easy_apply_bool,
+                         country, job_type, experience_level)
                     new_jobs += 1
             
             # Log scraping session
