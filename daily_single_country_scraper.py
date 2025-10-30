@@ -104,6 +104,8 @@ def scrape_single_country(location, country_name, railway_url):
     scraper.existing_jobs = existing_jobs
 
     all_new_jobs = {}
+    software_jobs = {}
+    hr_jobs = {}
     successful_searches = 0
 
     try:
@@ -111,6 +113,9 @@ def scrape_single_country(location, country_name, railway_url):
 
         for term in search_terms:
             print(f"   [SEARCH] {term}")
+
+            # Determine if this is a software or HR search
+            is_software = term in software_search_terms
 
             try:
                 results = scraper.search_jobs(
@@ -128,6 +133,12 @@ def scrape_single_country(location, country_name, railway_url):
                         if job_id not in all_new_jobs:
                             all_new_jobs[job_id] = job_data
 
+                            # Track software vs HR jobs
+                            if is_software:
+                                software_jobs[job_id] = job_data
+                            else:
+                                hr_jobs[job_id] = job_data
+
                     print(f"      ✓ Found {len(results)} jobs")
                     successful_searches += 1
                 else:
@@ -142,7 +153,7 @@ def scrape_single_country(location, country_name, railway_url):
 
     print(f"\n[SUMMARY] {country_name}:")
     print(f"   • Searches: {successful_searches}/{len(search_terms)}")
-    print(f"   • New jobs found: {len(all_new_jobs)}")
+    print(f"   • New jobs found: {len(all_new_jobs)} (Software: {len(software_jobs)}, HR: {len(hr_jobs)})")
 
     # Upload to Railway
     if all_new_jobs:
@@ -158,12 +169,14 @@ def scrape_single_country(location, country_name, railway_url):
         print(f"\n[SKIP] No new jobs to upload")
 
     # Output for GitHub Actions summary
-    print(f"\n::notice title={country_name} Complete::{len(all_new_jobs)} new jobs found and uploaded")
+    print(f"\n::notice title={country_name} Complete::{len(all_new_jobs)} new jobs (Software: {len(software_jobs)}, HR: {len(hr_jobs)})")
 
     # Set output for GitHub Actions
     if os.getenv('GITHUB_OUTPUT'):
         with open(os.getenv('GITHUB_OUTPUT'), 'a') as f:
             f.write(f"jobs_found={len(all_new_jobs)}\n")
+            f.write(f"software_jobs={len(software_jobs)}\n")
+            f.write(f"hr_jobs={len(hr_jobs)}\n")
             f.write(f"country={country_name}\n")
 
     print(f"\n✅ {country_name} scraping complete!")

@@ -55,8 +55,10 @@ jobs:
         run: |
           # Log to console
           if [ "${{ steps.scrape.outcome }}" == "success" ]; then
-            NEW_JOBS="${{ steps.scrape.outputs.jobs_found }}"
-            echo "✅ ${{ matrix.country.name }}: $NEW_JOBS new jobs found"
+            SOFTWARE_JOBS="${{ steps.scrape.outputs.software_jobs }}"
+            HR_JOBS="${{ steps.scrape.outputs.hr_jobs }}"
+            TOTAL_JOBS="${{ steps.scrape.outputs.jobs_found }}"
+            echo "✅ ${{ matrix.country.name }}: $TOTAL_JOBS new jobs (Software: $SOFTWARE_JOBS, HR: $HR_JOBS)"
 
             # Send to Slack if configured
             if [ -n "$SLACK_WEBHOOK_URL" ]; then
@@ -71,10 +73,10 @@ jobs:
               esac)
 
               # Different message based on whether new jobs were found
-              if [ "$NEW_JOBS" -gt "0" ]; then
-                MESSAGE="$COUNTRY_FLAG *${{ matrix.country.name }}*: :sparkles: *$NEW_JOBS new jobs* added :white_check_mark:"
+              if [ "$TOTAL_JOBS" -gt "0" ]; then
+                MESSAGE="$COUNTRY_FLAG *${{ matrix.country.name }}*: :computer: *$SOFTWARE_JOBS software* | :briefcase: *$HR_JOBS HR* :white_check_mark:"
               else
-                MESSAGE="$COUNTRY_FLAG *${{ matrix.country.name }}*: No new jobs (all up to date) :white_check_mark:"
+                MESSAGE="$COUNTRY_FLAG *${{ matrix.country.name }}*: No new jobs :white_check_mark:"
               fi
 
               curl -X POST "$SLACK_WEBHOOK_URL" \
