@@ -48,13 +48,42 @@ jobs:
         env:
           RAILWAY_URL: https://web-production-110bb.up.railway.app
 
-      - name: Country completion notification
+      - name: Send Slack notification
         if: always()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
+          # Log to console
           if [ "${{ steps.scrape.outcome }}" == "success" ]; then
-            echo "::notice title=${{ matrix.country.name }} ✅::Completed - ${{ steps.scrape.outputs.jobs_found }} jobs found"
+            echo "✅ ${{ matrix.country.name }}: ${{ steps.scrape.outputs.jobs_found }} jobs found"
+
+            # Send to Slack if configured
+            if [ -n "$SLACK_WEBHOOK_URL" ]; then
+              COUNTRY_FLAG=$(case "${{ matrix.country.name }}" in
+                "Ireland") echo ":flag-ie:";;
+                "Spain") echo ":flag-es:";;
+                "Panama") echo ":flag-pa:";;
+                "Chile") echo ":flag-cl:";;
+                "Netherlands") echo ":flag-nl:";;
+                "Germany") echo ":flag-de:";;
+                "Sweden") echo ":flag-se:";;
+              esac)
+
+              curl -X POST "$SLACK_WEBHOOK_URL" \
+                -H "Content-Type: application/json" \
+                -d "{\"text\":\"$COUNTRY_FLAG *${{ matrix.country.name }}*: ${{ steps.scrape.outputs.jobs_found }} jobs :white_check_mark:\"}" \
+                > /dev/null 2>&1
+            fi
           else
-            echo "::error title=${{ matrix.country.name }} ❌::Scraping failed"
+            echo "❌ ${{ matrix.country.name }}: Scraping failed"
+
+            # Send failure to Slack
+            if [ -n "$SLACK_WEBHOOK_URL" ]; then
+              curl -X POST "$SLACK_WEBHOOK_URL" \
+                -H "Content-Type: application/json" \
+                -d "{\"text\":\":x: *${{ matrix.country.name }}*: Scraping failed\"}" \
+                > /dev/null 2>&1
+            fi
           fi
 
   # Cleanup job - runs after all countries finish
@@ -83,50 +112,63 @@ jobs:
           echo "jobs_deleted=$JOBS_DELETED" >> $GITHUB_OUTPUT
           echo "total_jobs=$TOTAL_JOBS" >> $GITHUB_OUTPUT
 
-      - name: Send notification (Discord/Slack)
-        if: env.WEBHOOK_URL != ''
+      - name: Send Slack summary
         env:
-          WEBHOOK_URL: ${{ secrets.NOTIFICATION_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
-          # Get job results from previous step
-          JOBS_DELETED="${{ steps.cleanup.outputs.jobs_deleted }}"
-          TOTAL_JOBS="${{ steps.cleanup.outputs.total_jobs }}"
+          # Send summary to Slack if configured
+          if [ -n "$SLACK_WEBHOOK_URL" ]; then
+            JOBS_DELETED="${{ steps.cleanup.outputs.jobs_deleted }}"
+            TOTAL_JOBS="${{ steps.cleanup.outputs.total_jobs }}"
 
-          # Count successful vs failed countries
-          if [ "${{ needs.scrape-country.result }}" == "success" ]; then
-            STATUS="✅ All countries completed"
-            COLOR="3066993"
-          else
-            STATUS="⚠️ Some countries failed"
-            COLOR="15158332"
+            if [ "${{ needs.scrape-country.result }}" == "success" ]; then
+              STATUS=":white_check_mark: All countries completed successfully!"
+            else
+              STATUS=":warning: Some countries had issues"
+            fi
+
+            curl -X POST "$SLACK_WEBHOOK_URL" \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"text\": \":tada: *Job Scraper Complete*\",
+                \"blocks\": [
+                  {
+                    \"type\": \"header\",
+                    \"text\": {
+                      \"type\": \"plain_text\",
+                      \"text\": \":tada: Job Scraper Complete\"
+                    }
+                  },
+                  {
+                    \"type\": \"section\",
+                    \"text\": {
+                      \"type\": \"mrkdwn\",
+                      \"text\": \"$STATUS\"
+                    }
+                  },
+                  {
+                    \"type\": \"section\",
+                    \"fields\": [
+                      {\"type\": \"mrkdwn\", \"text\": \"*:chart_with_upwards_trend: Total Jobs:*\\n$TOTAL_JOBS\"},
+                      {\"type\": \"mrkdwn\", \"text\": \"*:broom: Jobs Cleaned:*\\n$JOBS_DELETED\"},
+                      {\"type\": \"mrkdwn\", \"text\": \"*:stopwatch: Run:*\\n#${{ github.run_number }}\"},
+                      {\"type\": \"mrkdwn\", \"text\": \"*:earth_americas: Countries:*\\n7\"}
+                    ]
+                  },
+                  {
+                    \"type\": \"section\",
+                    \"text\": {
+                      \"type\": \"mrkdwn\",
+                      \"text\": \"<https://web-production-110bb.up.railway.app|:link: View Jobs on Railway>\"
+                    }
+                  }
+                ]
+              }"
           fi
 
-          # Create notification payload
-          PAYLOAD=$(cat <<EOF
-          {
-            "embeds": [{
-              "title": "Job Scraper Complete",
-              "description": "$STATUS",
-              "color": $COLOR,
-              "fields": [
-                {"name": "Total Jobs", "value": "$TOTAL_JOBS", "inline": true},
-                {"name": "Jobs Cleaned", "value": "$JOBS_DELETED", "inline": true},
-                {"name": "Duration", "value": "${{ github.run_number }} run", "inline": true}
-              ],
-              "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            }]
-          }
-          EOF
-          )
-
-          # Send to webhook
-          curl -X POST "$WEBHOOK_URL" \
-            -H "Content-Type: application/json" \
-            -d "$PAYLOAD"
-
-      - name: Create summary and notification
+      - name: Create summary
         run: |
-          # Create GitHub Actions summary
+          # Create GitHub Actions summary (visible in workflow UI)
           echo "### 🎉 Job Scraping Complete!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "#### 📊 Results:" >> $GITHUB_STEP_SUMMARY
@@ -134,21 +176,10 @@ jobs:
           echo "- **Old Jobs Cleaned:** ${{ steps.cleanup.outputs.jobs_deleted }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Countries Processed:** 7" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "#### 🌍 Country Results:" >> $GITHUB_STEP_SUMMARY
-          echo "Check individual job logs above for details per country" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
           echo "#### 🔗 Links:" >> $GITHUB_STEP_SUMMARY
-          echo "- [View Jobs (Software)](https://web-production-110bb.up.railway.app)" >> $GITHUB_STEP_SUMMARY
-          echo "- [View Jobs (HR)](https://web-production-110bb.up.railway.app)" >> $GITHUB_STEP_SUMMARY
+          echo "- [View Jobs on Railway](https://web-production-110bb.up.railway.app)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "⏰ Next run: Check cron schedule" >> $GITHUB_STEP_SUMMARY
-
-          # Send notification via GitHub Actions (appears in mobile app)
-          if [ "${{ needs.scrape-country.result }}" == "success" ]; then
-            echo "::notice title=✅ Scraping Complete::All 7 countries processed successfully. Total jobs: ${{ steps.cleanup.outputs.total_jobs }}"
-          else
-            echo "::warning title=⚠️ Scraping Complete with Issues::Some countries failed. Check logs. Total jobs: ${{ steps.cleanup.outputs.total_jobs }}"
-          fi
+          echo "⏰ Next run: Check cron schedule (every few hours)" >> $GITHUB_STEP_SUMMARY
 
 # Speed: 7 parallel jobs × 5 minutes = ~5-7 minutes total
 # PUBLIC repos get UNLIMITED GitHub Actions minutes - completely FREE!
