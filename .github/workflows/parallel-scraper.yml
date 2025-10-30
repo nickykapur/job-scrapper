@@ -55,7 +55,8 @@ jobs:
         run: |
           # Log to console
           if [ "${{ steps.scrape.outcome }}" == "success" ]; then
-            echo "✅ ${{ matrix.country.name }}: ${{ steps.scrape.outputs.jobs_found }} jobs found"
+            NEW_JOBS="${{ steps.scrape.outputs.jobs_found }}"
+            echo "✅ ${{ matrix.country.name }}: $NEW_JOBS new jobs found"
 
             # Send to Slack if configured
             if [ -n "$SLACK_WEBHOOK_URL" ]; then
@@ -69,9 +70,16 @@ jobs:
                 "Sweden") echo ":flag-se:";;
               esac)
 
+              # Different message based on whether new jobs were found
+              if [ "$NEW_JOBS" -gt "0" ]; then
+                MESSAGE="$COUNTRY_FLAG *${{ matrix.country.name }}*: :sparkles: *$NEW_JOBS new jobs* added :white_check_mark:"
+              else
+                MESSAGE="$COUNTRY_FLAG *${{ matrix.country.name }}*: No new jobs (all up to date) :white_check_mark:"
+              fi
+
               curl -X POST "$SLACK_WEBHOOK_URL" \
                 -H "Content-Type: application/json" \
-                -d "{\"text\":\"$COUNTRY_FLAG *${{ matrix.country.name }}*: ${{ steps.scrape.outputs.jobs_found }} jobs :white_check_mark:\"}" \
+                -d "{\"text\":\"$MESSAGE\"}" \
                 > /dev/null 2>&1
             fi
           else
@@ -111,60 +119,6 @@ jobs:
 
           echo "jobs_deleted=$JOBS_DELETED" >> $GITHUB_OUTPUT
           echo "total_jobs=$TOTAL_JOBS" >> $GITHUB_OUTPUT
-
-      - name: Send Slack summary
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-        run: |
-          # Send summary to Slack if configured
-          if [ -n "$SLACK_WEBHOOK_URL" ]; then
-            JOBS_DELETED="${{ steps.cleanup.outputs.jobs_deleted }}"
-            TOTAL_JOBS="${{ steps.cleanup.outputs.total_jobs }}"
-
-            if [ "${{ needs.scrape-country.result }}" == "success" ]; then
-              STATUS=":white_check_mark: All countries completed successfully!"
-            else
-              STATUS=":warning: Some countries had issues"
-            fi
-
-            curl -X POST "$SLACK_WEBHOOK_URL" \
-              -H "Content-Type: application/json" \
-              -d "{
-                \"text\": \":tada: *Job Scraper Complete*\",
-                \"blocks\": [
-                  {
-                    \"type\": \"header\",
-                    \"text\": {
-                      \"type\": \"plain_text\",
-                      \"text\": \":tada: Job Scraper Complete\"
-                    }
-                  },
-                  {
-                    \"type\": \"section\",
-                    \"text\": {
-                      \"type\": \"mrkdwn\",
-                      \"text\": \"$STATUS\"
-                    }
-                  },
-                  {
-                    \"type\": \"section\",
-                    \"fields\": [
-                      {\"type\": \"mrkdwn\", \"text\": \"*:chart_with_upwards_trend: Total Jobs:*\\n$TOTAL_JOBS\"},
-                      {\"type\": \"mrkdwn\", \"text\": \"*:broom: Jobs Cleaned:*\\n$JOBS_DELETED\"},
-                      {\"type\": \"mrkdwn\", \"text\": \"*:stopwatch: Run:*\\n#${{ github.run_number }}\"},
-                      {\"type\": \"mrkdwn\", \"text\": \"*:earth_americas: Countries:*\\n7\"}
-                    ]
-                  },
-                  {
-                    \"type\": \"section\",
-                    \"text\": {
-                      \"type\": \"mrkdwn\",
-                      \"text\": \"<https://web-production-110bb.up.railway.app|:link: View Jobs on Railway>\"
-                    }
-                  }
-                ]
-              }"
-          fi
 
       - name: Create summary
         run: |
