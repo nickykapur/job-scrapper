@@ -58,10 +58,71 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Enforce country job limits
+        id: cleanup
         run: |
-          curl -X POST https://web-production-110bb.up.railway.app/api/jobs/enforce-country-limit \
+          echo "Running cleanup..."
+          RESPONSE=$(curl -s -X POST https://web-production-110bb.up.railway.app/api/jobs/enforce-country-limit \
             -H "Content-Type: application/json" \
-            -d '{"max_jobs": 300}' | python3 -m json.tool
+            -d '{"max_jobs": 300}')
+          echo "$RESPONSE" | python3 -m json.tool
+
+          # Extract stats for notification
+          JOBS_DELETED=$(echo "$RESPONSE" | python3 -c "import sys, json; print(json.load(sys.stdin).get('jobs_deleted', 0))")
+          TOTAL_JOBS=$(echo "$RESPONSE" | python3 -c "import sys, json; print(json.load(sys.stdin).get('total_jobs_remaining', 0))")
+
+          echo "jobs_deleted=$JOBS_DELETED" >> $GITHUB_OUTPUT
+          echo "total_jobs=$TOTAL_JOBS" >> $GITHUB_OUTPUT
+
+      - name: Send notification (Discord/Slack)
+        if: env.WEBHOOK_URL != ''
+        env:
+          WEBHOOK_URL: ${{ secrets.NOTIFICATION_WEBHOOK_URL }}
+        run: |
+          # Get job results from previous step
+          JOBS_DELETED="${{ steps.cleanup.outputs.jobs_deleted }}"
+          TOTAL_JOBS="${{ steps.cleanup.outputs.total_jobs }}"
+
+          # Count successful vs failed countries
+          if [ "${{ needs.scrape-country.result }}" == "success" ]; then
+            STATUS="✅ All countries completed"
+            COLOR="3066993"
+          else
+            STATUS="⚠️ Some countries failed"
+            COLOR="15158332"
+          fi
+
+          # Create notification payload
+          PAYLOAD=$(cat <<EOF
+          {
+            "embeds": [{
+              "title": "Job Scraper Complete",
+              "description": "$STATUS",
+              "color": $COLOR,
+              "fields": [
+                {"name": "Total Jobs", "value": "$TOTAL_JOBS", "inline": true},
+                {"name": "Jobs Cleaned", "value": "$JOBS_DELETED", "inline": true},
+                {"name": "Duration", "value": "${{ github.run_number }} run", "inline": true}
+              ],
+              "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            }]
+          }
+          EOF
+          )
+
+          # Send to webhook
+          curl -X POST "$WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD"
+
+      - name: Summary comment
+        run: |
+          echo "### 🎉 Scraping Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Total Jobs:** ${{ steps.cleanup.outputs.total_jobs }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Jobs Cleaned:** ${{ steps.cleanup.outputs.jobs_deleted }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** All 7 countries processed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "View jobs: https://web-production-110bb.up.railway.app" >> $GITHUB_STEP_SUMMARY
 
 # Speed: 7 parallel jobs × 5 minutes = ~5-7 minutes total
 # PUBLIC repos get UNLIMITED GitHub Actions minutes - completely FREE!

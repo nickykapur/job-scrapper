@@ -7,12 +7,53 @@ Scrapes one country at a time for faster execution
 import argparse
 import os
 import sys
-from daily_multi_country_update import (
-    LinkedInJobScraper,
-    load_existing_jobs_from_railway,
-    upload_jobs_to_railway,
-    enforce_country_job_limit
-)
+import requests
+from linkedin_job_scraper import LinkedInJobScraper
+
+def load_existing_jobs_from_railway(railway_url):
+    """Load existing jobs from Railway database via API"""
+    try:
+        if not railway_url.startswith('http'):
+            railway_url = f'https://{railway_url}'
+
+        api_url = f"{railway_url}/api/jobs"
+        response = requests.get(api_url, timeout=30)
+
+        if response.status_code == 200:
+            return response.json()
+        else:
+            print(f"[WARN] Could not load existing jobs: {response.status_code}")
+            return {}
+    except Exception as e:
+        print(f"[WARN] Error loading existing jobs: {e}")
+        return {}
+
+def upload_jobs_to_railway(railway_url, jobs_data):
+    """Upload jobs to Railway database"""
+    try:
+        if not railway_url.startswith('http'):
+            railway_url = f'https://{railway_url}'
+
+        sync_url = f"{railway_url}/sync_jobs"
+
+        print(f"   [API] Uploading to: {sync_url}")
+        response = requests.post(
+            sync_url,
+            json={"jobs_data": jobs_data},
+            timeout=60,
+            headers={"Content-Type": "application/json"}
+        )
+
+        if response.status_code == 200:
+            result = response.json()
+            print(f"   [OK] New: {result.get('new_jobs', 0)}, Updated: {result.get('updated_jobs', 0)}")
+            return True
+        else:
+            print(f"   [ERROR] Upload failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"   [ERROR] Upload error: {e}")
+        return False
 
 def scrape_single_country(location, country_name, railway_url):
     """Scrape jobs for a single country"""
@@ -115,6 +156,15 @@ def scrape_single_country(location, country_name, railway_url):
             return False
     else:
         print(f"\n[SKIP] No new jobs to upload")
+
+    # Output for GitHub Actions summary
+    print(f"\n::notice title={country_name} Complete::{len(all_new_jobs)} new jobs found and uploaded")
+
+    # Set output for GitHub Actions
+    if os.getenv('GITHUB_OUTPUT'):
+        with open(os.getenv('GITHUB_OUTPUT'), 'a') as f:
+            f.write(f"jobs_found={len(all_new_jobs)}\n")
+            f.write(f"country={country_name}\n")
 
     print(f"\n✅ {country_name} scraping complete!")
     return True
