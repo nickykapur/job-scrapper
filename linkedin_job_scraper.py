@@ -676,10 +676,11 @@ class LinkedInJobScraper:
             if not title or not job_url:
                 print(f"Skipping job card - missing essential data. Title: '{title}', URL: '{job_url}'")
                 return None
-                
-            # Filter out non-software related jobs
-            if not self.is_software_related_job(title):
-                print(f"Skipping non-software job: '{title}'")
+
+            # Filter out irrelevant jobs (keep both software and HR jobs)
+            job_type = self.detect_job_type(title)
+            if job_type == 'other':
+                print(f"Skipping irrelevant job: '{title}' (type: {job_type})")
                 return None
             
             # Filter out excluded companies
@@ -696,8 +697,8 @@ class LinkedInJobScraper:
             # Derive country from location
             country = self.get_country_from_location(location or "")
 
-            # Detect job type (software, hr, or other)
-            job_type = self.detect_job_type(title)
+            # Job type already detected above during filtering (line 681)
+            # job_type is already set
 
             # Detect experience level (senior, mid, junior)
             experience_level = self.detect_experience_level(title)

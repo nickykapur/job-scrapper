@@ -626,6 +626,74 @@ async def enforce_country_limit(max_jobs: int = 300):
         print(f"❌ Enforce limit failed: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to enforce limit: {str(e)}")
 
+@app.post("/api/migrate-schema")
+async def migrate_database_schema():
+    """Run database migrations to add missing columns"""
+    if not db or not DATABASE_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    try:
+        conn = await db.get_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+
+        migrations = []
+
+        # Add missing columns
+        try:
+            await conn.execute("ALTER TABLE jobs ADD COLUMN IF NOT EXISTS country VARCHAR(100);")
+            migrations.append("Added country column")
+        except Exception as e:
+            migrations.append(f"Country column: {str(e)}")
+
+        try:
+            await conn.execute("ALTER TABLE jobs ADD COLUMN IF NOT EXISTS job_type VARCHAR(50);")
+            migrations.append("Added job_type column")
+        except Exception as e:
+            migrations.append(f"Job_type column: {str(e)}")
+
+        try:
+            await conn.execute("ALTER TABLE jobs ADD COLUMN IF NOT EXISTS experience_level VARCHAR(50);")
+            migrations.append("Added experience_level column")
+        except Exception as e:
+            migrations.append(f"Experience_level column: {str(e)}")
+
+        try:
+            await conn.execute("ALTER TABLE jobs ADD COLUMN IF NOT EXISTS excluded BOOLEAN DEFAULT FALSE;")
+            migrations.append("Added excluded column")
+        except Exception as e:
+            migrations.append(f"Excluded column: {str(e)}")
+
+        # Create indexes
+        try:
+            await conn.execute("CREATE INDEX IF NOT EXISTS idx_jobs_country ON jobs(country);")
+            migrations.append("Created country index")
+        except Exception as e:
+            migrations.append(f"Country index: {str(e)}")
+
+        try:
+            await conn.execute("CREATE INDEX IF NOT EXISTS idx_jobs_job_type ON jobs(job_type);")
+            migrations.append("Created job_type index")
+        except Exception as e:
+            migrations.append(f"Job_type index: {str(e)}")
+
+        try:
+            await conn.execute("CREATE INDEX IF NOT EXISTS idx_jobs_experience_level ON jobs(experience_level);")
+            migrations.append("Created experience_level index")
+        except Exception as e:
+            migrations.append(f"Experience_level index: {str(e)}")
+
+        await conn.close()
+
+        return {
+            "success": True,
+            "message": "Database schema migrated successfully",
+            "migrations": migrations
+        }
+    except Exception as e:
+        print(f"❌ Migration failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Migration failed: {str(e)}")
+
 @app.get("/jobs_database.json")
 async def get_jobs_legacy():
     """Legacy endpoint - redirects to proper API"""
