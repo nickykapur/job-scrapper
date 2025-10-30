@@ -1,0 +1,69 @@
+name: Parallel Job Scraper (Fast)
+
+on:
+  schedule:
+    # Runs at 9 AM, 11 AM, 1 PM, 3 PM, 4 PM, 6 PM, 8 PM Dublin time
+    - cron: '0 9,11,13,15,16,18,20 * * *'
+
+  workflow_dispatch:
+
+jobs:
+  scrape-country:
+    runs-on: ubuntu-latest
+
+    # Run 7 countries in parallel
+    strategy:
+      matrix:
+        country:
+          - { location: "Dublin, County Dublin, Ireland", name: "Ireland" }
+          - { location: "Madrid, Community of Madrid, Spain", name: "Spain" }
+          - { location: "Panama City, Panama", name: "Panama" }
+          - { location: "Santiago, Chile", name: "Chile" }
+          - { location: "Amsterdam, North Holland, Netherlands", name: "Netherlands" }
+          - { location: "Berlin, Germany", name: "Germany" }
+          - { location: "Stockholm, Sweden", name: "Sweden" }
+      max-parallel: 7  # Run all 7 at once
+      fail-fast: false  # Continue even if one fails
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run scraper for ${{ matrix.country.name }}
+        run: |
+          python daily_single_country_scraper.py \
+            --location "${{ matrix.country.location }}" \
+            --country "${{ matrix.country.name }}"
+        env:
+          RAILWAY_URL: https://web-production-110bb.up.railway.app
+
+  # Cleanup job - runs after all countries finish
+  cleanup:
+    runs-on: ubuntu-latest
+    needs: scrape-country
+    if: always()  # Run even if some countries failed
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Enforce country job limits
+        run: |
+          curl -X POST https://web-production-110bb.up.railway.app/api/jobs/enforce-country-limit \
+            -H "Content-Type: application/json" \
+            -d '{"max_jobs": 300}' | python3 -m json.tool
+
+# Speed: 7 parallel jobs × 5 minutes = ~5-7 minutes total
+# PUBLIC repos get UNLIMITED GitHub Actions minutes - completely FREE!
+# Usage: 7 jobs × 5 min × 7 runs/day × 30 days = 7350 minutes/month
+# Cost: $0 (FREE for public repositories)

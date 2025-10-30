@@ -17,7 +17,13 @@ import re
 import requests
 
 def delete_country_jobs_from_railway(railway_url, country):
-    """Delete all jobs for a specific country from Railway database"""
+    """Delete ALL jobs for a specific country from Railway database
+
+    WARNING: This deletes ALL jobs from the country, not just excess ones.
+    Consider using enforce_country_job_limit() instead to keep newest jobs.
+
+    This function is kept for manual cleanup operations only.
+    """
     try:
         # Normalize Railway URL
         if not railway_url.startswith('http'):
@@ -137,43 +143,46 @@ def check_country_job_counts(existing_jobs):
 
     return country_counts
 
-def cleanup_countries_with_excess_jobs(existing_jobs, threshold=200, railway_url=None):
-    """Remove all jobs for countries that have more than the threshold from Railway database
+def enforce_country_job_limit(railway_url, max_jobs=300):
+    """Enforce max jobs per country by removing only the oldest jobs
+
+    This is MUCH more efficient than deleting all jobs and re-adding them.
+    It keeps the newest N jobs per country and only deletes excess old jobs.
 
     Args:
-        existing_jobs: Dictionary of existing jobs from Railway
-        threshold: Maximum number of jobs per country before cleanup (default: 200)
-        railway_url: Railway URL to delete jobs from database (required)
+        railway_url: Railway URL to call the enforce endpoint
+        max_jobs: Maximum number of jobs to keep per country (default: 300)
 
     Returns:
-        List of countries that were cleaned
+        True if successful, False otherwise
     """
-    country_counts = check_country_job_counts(existing_jobs)
-    countries_to_clean = []
+    if not railway_url:
+        print(f"\n[WARN] No Railway URL provided - skipping cleanup")
+        return False
 
-    # Identify countries that need cleanup
-    for country, count in country_counts.items():
-        if count > threshold:
-            countries_to_clean.append(country)
+    try:
+        api_url = f"{railway_url}/api/jobs/enforce-country-limit"
+        print(f"\n🌐 Enforcing {max_jobs} jobs per country limit...")
+        print(f"[API] Calling: {api_url}")
 
-    if not countries_to_clean:
-        return []
+        response = requests.post(api_url, json={"max_jobs": max_jobs}, timeout=60)
 
-    print(f"\n[CLEANUP] Cleanup Required:")
-    for country in countries_to_clean:
-        print(f"   [WARN] {country}: {country_counts[country]} jobs (threshold: {threshold})")
+        if response.status_code == 200:
+            result = response.json()
+            print(f"   ✅ Success: Deleted {result.get('jobs_deleted', 0)} old jobs")
+            print(f"   📊 Total jobs remaining: {result.get('total_jobs_remaining', 0)}")
+            print(f"   🌍 Countries processed: {result.get('countries_processed', 0)}")
+            return True
+        else:
+            print(f"   ❌ Failed: {response.status_code} - {response.text}")
+            return False
 
-    # Delete from Railway database
-    if railway_url:
-        print(f"\n🌐 Deleting from Railway database...")
-        for country in countries_to_clean:
-            delete_country_jobs_from_railway(railway_url, country)
-    else:
-        print(f"\n[WARN] No Railway URL provided - skipping deletion")
-        return []
-
-    print(f"\n[OK] Cleanup complete - {len(countries_to_clean)} countries cleaned")
-    return countries_to_clean
+    except requests.exceptions.Timeout:
+        print(f"   ⏱️ Request timed out after 60 seconds")
+        return False
+    except Exception as e:
+        print(f"   ❌ Error: {e}")
+        return False
 
 def save_jobs_with_categories(jobs_data):
     """Save jobs with categorization metadata"""
@@ -557,19 +566,12 @@ def run_multi_country_job_search():
         for country, count in sorted(country_counts.items(), key=lambda x: x[1], reverse=True):
             print(f"   • {country}: {count} jobs")
 
-        # Clean up countries with more than 200 jobs from Railway database
-        countries_cleaned = cleanup_countries_with_excess_jobs(
-            existing_jobs,
-            threshold=200,
-            railway_url=railway_url
-        )
+        # Enforce 300 jobs per country limit (keeps newest, deletes oldest)
+        # This is much more efficient than deleting all jobs and re-adding
+        enforce_country_job_limit(railway_url, max_jobs=300)
 
-        if countries_cleaned:
-            print(f"\n[REFRESH] Will refetch fresh data for: {', '.join(countries_cleaned)}")
-            # After cleanup, reload jobs to get updated state
-            existing_jobs = load_existing_jobs_from_railway(railway_url)
-        else:
-            print(f"\n[OK] No cleanup needed - all countries within limits")
+        # Reload jobs to get updated state after cleanup
+        existing_jobs = load_existing_jobs_from_railway(railway_url)
 
     # Multi-country search configuration
     # Limited to main locations for faster scraping
