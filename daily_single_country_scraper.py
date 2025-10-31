@@ -29,7 +29,7 @@ def load_existing_jobs_from_railway(railway_url):
         return {}
 
 def upload_jobs_to_railway(railway_url, jobs_data):
-    """Upload jobs to Railway database"""
+    """Upload jobs to Railway database and return actual new/updated counts"""
     try:
         if not railway_url.startswith('http'):
             railway_url = f'https://{railway_url}'
@@ -46,14 +46,24 @@ def upload_jobs_to_railway(railway_url, jobs_data):
 
         if response.status_code == 200:
             result = response.json()
-            print(f"   [OK] New: {result.get('new_jobs', 0)}, Updated: {result.get('updated_jobs', 0)}")
-            return True
+            new_jobs = result.get('new_jobs', 0)
+            new_software = result.get('new_software', 0)
+            new_hr = result.get('new_hr', 0)
+            updated_jobs = result.get('updated_jobs', 0)
+            print(f"   [OK] New: {new_jobs} ({new_software} software, {new_hr} HR), Updated: {updated_jobs}")
+            return {
+                'success': True,
+                'new_jobs': new_jobs,
+                'new_software': new_software,
+                'new_hr': new_hr,
+                'updated_jobs': updated_jobs
+            }
         else:
             print(f"   [ERROR] Upload failed: {response.status_code}")
-            return False
+            return {'success': False, 'new_jobs': 0, 'new_software': 0, 'new_hr': 0, 'updated_jobs': 0}
     except Exception as e:
         print(f"   [ERROR] Upload error: {e}")
-        return False
+        return {'success': False, 'new_jobs': 0, 'new_software': 0, 'new_hr': 0, 'updated_jobs': 0}
 
 def scrape_single_country(location, country_name, railway_url):
     """Scrape jobs for a single country"""
@@ -155,13 +165,21 @@ def scrape_single_country(location, country_name, railway_url):
     print(f"   • Searches: {successful_searches}/{len(search_terms)}")
     print(f"   • New jobs found: {len(all_new_jobs)} (Software: {len(software_jobs)}, HR: {len(hr_jobs)})")
 
-    # Upload to Railway
+    # Upload to Railway and get actual new job counts
+    actual_new_software = 0
+    actual_new_hr = 0
+    actual_new_total = 0
+
     if all_new_jobs:
         print(f"\n[UPLOAD] Uploading {len(all_new_jobs)} jobs to Railway...")
-        success = upload_jobs_to_railway(railway_url, all_new_jobs)
+        upload_result = upload_jobs_to_railway(railway_url, all_new_jobs)
 
-        if success:
+        if upload_result['success']:
+            actual_new_total = upload_result['new_jobs']
+            actual_new_software = upload_result['new_software']
+            actual_new_hr = upload_result['new_hr']
             print(f"   ✅ Upload successful!")
+            print(f"   📊 Actually added to DB: {actual_new_total} new ({actual_new_software} software, {actual_new_hr} HR)")
         else:
             print(f"   ❌ Upload failed!")
             return False
@@ -169,14 +187,14 @@ def scrape_single_country(location, country_name, railway_url):
         print(f"\n[SKIP] No new jobs to upload")
 
     # Output for GitHub Actions summary
-    print(f"\n::notice title={country_name} Complete::{len(all_new_jobs)} new jobs (Software: {len(software_jobs)}, HR: {len(hr_jobs)})")
+    print(f"\n::notice title={country_name} Complete::{actual_new_total} new jobs added ({actual_new_software} software, {actual_new_hr} HR)")
 
-    # Set output for GitHub Actions
+    # Set output for GitHub Actions - use ACTUAL new counts, not scraped counts
     if os.getenv('GITHUB_OUTPUT'):
         with open(os.getenv('GITHUB_OUTPUT'), 'a') as f:
-            f.write(f"jobs_found={len(all_new_jobs)}\n")
-            f.write(f"software_jobs={len(software_jobs)}\n")
-            f.write(f"hr_jobs={len(hr_jobs)}\n")
+            f.write(f"jobs_found={actual_new_total}\n")
+            f.write(f"software_jobs={actual_new_software}\n")
+            f.write(f"hr_jobs={actual_new_hr}\n")
             f.write(f"country={country_name}\n")
 
     print(f"\n✅ {country_name} scraping complete!")

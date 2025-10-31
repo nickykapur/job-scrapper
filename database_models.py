@@ -402,15 +402,17 @@ class JobDatabase:
         conn = await self.get_connection()
         if not conn:
             return self._sync_jobs_json(jobs_data)
-        
+
         try:
             new_jobs = 0
             updated_jobs = 0
-            
+            new_software = 0
+            new_hr = 0
+
             for job_id, job_data in jobs_data.items():
                 if job_id.startswith("_"):  # Skip metadata
                     continue
-                
+
                 # Check if job exists
                 existing = await conn.fetchrow("SELECT id, applied FROM jobs WHERE id = $1", job_id)
                 
@@ -470,6 +472,12 @@ class JobDatabase:
                     """, job_id, title, company, location, posted_date, job_data['job_url'], applied_bool, is_new_bool, easy_apply_bool,
                          country, job_type, experience_level)
                     new_jobs += 1
+
+                    # Track software vs HR new jobs
+                    if job_type == 'software':
+                        new_software += 1
+                    elif job_type == 'hr':
+                        new_hr += 1
             
             # Log scraping session
             await conn.execute("""
@@ -477,7 +485,7 @@ class JobDatabase:
                 VALUES ($1, $2, $3, $4)
             """, len(jobs_data), new_jobs, updated_jobs, f"Synced from local scraper")
 
-            print(f"✅ PostgreSQL: {new_jobs} new jobs, {updated_jobs} updated jobs")
+            print(f"✅ PostgreSQL: {new_jobs} new jobs ({new_software} software, {new_hr} HR), {updated_jobs} updated jobs")
 
             # IMPORTANT: Clean up old jobs to maintain 300 per country limit
             print(f"\n✂️ Cleaning up old jobs (maintaining 300 per country)...")
@@ -487,7 +495,13 @@ class JobDatabase:
             else:
                 print(f"✅ No cleanup needed - all countries within limit")
 
-            return {"new_jobs": new_jobs, "updated_jobs": updated_jobs, "deleted_jobs": deleted_jobs}
+            return {
+                "new_jobs": new_jobs,
+                "new_software": new_software,
+                "new_hr": new_hr,
+                "updated_jobs": updated_jobs,
+                "deleted_jobs": deleted_jobs
+            }
 
         except Exception as e:
             print(f"❌ Error syncing to PostgreSQL: {e}")
