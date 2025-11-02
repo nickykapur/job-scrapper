@@ -1,0 +1,46 @@
+name: Daily User Analytics
+
+on:
+  schedule:
+    # Run once daily at 8 AM Dublin time
+    - cron: '0 8 * * *'
+
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  send-analytics:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install asyncpg requests
+
+      - name: Send analytics to Slack
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          python send_analytics_to_slack.py
+
+      - name: Create summary
+        if: always()
+        run: |
+          echo "### 📊 Daily Analytics Report Sent!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Check your Slack channel for the full report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Report includes:**" >> $GITHUB_STEP_SUMMARY
+          echo "- User activity stats" >> $GITHUB_STEP_SUMMARY
+          echo "- Jobs applied/rejected per user" >> $GITHUB_STEP_SUMMARY
+          echo "- Last 24h activity" >> $GITHUB_STEP_SUMMARY
+          echo "- Total job counts by country" >> $GITHUB_STEP_SUMMARY
