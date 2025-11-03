@@ -113,12 +113,12 @@ class JobDatabase:
             jobs_query = """
                 SELECT id, title, company, location, posted_date, job_url,
                        scraped_at, applied, rejected, is_new, easy_apply, category, notes,
-                       first_seen, last_seen_24h, excluded
+                       first_seen, last_seen_24h, excluded, country, job_type, experience_level
                 FROM jobs
                 ORDER BY scraped_at DESC
             """
             rows = await conn.fetch(jobs_query)
-            
+
             # Convert to dictionary format
             jobs = {}
             for row in rows:
@@ -138,7 +138,10 @@ class JobDatabase:
                     "notes": row['notes'],
                     "first_seen": row['first_seen'].isoformat() if row['first_seen'] else None,
                     "last_seen_24h": row['last_seen_24h'].isoformat() if row['last_seen_24h'] else None,
-                    "excluded": row['excluded']
+                    "excluded": row['excluded'],
+                    "country": row['country'],
+                    "job_type": row['job_type'],
+                    "experience_level": row['experience_level']
                 }
                 jobs[row['id']] = job_data
             
