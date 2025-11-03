@@ -6,18 +6,16 @@ import {
   Box,
   Button,
   Stack,
+  Chip,
+  alpha,
 } from '@mui/material';
 import {
   OpenInNew as OpenInNewIcon,
   Check as CheckIcon,
   Close as RejectIcon,
-  LocationOn as LocationIcon,
-  AccessTime as TimeIcon,
-  Business as CompanyIcon,
-  Bolt as EasyApplyIcon,
 } from '@mui/icons-material';
 import type { Job } from '../types';
-import { getCountryFromLocation, getCountryFlag } from '../utils/countryUtils';
+import { getCountryFromLocation } from '../utils/countryUtils';
 
 interface JobCardProps {
   job: Job;
@@ -32,54 +30,53 @@ export const JobCard: React.FC<JobCardProps> = ({
   onRejectJob,
   isUpdating = false,
 }) => {
-  // Extract country from location since API doesn't provide country field
   const extractedCountry = job.country || getCountryFromLocation(job.location);
+
   return (
     <Card
       sx={{
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        borderRadius: 2,
-        background: (theme) => theme.palette.mode === 'dark'
-          ? '#1a1a1a'
-          : '#ffffff',
+        borderRadius: 2.5,
+        background: 'background.paper',
         border: '1px solid',
-        borderColor: (theme) => theme.palette.mode === 'dark' ? '#333' : '#e5e7eb',
-        boxShadow: (theme) => theme.palette.mode === 'dark'
-          ? '0 1px 3px rgba(0,0,0,0.3)'
-          : '0 1px 3px rgba(0,0,0,0.1)',
+        borderColor: (theme) => theme.palette.mode === 'dark' ? '#2a2a2a' : '#e5e7eb',
         transition: 'all 0.2s ease-in-out',
         '&:hover': {
+          borderColor: (theme) => theme.palette.mode === 'dark' ? '#404040' : '#d1d5db',
           boxShadow: (theme) => theme.palette.mode === 'dark'
-            ? '0 4px 12px rgba(0,0,0,0.4)'
-            : '0 4px 12px rgba(0,0,0,0.15)',
+            ? '0 4px 12px rgba(0,0,0,0.3)'
+            : '0 4px 12px rgba(0,0,0,0.08)',
           transform: 'translateY(-2px)',
         },
       }}
     >
-      <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3 }, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+      <CardContent sx={{ p: 3, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
         {/* Company Name */}
-        <Box display="flex" alignItems="center" mb={1}>
-          <CompanyIcon sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{ fontWeight: 500, fontSize: '0.875rem' }}
-          >
-            {job.company}
-          </Typography>
-        </Box>
+        <Typography
+          variant="caption"
+          sx={{
+            fontWeight: 600,
+            fontSize: '0.75rem',
+            color: 'text.secondary',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            mb: 1
+          }}
+        >
+          {job.company}
+        </Typography>
 
         {/* Job Title */}
         <Typography
           variant="h6"
           sx={{
-            fontWeight: 600,
-            fontSize: '1.125rem',
+            fontWeight: 700,
+            fontSize: '1rem',
             mb: 2,
             color: 'text.primary',
-            lineHeight: 1.3,
+            lineHeight: 1.4,
             display: '-webkit-box',
             WebkitLineClamp: 2,
             WebkitBoxOrient: 'vertical',
@@ -91,59 +88,59 @@ export const JobCard: React.FC<JobCardProps> = ({
 
         {/* Job Details */}
         <Stack spacing={1} sx={{ mb: 3, flexGrow: 1 }}>
-          {extractedCountry && extractedCountry !== 'Unknown' && (
-            <Box display="flex" alignItems="center">
-              <LocationIcon sx={{ fontSize: 14, mr: 0.5, color: 'text.secondary' }} />
-              <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 600, color: 'primary.main' }}>
-                {getCountryFlag(extractedCountry)} {extractedCountry}
+          <Box display="flex" alignItems="center" justifyContent="space-between">
+            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.8125rem' }}>
+              {job.location}
+            </Typography>
+            {extractedCountry && extractedCountry !== 'Unknown' && (
+              <Typography variant="caption" sx={{ fontSize: '0.75rem', fontWeight: 600, color: 'primary.main' }}>
+                {extractedCountry}
               </Typography>
-            </Box>
-          )}
-          <Box display="flex" alignItems="center">
-            <TimeIcon sx={{ fontSize: 14, mr: 0.5, color: 'text.secondary' }} />
-            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+            )}
+          </Box>
+
+          <Box display="flex" alignItems="center" justifyContent="space-between">
+            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.8125rem' }}>
               {job.posted_date}
             </Typography>
+            {job.easy_apply && (
+              <Chip
+                label="Quick Apply"
+                size="small"
+                sx={{
+                  height: 20,
+                  bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)',
+                  color: '#10b981',
+                  fontSize: '0.65rem',
+                  fontWeight: 600,
+                  borderRadius: 1,
+                }}
+              />
+            )}
           </Box>
-          {job.easy_apply && (
-            <Box
-              display="flex"
-              alignItems="center"
-              sx={{
-                bgcolor: '#10b98120',
-                px: 1,
-                py: 0.5,
-                borderRadius: 1,
-                width: 'fit-content'
-              }}
-            >
-              <EasyApplyIcon sx={{ fontSize: 14, mr: 0.5, color: '#10b981' }} />
-              <Typography variant="body2" sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#10b981' }}>
-                Easy Apply
-              </Typography>
-            </Box>
-          )}
         </Stack>
 
         {/* Action Buttons */}
         <Box>
           {!job.applied && !job.rejected && (
-            <Stack spacing={1}>
+            <Stack spacing={1.5}>
               <Button
                 variant="contained"
-                size="small"
+                size="medium"
                 onClick={() => onApplyAndOpen(job.id, job.job_url)}
                 disabled={isUpdating}
-                startIcon={<OpenInNewIcon />}
+                endIcon={<OpenInNewIcon sx={{ fontSize: '1rem' }} />}
                 sx={{
-                  borderRadius: 1.5,
+                  borderRadius: 2,
                   fontWeight: 600,
                   textTransform: 'none',
                   fontSize: '0.875rem',
-                  py: 1,
+                  py: 1.25,
                   background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                  boxShadow: 'none',
                   '&:hover': {
                     background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
                   },
                 }}
               >
@@ -151,27 +148,25 @@ export const JobCard: React.FC<JobCardProps> = ({
               </Button>
 
               <Button
-                variant="outlined"
-                size="small"
+                variant="text"
+                size="medium"
                 onClick={() => onRejectJob(job.id)}
                 disabled={isUpdating}
-                startIcon={<RejectIcon />}
+                startIcon={<RejectIcon sx={{ fontSize: '1rem' }} />}
                 sx={{
-                  borderRadius: 1.5,
-                  fontWeight: 600,
+                  borderRadius: 2,
+                  fontWeight: 500,
                   textTransform: 'none',
                   fontSize: '0.875rem',
                   py: 1,
-                  borderColor: '#ef4444',
-                  color: '#ef4444',
+                  color: 'text.secondary',
                   '&:hover': {
-                    borderColor: '#dc2626',
-                    color: '#dc2626',
-                    backgroundColor: 'rgba(239,68,68,0.04)',
+                    color: 'error.main',
+                    backgroundColor: (theme) => alpha(theme.palette.error.main, 0.08),
                   },
                 }}
               >
-                Not Suitable
+                Not Interested
               </Button>
             </Stack>
           )}
@@ -179,15 +174,15 @@ export const JobCard: React.FC<JobCardProps> = ({
           {job.applied && (
             <Button
               variant="contained"
-              size="small"
+              size="medium"
               disabled
               startIcon={<CheckIcon />}
               sx={{
-                borderRadius: 1.5,
+                borderRadius: 2,
                 fontWeight: 600,
                 textTransform: 'none',
                 fontSize: '0.875rem',
-                py: 1,
+                py: 1.25,
                 width: '100%',
                 background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
               }}
@@ -199,17 +194,18 @@ export const JobCard: React.FC<JobCardProps> = ({
           {job.rejected && (
             <Button
               variant="contained"
-              size="small"
+              size="medium"
               disabled
               startIcon={<RejectIcon />}
               sx={{
-                borderRadius: 1.5,
+                borderRadius: 2,
                 fontWeight: 600,
                 textTransform: 'none',
                 fontSize: '0.875rem',
-                py: 1,
+                py: 1.25,
                 width: '100%',
-                background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                background: (theme) => alpha(theme.palette.text.secondary, 0.12),
+                color: 'text.secondary',
               }}
             >
               Rejected

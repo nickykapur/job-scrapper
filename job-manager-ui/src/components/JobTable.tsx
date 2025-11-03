@@ -198,60 +198,62 @@ const JobTable: React.FC<JobTableProps> = ({
   return (
     <Box>
       {/* Filters */}
-      <Paper sx={{ p: 3, mb: 3 }}>
+      <Paper sx={{ p: 2.5, mb: 3, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
-          <FilterIcon sx={{ color: 'primary.main' }} />
           <TextField
-            label="Search jobs or companies"
+            placeholder="Search jobs or companies..."
             variant="outlined"
             size="small"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            sx={{ flex: 1, minWidth: 200 }}
+            sx={{
+              flex: 1,
+              minWidth: 200,
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 2,
+              }
+            }}
           />
 
-          <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
-            {filteredAndSortedJobs.length} jobs
+          <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap', fontWeight: 600 }}>
+            {filteredAndSortedJobs.length} positions
           </Typography>
         </Stack>
       </Paper>
 
       {/* Jobs Table */}
-      <TableContainer component={Paper} sx={{ boxShadow: 2 }}>
+      <TableContainer component={Paper} sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
         <Table>
           <TableHead>
-            <TableRow sx={{ bgcolor: 'primary.main' }}>
-              <TableCell sx={{ color: 'white', fontWeight: 600 }}>
+            <TableRow sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? '#1a1a1a' : '#f9fafb' }}>
+              <TableCell sx={{ fontWeight: 700, fontSize: '0.8125rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'text.secondary' }}>
                 <TableSortLabel
                   active={sortField === 'title'}
                   direction={sortField === 'title' ? sortDirection : 'asc'}
                   onClick={() => handleSort('title')}
-                  sx={{ color: 'white', '&.Mui-active': { color: 'white' } }}
                 >
-                  Job Title
+                  Position
                 </TableSortLabel>
               </TableCell>
-              <TableCell sx={{ color: 'white', fontWeight: 600 }}>
+              <TableCell sx={{ fontWeight: 700, fontSize: '0.8125rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'text.secondary' }}>
                 <TableSortLabel
                   active={sortField === 'company'}
                   direction={sortField === 'company' ? sortDirection : 'asc'}
                   onClick={() => handleSort('company')}
-                  sx={{ color: 'white', '&.Mui-active': { color: 'white' } }}
                 >
                   Company
                 </TableSortLabel>
               </TableCell>
-              <TableCell sx={{ color: 'white', fontWeight: 600 }}>
+              <TableCell sx={{ fontWeight: 700, fontSize: '0.8125rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'text.secondary' }}>
                 <TableSortLabel
                   active={sortField === 'posted_date'}
                   direction={sortField === 'posted_date' ? sortDirection : 'asc'}
                   onClick={() => handleSort('posted_date')}
-                  sx={{ color: 'white', '&.Mui-active': { color: 'white' } }}
                 >
                   Posted
                 </TableSortLabel>
               </TableCell>
-              <TableCell sx={{ color: 'white', fontWeight: 600, textAlign: 'center' }}>
+              <TableCell sx={{ fontWeight: 700, fontSize: '0.8125rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'text.secondary', textAlign: 'center' }}>
                 Actions
               </TableCell>
             </TableRow>
@@ -280,45 +282,35 @@ const JobTable: React.FC<JobTableProps> = ({
                 >
                 <TableCell>
                   <Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                      <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                        {job.title}
-                      </Typography>
-                      {job.easy_apply && (
-                        <Chip
-                          icon={<EasyApplyIcon sx={{ fontSize: '0.75rem' }} />}
-                          label="Easy Apply"
-                          size="small"
-                          sx={{
-                            height: 20,
-                            bgcolor: '#10b98120',
-                            color: '#10b981',
-                            fontSize: '0.65rem',
-                            fontWeight: 600,
-                            '& .MuiChip-icon': { color: '#10b981' }
-                          }}
-                        />
-                      )}
-                    </Box>
-                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                      <LocationIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
+                    <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5, fontSize: '0.875rem' }}>
+                      {job.title}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
                       {job.location}
                     </Typography>
+                    {job.easy_apply && (
+                      <Chip
+                        label="Quick Apply"
+                        size="small"
+                        sx={{
+                          height: 18,
+                          ml: 1,
+                          bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)',
+                          color: '#10b981',
+                          fontSize: '0.65rem',
+                          fontWeight: 600,
+                        }}
+                      />
+                    )}
                   </Box>
                 </TableCell>
                 <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <CompanyIcon sx={{ fontSize: '1rem', mr: 1, color: 'text.secondary' }} />
-                    <Typography variant="body2">{job.company}</Typography>
-                  </Box>
+                  <Typography variant="body2" sx={{ fontWeight: 500 }}>{job.company}</Typography>
                 </TableCell>
                 <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <TimeIcon sx={{ fontSize: '0.9rem', mr: 0.5, color: 'text.secondary' }} />
-                    <Typography variant="body2" color="text.secondary">
-                      {job.posted_date || 'Unknown'}
-                    </Typography>
-                  </Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8125rem' }}>
+                    {job.posted_date || 'Unknown'}
+                  </Typography>
                 </TableCell>
                 <TableCell>
                   <Stack direction="row" spacing={1} justifyContent="center">

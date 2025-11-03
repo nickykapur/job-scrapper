@@ -1,11 +1,5 @@
 import React from 'react';
-import { Grid, Card, CardContent, Typography, Box, useTheme } from '@mui/material';
-import {
-  Work as WorkIcon,
-  FiberNew as NewIcon,
-  Check as CheckIcon,
-  Schedule as ScheduleIcon,
-} from '@mui/icons-material';
+import { Grid, Card, CardContent, Typography, Box, alpha } from '@mui/material';
 import { JobStats } from '../types';
 
 interface StatsCardsProps {
@@ -13,82 +7,68 @@ interface StatsCardsProps {
 }
 
 export const StatsCards: React.FC<StatsCardsProps> = ({ stats }) => {
-  const theme = useTheme();
-
   const statItems = [
     {
       label: 'Total Jobs',
       value: stats.total,
-      icon: <WorkIcon />,
-      color: theme.palette.primary.main,
-      bgColor: theme.palette.primary.light + '20',
+      color: '#3b82f6',
     },
     {
       label: 'New Positions',
       value: stats.new,
-      icon: <NewIcon />,
-      color: theme.palette.success.main,
-      bgColor: theme.palette.success.light + '20',
+      color: '#10b981',
     },
     {
       label: 'Applied',
       value: stats.applied,
-      icon: <CheckIcon />,
-      color: theme.palette.info.main,
-      bgColor: theme.palette.info.light + '20',
+      color: '#8b5cf6',
     },
     {
       label: 'Pending',
       value: stats.not_applied,
-      icon: <ScheduleIcon />,
-      color: theme.palette.warning.main,
-      bgColor: theme.palette.warning.light + '20',
+      color: '#f59e0b',
     },
   ];
 
   return (
-    <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }} sx={{ mb: { xs: 2, sm: 3, md: 4 } }}>
+    <Grid container spacing={{ xs: 2, sm: 2, md: 3 }} sx={{ mb: { xs: 3, sm: 4, md: 4 } }}>
       {statItems.map((item) => (
         <Grid item xs={6} sm={6} md={3} key={item.label}>
           <Card
             elevation={0}
             sx={{
               height: '100%',
-              border: 1,
+              border: '1px solid',
               borderColor: 'divider',
-              borderRadius: 2,
+              borderRadius: 2.5,
               transition: 'all 0.2s ease-in-out',
               '&:hover': {
-                borderColor: item.color,
+                borderColor: (theme) => alpha(item.color, 0.4),
                 transform: 'translateY(-2px)',
-                boxShadow: theme.shadows[4],
+                boxShadow: (theme) => theme.palette.mode === 'dark'
+                  ? `0 4px 12px ${alpha(item.color, 0.15)}`
+                  : `0 4px 12px ${alpha(item.color, 0.1)}`,
               },
             }}
           >
-            <CardContent sx={{ p: { xs: 1.5, sm: 2, md: 3 } }}>
-              <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                <Box>
-                  <Typography variant="h4" component="div" sx={{ fontWeight: 700, color: item.color, mb: { xs: 0, sm: 0.5 }, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
-                    {item.value}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
-                    {item.label}
-                  </Typography>
-                </Box>
-                <Box
+            <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3 } }}>
+              <Box>
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  {item.label}
+                </Typography>
+                <Typography
+                  variant="h4"
+                  component="div"
                   sx={{
-                    display: { xs: 'none', sm: 'flex' },
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: { sm: 40, md: 48 },
-                    height: { sm: 40, md: 48 },
-                    borderRadius: 2,
-                    backgroundColor: item.bgColor,
+                    fontWeight: 800,
                     color: item.color,
+                    mt: 1,
+                    fontSize: { xs: '1.75rem', sm: '2rem', md: '2.25rem' },
+                    letterSpacing: '-0.02em',
                   }}
                 >
-                  {React.cloneElement(item.icon, { fontSize: 'medium' })}
-                </Box>
+                  {item.value}
+                </Typography>
               </Box>
             </CardContent>
           </Card>

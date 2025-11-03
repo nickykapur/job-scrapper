@@ -163,21 +163,17 @@ export const JobSections: React.FC<JobSectionsProps> = ({
     return acc;
   }, {} as Record<string, Job[]>);
 
-  // Country flag mapping - Only actively scraped countries
-  const countryFlags: Record<string, string> = {
-    'Ireland': '🇮🇪',
-    'Spain': '🇪🇸',
-    'Panama': '🇵🇦',
-    'Chile': '🇨🇱',
-    'Unknown': '🌍'
-  };
-
-  // Country colors - Only actively scraped countries
+  // Country colors - All actively scraped countries
   const countryColors: Record<string, string> = {
     'Ireland': '#4CAF50',
     'Spain': '#FF9800',
     'Panama': '#2196F3',
     'Chile': '#9C27B0',
+    'Netherlands': '#E91E63',
+    'Germany': '#FF5722',
+    'Sweden': '#00BCD4',
+    'Belgium': '#FFC107',
+    'Denmark': '#F44336',
     'Unknown': '#607D8B'
   };
 
@@ -200,17 +196,14 @@ export const JobSections: React.FC<JobSectionsProps> = ({
           {/* Header with View Controls */}
           <Box sx={{ mb: { xs: 2, sm: 3 }, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: { xs: 1, sm: 2 } }}>
             <Typography
-              variant="h4"
+              variant="h5"
               sx={{
                 fontWeight: 700,
-                background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.75rem' },
+                color: 'text.primary',
+                fontSize: { xs: '1.125rem', sm: '1.25rem', md: '1.375rem' },
               }}
             >
-              Job Listings
+              Available Positions
             </Typography>
 
             <Box sx={{ display: 'flex', gap: { xs: 1, sm: 2 }, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -281,21 +274,21 @@ export const JobSections: React.FC<JobSectionsProps> = ({
                   {/* Time-based organization */}
                   {displayNewJobs.length > 0 && (
                     <Box>
-                      <SectionHeader title="🆕 New Jobs" count={displayNewJobs.length} color="#4CAF50" />
+                      <SectionHeader title="New Jobs" count={displayNewJobs.length} color="#4CAF50" />
                       {renderJobGrid(displayNewJobs)}
                     </Box>
                   )}
 
                   {displayLast24hJobs.length > 0 && (
                     <Box>
-                      <SectionHeader title="⏰ Posted Today" count={displayLast24hJobs.length} color="#FF9800" />
+                      <SectionHeader title="Posted Today" count={displayLast24hJobs.length} color="#FF9800" />
                       {renderJobGrid(displayLast24hJobs)}
                     </Box>
                   )}
 
                   {displayOtherJobs.length > 0 && (
                     <Box>
-                      <SectionHeader title="📋 Other Positions" count={displayOtherJobs.length} color="#9C27B0" />
+                      <SectionHeader title="Other Positions" count={displayOtherJobs.length} color="#9C27B0" />
                       {renderJobGrid(displayOtherJobs)}
                     </Box>
                   )}
@@ -308,7 +301,7 @@ export const JobSections: React.FC<JobSectionsProps> = ({
                     .map(([country, countryJobs]) => (
                       <Box key={country}>
                         <SectionHeader
-                          title={`${countryFlags[country] || '🌍'} ${country}`}
+                          title={country}
                           count={countryJobs.length}
                           color={countryColors[country] || '#607D8B'}
                         />
