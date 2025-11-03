@@ -18,7 +18,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install asyncpg selenium
+          pip install asyncpg selenium requests beautifulsoup4 python-dotenv webdriver-manager
 
       - name: Run backfill script
         env:
