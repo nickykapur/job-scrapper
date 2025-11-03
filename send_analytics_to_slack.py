@@ -15,7 +15,7 @@ async def get_analytics():
     """Get user analytics from database"""
     db_url = os.environ.get('DATABASE_URL')
     if not db_url:
-        print("❌ DATABASE_URL not set")
+        print("[ERROR] DATABASE_URL not set")
         return None
 
     conn = await asyncpg.connect(db_url)
@@ -66,6 +66,8 @@ async def get_analytics():
                 COUNT(*) FILTER (WHERE country = 'Netherlands') as netherlands,
                 COUNT(*) FILTER (WHERE country = 'Germany') as germany,
                 COUNT(*) FILTER (WHERE country = 'Sweden') as sweden,
+                COUNT(*) FILTER (WHERE country = 'Belgium') as belgium,
+                COUNT(*) FILTER (WHERE country = 'Denmark') as denmark,
                 COUNT(*) FILTER (WHERE job_type = 'software') as software_jobs,
                 COUNT(*) FILTER (WHERE job_type = 'hr') as hr_jobs
             FROM jobs
@@ -84,21 +86,19 @@ def send_to_slack(analytics):
     """Send analytics to Slack"""
     webhook_url = os.environ.get('SLACK_WEBHOOK_URL')
     if not webhook_url:
-        print("❌ SLACK_WEBHOOK_URL not set")
+        print("[ERROR] SLACK_WEBHOOK_URL not set")
         return False
 
     # Build user stats
     user_stats = []
     for user in analytics['users']:
-        job_type_emoji = ":computer:" if user['job_types'] and 'software' in user['job_types'] else ":briefcase:"
         job_type_name = "Software" if user['job_types'] and 'software' in user['job_types'] else "HR"
-
         last_login = "Never" if not user['last_login'] else f"<t:{int(user['last_login'].timestamp())}:R>"
 
         user_stats.append(
-            f"{job_type_emoji} *{user['username']}* ({job_type_name})\n"
-            f"    • Applied: {user['jobs_applied']} | Rejected: {user['jobs_rejected']} | Saved: {user['jobs_saved']}\n"
-            f"    • Last login: {last_login}"
+            f"*{user['username']}* ({job_type_name})\n"
+            f"  Applied: {user['jobs_applied']} | Rejected: {user['jobs_rejected']} | Saved: {user['jobs_saved']}\n"
+            f"  Last login: {last_login}"
         )
 
     # Build recent activity
@@ -116,13 +116,13 @@ def send_to_slack(analytics):
     tj = analytics['total_jobs']
 
     message = {
-        "text": ":bar_chart: Daily User Analytics Report",
+        "text": "Daily User Analytics Report",
         "blocks": [
             {
                 "type": "header",
                 "text": {
                     "type": "plain_text",
-                    "text": ":bar_chart: Daily User Analytics Report"
+                    "text": "Daily Analytics Report"
                 }
             },
             {
@@ -139,7 +139,7 @@ def send_to_slack(analytics):
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": "*:busts_in_silhouette: User Stats*\n\n" + "\n\n".join(user_stats)
+                    "text": "*User Activity*\n\n" + "\n\n".join(user_stats)
                 }
             },
             {
@@ -149,7 +149,7 @@ def send_to_slack(analytics):
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": "*:fire: Recent Activity (Last 24h)*\n\n" + "\n".join(recent_text)
+                    "text": "*Recent Activity (Last 24h)*\n\n" + "\n".join(recent_text)
                 }
             },
             {
@@ -158,16 +158,18 @@ def send_to_slack(analytics):
             {
                 "type": "section",
                 "fields": [
-                    {"type": "mrkdwn", "text": f"*:briefcase: Total Jobs:*\n{tj['total']}"},
-                    {"type": "mrkdwn", "text": f"*:computer: Software:*\n{tj['software_jobs']}"},
-                    {"type": "mrkdwn", "text": f"*:handshake: HR:*\n{tj['hr_jobs']}"},
-                    {"type": "mrkdwn", "text": f"*:flag-ie: Ireland:*\n{tj['ireland']}"},
-                    {"type": "mrkdwn", "text": f"*:flag-es: Spain:*\n{tj['spain']}"},
-                    {"type": "mrkdwn", "text": f"*:flag-pa: Panama:*\n{tj['panama']}"},
-                    {"type": "mrkdwn", "text": f"*:flag-cl: Chile:*\n{tj['chile']}"},
-                    {"type": "mrkdwn", "text": f"*:flag-nl: Netherlands:*\n{tj['netherlands']}"},
-                    {"type": "mrkdwn", "text": f"*:flag-de: Germany:*\n{tj['germany']}"},
-                    {"type": "mrkdwn", "text": f"*:flag-se: Sweden:*\n{tj['sweden']}"}
+                    {"type": "mrkdwn", "text": f"*Total Jobs:*\n{tj['total']}"},
+                    {"type": "mrkdwn", "text": f"*Software:*\n{tj['software_jobs']}"},
+                    {"type": "mrkdwn", "text": f"*HR:*\n{tj['hr_jobs']}"},
+                    {"type": "mrkdwn", "text": f"*Ireland:*\n{tj['ireland']}"},
+                    {"type": "mrkdwn", "text": f"*Spain:*\n{tj['spain']}"},
+                    {"type": "mrkdwn", "text": f"*Panama:*\n{tj['panama']}"},
+                    {"type": "mrkdwn", "text": f"*Chile:*\n{tj['chile']}"},
+                    {"type": "mrkdwn", "text": f"*Netherlands:*\n{tj['netherlands']}"},
+                    {"type": "mrkdwn", "text": f"*Germany:*\n{tj['germany']}"},
+                    {"type": "mrkdwn", "text": f"*Sweden:*\n{tj['sweden']}"},
+                    {"type": "mrkdwn", "text": f"*Belgium:*\n{tj['belgium']}"},
+                    {"type": "mrkdwn", "text": f"*Denmark:*\n{tj['denmark']}"}
                 ]
             }
         ]
@@ -176,26 +178,26 @@ def send_to_slack(analytics):
     try:
         response = requests.post(webhook_url, json=message, timeout=10)
         if response.status_code == 200:
-            print("✅ Analytics sent to Slack!")
+            print("[SUCCESS] Analytics sent to Slack")
             return True
         else:
-            print(f"❌ Slack API error: {response.status_code}")
+            print(f"[ERROR] Slack API error: {response.status_code}")
             return False
     except Exception as e:
-        print(f"❌ Error sending to Slack: {e}")
+        print(f"[ERROR] Error sending to Slack: {e}")
         return False
 
 async def main():
-    print("📊 Fetching user analytics...")
+    print("[INFO] Fetching user analytics...")
     analytics = await get_analytics()
 
     if not analytics:
         sys.exit(1)
 
-    print(f"✅ Found {len(analytics['users'])} users")
-    print(f"📈 Recent activity: {len(analytics['recent_activity'])} active users")
+    print(f"[SUCCESS] Found {len(analytics['users'])} users")
+    print(f"[INFO] Recent activity: {len(analytics['recent_activity'])} active users")
 
-    print("\n📤 Sending to Slack...")
+    print("\n[INFO] Sending to Slack...")
     success = send_to_slack(analytics)
 
     sys.exit(0 if success else 1)

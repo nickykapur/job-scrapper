@@ -56,6 +56,8 @@ const CountryJobTabs: React.FC<CountryJobTabsProps> = ({
     'Netherlands': { flag: '🇳🇱', color: '#E91E63' },
     'Germany': { flag: '🇩🇪', color: '#FF5722' },
     'Sweden': { flag: '🇸🇪', color: '#00BCD4' },
+    'Belgium': { flag: '🇧🇪', color: '#FFC107' },
+    'Denmark': { flag: '🇩🇰', color: '#F44336' },
   };
 
   // Process jobs data
@@ -91,9 +93,10 @@ const CountryJobTabs: React.FC<CountryJobTabsProps> = ({
       };
     });
 
-    // IMPORTANT: Always show all configured countries, even if they have 0 active jobs
-    // This way users can still see applied job stats per country
+    // Filter out countries with no active jobs to apply
+    // Only show countries that have jobs available
     const sortedCountries = Object.values(countryGroups)
+      .filter(country => country.totalJobs > 0)
       .sort((a, b) => b.totalJobs - a.totalJobs);
 
     return {
@@ -257,7 +260,7 @@ const CountryJobTabs: React.FC<CountryJobTabsProps> = ({
               value="applied"
             />
 
-            {/* Country Tabs - Always show all countries */}
+            {/* Country Tabs - Only show countries with active jobs */}
             {countryData.map((data) => (
               <Tab
                 key={data.country}

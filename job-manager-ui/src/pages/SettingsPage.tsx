@@ -55,7 +55,7 @@ const SettingsPage: React.FC = () => {
   // Available options
   const JOB_TYPES = ['software', 'hr', 'marketing', 'design', 'data', 'sales'];
   const EXPERIENCE_LEVELS = ['entry', 'junior', 'mid', 'senior', 'executive'];
-  const COUNTRIES = ['Ireland', 'Spain', 'Panama', 'Chile', 'Netherlands', 'Germany', 'Sweden', 'Remote'];
+  const COUNTRIES = ['Ireland', 'Spain', 'Panama', 'Chile', 'Netherlands', 'Germany', 'Sweden', 'Belgium', 'Denmark', 'Remote'];
 
   useEffect(() => {
     const loadPreferences = async () => {

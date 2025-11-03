@@ -11,7 +11,7 @@ jobs:
   scrape-country:
     runs-on: ubuntu-latest
 
-    # Run 7 countries in parallel
+    # Run 9 countries in parallel
     strategy:
       matrix:
         country:
@@ -22,7 +22,9 @@ jobs:
           - { location: "Amsterdam, North Holland, Netherlands", name: "Netherlands" }
           - { location: "Berlin, Germany", name: "Germany" }
           - { location: "Stockholm, Sweden", name: "Sweden" }
-      max-parallel: 7  # Run all 7 at once
+          - { location: "Brussels, Belgium", name: "Belgium" }
+          - { location: "Copenhagen, Denmark", name: "Denmark" }
+      max-parallel: 9  # Run all 9 at once
       fail-fast: false  # Continue even if one fails
 
     steps:
@@ -58,25 +60,15 @@ jobs:
             SOFTWARE_JOBS="${{ steps.scrape.outputs.software_jobs }}"
             HR_JOBS="${{ steps.scrape.outputs.hr_jobs }}"
             TOTAL_JOBS="${{ steps.scrape.outputs.jobs_found }}"
-            echo "✅ ${{ matrix.country.name }}: $TOTAL_JOBS new jobs (Software: $SOFTWARE_JOBS, HR: $HR_JOBS)"
+            echo "[SUCCESS] ${{ matrix.country.name }}: $TOTAL_JOBS new jobs (Software: $SOFTWARE_JOBS, HR: $HR_JOBS)"
 
             # Send to Slack if configured
             if [ -n "$SLACK_WEBHOOK_URL" ]; then
-              COUNTRY_FLAG=$(case "${{ matrix.country.name }}" in
-                "Ireland") echo ":flag-ie:";;
-                "Spain") echo ":flag-es:";;
-                "Panama") echo ":flag-pa:";;
-                "Chile") echo ":flag-cl:";;
-                "Netherlands") echo ":flag-nl:";;
-                "Germany") echo ":flag-de:";;
-                "Sweden") echo ":flag-se:";;
-              esac)
-
               # Different message based on whether new jobs were found
               if [ "$TOTAL_JOBS" -gt "0" ]; then
-                MESSAGE="$COUNTRY_FLAG *${{ matrix.country.name }}*: :computer: *$SOFTWARE_JOBS software* | :briefcase: *$HR_JOBS HR* :white_check_mark:"
+                MESSAGE="*${{ matrix.country.name }}*: $SOFTWARE_JOBS software | $HR_JOBS HR positions"
               else
-                MESSAGE="$COUNTRY_FLAG *${{ matrix.country.name }}*: No new jobs :white_check_mark:"
+                MESSAGE="*${{ matrix.country.name }}*: No new jobs found"
               fi
 
               curl -X POST "$SLACK_WEBHOOK_URL" \
@@ -85,13 +77,13 @@ jobs:
                 > /dev/null 2>&1
             fi
           else
-            echo "❌ ${{ matrix.country.name }}: Scraping failed"
+            echo "[FAILED] ${{ matrix.country.name }}: Scraping failed"
 
             # Send failure to Slack
             if [ -n "$SLACK_WEBHOOK_URL" ]; then
               curl -X POST "$SLACK_WEBHOOK_URL" \
                 -H "Content-Type: application/json" \
-                -d "{\"text\":\":x: *${{ matrix.country.name }}*: Scraping failed\"}" \
+                -d "{\"text\":\"*${{ matrix.country.name }}*: Scraping failed\"}" \
                 > /dev/null 2>&1
             fi
           fi
@@ -125,17 +117,17 @@ jobs:
       - name: Create summary
         run: |
           # Create GitHub Actions summary (visible in workflow UI)
-          echo "### 🎉 Job Scraping Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "### Job Scraping Complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "#### 📊 Results:" >> $GITHUB_STEP_SUMMARY
+          echo "#### Results" >> $GITHUB_STEP_SUMMARY
           echo "- **Total Jobs in Database:** ${{ steps.cleanup.outputs.total_jobs }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Old Jobs Cleaned:** ${{ steps.cleanup.outputs.jobs_deleted }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Countries Processed:** 7" >> $GITHUB_STEP_SUMMARY
+          echo "- **Jobs Removed:** ${{ steps.cleanup.outputs.jobs_deleted }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Countries Processed:** 9" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "#### 🔗 Links:" >> $GITHUB_STEP_SUMMARY
-          echo "- [View Jobs on Railway](https://web-production-110bb.up.railway.app)" >> $GITHUB_STEP_SUMMARY
+          echo "#### Links" >> $GITHUB_STEP_SUMMARY
+          echo "- [View Dashboard](https://web-production-110bb.up.railway.app)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "⏰ Next run: Check cron schedule (every few hours)" >> $GITHUB_STEP_SUMMARY
+          echo "Next run: Check cron schedule" >> $GITHUB_STEP_SUMMARY
 
 # Speed: 7 parallel jobs × 5 minutes = ~5-7 minutes total
 # PUBLIC repos get UNLIMITED GitHub Actions minutes - completely FREE!

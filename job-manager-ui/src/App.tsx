@@ -596,11 +596,23 @@ function App() {
     <Box sx={{ width: DRAWER_WIDTH, height: '100%', bgcolor: 'background.paper', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
       <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
-        <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main', mb: 0.5 }}>
-          Career Portal
+        <Typography
+          variant="h5"
+          sx={{
+            fontWeight: 800,
+            background: (theme) => theme.palette.mode === 'dark'
+              ? 'linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%)'
+              : 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            letterSpacing: '-0.02em',
+            mb: 0.5
+          }}
+        >
+          JobHunt
         </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Job Management & Training
+        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+          Application Tracker
         </Typography>
       </Box>
 
@@ -622,28 +634,22 @@ function App() {
       </Box>
 
       {/* Navigation */}
-      <Box sx={{ flex: 1, py: 1 }}>
-        <Typography variant="overline" sx={{ px: 3, py: 1, color: 'text.secondary', fontWeight: 600, fontSize: '0.75rem' }}>
-          MAIN
-        </Typography>
-
-        <List sx={{ px: 1 }}>
+      <Box sx={{ flex: 1, py: 2 }}>
+        <List sx={{ px: 2 }}>
           <ListItem
             button
             selected={currentTab === 'dashboard'}
             onClick={() => setCurrentTab('dashboard')}
             sx={{
               borderRadius: 2,
-              mb: 0.5,
-              mx: 1,
+              mb: 1,
+              py: 1.25,
               '&.Mui-selected': {
-                bgcolor: 'primary.main',
-                color: 'primary.contrastText',
+                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)',
+                borderLeft: '3px solid',
+                borderColor: 'primary.main',
                 '&:hover': {
-                  bgcolor: 'primary.dark',
-                },
-                '& .MuiListItemIcon-root': {
-                  color: 'primary.contrastText',
+                  bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.15)',
                 },
               },
               '&:hover': {
@@ -651,12 +657,9 @@ function App() {
               },
             }}
           >
-            <ListItemIcon sx={{ minWidth: 40 }}>
-              <DashboardIcon />
-            </ListItemIcon>
             <ListItemText
-              primary="Dashboard"
-              primaryTypographyProps={{ fontWeight: 500, fontSize: '0.875rem' }}
+              primary="Jobs"
+              primaryTypographyProps={{ fontWeight: 600, fontSize: '0.9375rem' }}
             />
           </ListItem>
 
@@ -666,16 +669,14 @@ function App() {
             onClick={() => setCurrentTab('training')}
             sx={{
               borderRadius: 2,
-              mb: 0.5,
-              mx: 1,
+              mb: 1,
+              py: 1.25,
               '&.Mui-selected': {
-                bgcolor: 'primary.main',
-                color: 'primary.contrastText',
+                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)',
+                borderLeft: '3px solid',
+                borderColor: 'primary.main',
                 '&:hover': {
-                  bgcolor: 'primary.dark',
-                },
-                '& .MuiListItemIcon-root': {
-                  color: 'primary.contrastText',
+                  bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.15)',
                 },
               },
               '&:hover': {
@@ -683,12 +684,9 @@ function App() {
               },
             }}
           >
-            <ListItemIcon sx={{ minWidth: 40 }}>
-              <TrainingIcon />
-            </ListItemIcon>
             <ListItemText
               primary="DSA Training"
-              primaryTypographyProps={{ fontWeight: 500, fontSize: '0.875rem' }}
+              primaryTypographyProps={{ fontWeight: 600, fontSize: '0.9375rem' }}
             />
           </ListItem>
 
@@ -698,16 +696,14 @@ function App() {
             onClick={() => setCurrentTab('system-design')}
             sx={{
               borderRadius: 2,
-              mb: 0.5,
-              mx: 1,
+              mb: 1,
+              py: 1.25,
               '&.Mui-selected': {
-                bgcolor: 'primary.main',
-                color: 'primary.contrastText',
+                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)',
+                borderLeft: '3px solid',
+                borderColor: 'primary.main',
                 '&:hover': {
-                  bgcolor: 'primary.dark',
-                },
-                '& .MuiListItemIcon-root': {
-                  color: 'primary.contrastText',
+                  bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.15)',
                 },
               },
               '&:hover': {
@@ -715,117 +711,111 @@ function App() {
               },
             }}
           >
-            <ListItemIcon sx={{ minWidth: 40 }}>
-              <SystemDesignIcon />
-            </ListItemIcon>
             <ListItemText
               primary="System Design"
-              primaryTypographyProps={{ fontWeight: 500, fontSize: '0.875rem' }}
+              primaryTypographyProps={{ fontWeight: 600, fontSize: '0.9375rem' }}
             />
           </ListItem>
         </List>
 
-        <Typography variant="overline" sx={{ px: 3, py: 1, color: 'text.secondary', fontWeight: 600, fontSize: '0.75rem', mt: 2 }}>
-          OVERVIEW
-        </Typography>
+        <Divider sx={{ my: 2, mx: 2 }} />
 
-        <List sx={{ px: 1 }}>
-          <ListItem sx={{ borderRadius: 2, mx: 1, py: 1 }}>
-            <ListItemIcon sx={{ minWidth: 40 }}>
-              <WorkIcon color="action" />
-            </ListItemIcon>
-            <ListItemText
-              primary="Total Jobs"
-              secondary={Object.keys(cleanJobs).length}
-              primaryTypographyProps={{ fontSize: '0.875rem' }}
-              secondaryTypographyProps={{ fontSize: '0.75rem', fontWeight: 600 }}
-            />
-          </ListItem>
-
-          <ListItem sx={{ borderRadius: 2, mx: 1, py: 1 }}>
-            <ListItemIcon sx={{ minWidth: 40 }}>
-              <BookmarkIcon color="success" />
-            </ListItemIcon>
-            <ListItemText
-              primary="Applied"
-              secondary={stats.applied}
-              primaryTypographyProps={{ fontSize: '0.875rem' }}
-              secondaryTypographyProps={{ fontSize: '0.75rem', fontWeight: 600, color: 'success.main' }}
-            />
-          </ListItem>
-        </List>
+        <Box sx={{ px: 3, py: 2 }}>
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Overview
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              Total Jobs
+            </Typography>
+            <Typography variant="body2" fontWeight={700} color="text.primary">
+              {Object.keys(cleanJobs).length}
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Typography variant="body2" color="text.secondary">
+              Applied
+            </Typography>
+            <Typography variant="body2" fontWeight={700} color="success.main">
+              {stats.applied}
+            </Typography>
+          </Box>
+        </Box>
       </Box>
 
       {/* Footer */}
       <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
         {/* Sync Button - only show if there are local rejected jobs */}
         {localRejectedCount > 0 && (
-          <ListItem
-            button
+          <Button
+            fullWidth
+            variant="outlined"
             onClick={manualSyncRejectedJobs}
             sx={{
+              mb: 1.5,
               borderRadius: 2,
-              mb: 1,
-              bgcolor: 'warning.light',
+              py: 1,
+              borderColor: 'warning.main',
+              color: 'warning.main',
+              fontWeight: 600,
+              fontSize: '0.875rem',
+              textTransform: 'none',
               '&:hover': {
-                bgcolor: 'warning.main',
+                borderColor: 'warning.dark',
+                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 152, 0, 0.1)' : 'rgba(255, 152, 0, 0.05)',
               },
             }}
           >
-            <ListItemIcon sx={{ minWidth: 40 }}>
-              <CloudUploadIcon color="warning" />
-            </ListItemIcon>
-            <ListItemText
-              primary={`Sync ${localRejectedCount} Local Jobs`}
-              primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 600 }}
-              secondary="Tap to sync to cloud"
-              secondaryTypographyProps={{ fontSize: '0.75rem' }}
-            />
-          </ListItem>
+            Sync {localRejectedCount} Jobs
+          </Button>
         )}
 
-        <ListItem
-          button
+        <Button
+          fullWidth
+          variant="text"
           onClick={() => navigate('/settings')}
           sx={{
-            borderRadius: 2,
             mb: 1,
+            borderRadius: 2,
+            py: 1,
+            fontWeight: 500,
+            fontSize: '0.875rem',
+            textTransform: 'none',
+            justifyContent: 'flex-start',
+            color: 'text.primary',
             '&:hover': {
               bgcolor: 'action.hover',
             },
           }}
         >
-          <ListItemIcon sx={{ minWidth: 40 }}>
-            <SettingsIcon color="action" />
-          </ListItemIcon>
-          <ListItemText
-            primary="Settings"
-            primaryTypographyProps={{ fontSize: '0.875rem' }}
-          />
-        </ListItem>
+          Settings
+        </Button>
 
-        <ListItem
-          button
+        <Button
+          fullWidth
+          variant="text"
           onClick={async () => {
             await logout();
             navigate('/login');
           }}
           sx={{
             borderRadius: 2,
-            bgcolor: 'error.light',
+            py: 1,
+            fontWeight: 500,
+            fontSize: '0.875rem',
+            textTransform: 'none',
+            justifyContent: 'flex-start',
+            color: 'text.secondary',
             '&:hover': {
-              bgcolor: 'error.main',
+              bgcolor: 'action.hover',
+              color: 'error.main',
             },
           }}
         >
-          <ListItemIcon sx={{ minWidth: 40 }}>
-            <LogoutIcon sx={{ color: 'error.contrastText' }} />
-          </ListItemIcon>
-          <ListItemText
-            primary="Logout"
-            primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 600, color: 'error.contrastText' }}
-          />
-        </ListItem>
+          Sign out
+        </Button>
       </Box>
     </Box>
   );
@@ -894,33 +884,17 @@ function App() {
                 </IconButton>
               )}
 
-              <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 600 }}>
-                {currentTab === 'dashboard' ? 'Job Dashboard' :
-                 currentTab === 'training' ? 'DSA Training' : 'System Design'}
-              </Typography>
-
-              {/* Status Indicators */}
-              {currentTab === 'dashboard' && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 2 }}>
-                  <Chip
-                    icon={<DatabaseIcon />}
-                    label={`${Object.keys(cleanJobs).length}`}
-                    variant="outlined"
-                    size="small"
-                    sx={{ height: 24, fontSize: '0.75rem' }}
-                  />
-                  {stats.new > 0 && (
-                    <Chip
-                      icon={<SyncIcon />}
-                      label={`${stats.new} New`}
-                      color="success"
-                      variant="filled"
-                      size="small"
-                      sx={{ height: 24, fontSize: '0.75rem' }}
-                    />
-                  )}
-                </Box>
-              )}
+              <Box sx={{ flexGrow: 1 }}>
+                <Typography variant="h6" component="div" sx={{ fontWeight: 700, fontSize: '1.125rem' }}>
+                  {currentTab === 'dashboard' ? 'Jobs' :
+                   currentTab === 'training' ? 'DSA Training' : 'System Design'}
+                </Typography>
+                {currentTab === 'dashboard' && (
+                  <Typography variant="caption" color="text.secondary">
+                    {Object.keys(cleanJobs).length} active opportunities
+                  </Typography>
+                )}
+              </Box>
 
               {/* Theme Toggle */}
               <IconButton
