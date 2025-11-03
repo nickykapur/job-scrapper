@@ -416,13 +416,13 @@ class LinkedInJobScraper:
     def get_country_from_location(self, location):
         """Extract country name from location string"""
         location_lower = location.lower()
-        if "ireland" in location_lower:
+        if "ireland" in location_lower or "dublin" in location_lower:
             return "Ireland"
-        elif "spain" in location_lower:
+        elif "spain" in location_lower or "barcelona" in location_lower or "madrid" in location_lower:
             return "Spain"
         elif "panama" in location_lower:
             return "Panama"
-        elif "chile" in location_lower:
+        elif "chile" in location_lower or "santiago" in location_lower:
             return "Chile"
         elif "switzerland" in location_lower:
             return "Switzerland"
@@ -432,6 +432,10 @@ class LinkedInJobScraper:
             return "Germany"
         elif "sweden" in location_lower or "stockholm" in location_lower:
             return "Sweden"
+        elif "belgium" in location_lower or "brussels" in location_lower:
+            return "Belgium"
+        elif "denmark" in location_lower or "copenhagen" in location_lower:
+            return "Denmark"
         elif "france" in location_lower:
             return "France"
         elif "italy" in location_lower:

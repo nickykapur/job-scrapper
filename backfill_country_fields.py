@@ -15,7 +15,7 @@ async def backfill_job_fields():
     # Get database connection
     database_url = os.environ.get('DATABASE_URL')
     if not database_url:
-        print("❌ DATABASE_URL not set")
+        print("[ERROR] DATABASE_URL not set")
         return
 
     conn = await asyncpg.connect(database_url)
@@ -24,7 +24,7 @@ async def backfill_job_fields():
         # Get all jobs
         jobs = await conn.fetch("SELECT id, title, location FROM jobs")
 
-        print(f"📊 Found {len(jobs)} jobs to update")
+        print(f"[INFO] Found {len(jobs)} jobs to update")
 
         # Initialize scraper just for utility functions
         scraper = LinkedInJobScraper(headless=True)
@@ -57,15 +57,15 @@ async def backfill_job_fields():
                 updated += 1
 
                 if updated % 50 == 0:
-                    print(f"   ✅ Updated {updated}/{len(jobs)} jobs...")
+                    print(f"[INFO] Updated {updated}/{len(jobs)} jobs...")
 
             except Exception as e:
-                print(f"   ⚠️ Error updating job {job_id}: {e}")
+                print(f"[WARNING] Error updating job {job_id}: {e}")
                 errors += 1
 
-        print(f"\n✅ Backfill complete!")
-        print(f"   • Updated: {updated} jobs")
-        print(f"   • Errors: {errors}")
+        print(f"\n[SUCCESS] Backfill complete!")
+        print(f"  Updated: {updated} jobs")
+        print(f"  Errors: {errors}")
 
         # Show country distribution
         country_counts = await conn.fetch("""
@@ -76,9 +76,9 @@ async def backfill_job_fields():
             ORDER BY count DESC
         """)
 
-        print(f"\n📊 Jobs per country:")
+        print(f"\n[INFO] Jobs per country:")
         for row in country_counts:
-            print(f"   • {row['country']}: {row['count']} jobs")
+            print(f"  {row['country']}: {row['count']} jobs")
 
         # Show job type distribution
         type_counts = await conn.fetch("""
@@ -89,9 +89,9 @@ async def backfill_job_fields():
             ORDER BY count DESC
         """)
 
-        print(f"\n📊 Jobs per type:")
+        print(f"\n[INFO] Jobs per type:")
         for row in type_counts:
-            print(f"   • {row['job_type']}: {row['count']} jobs")
+            print(f"  {row['job_type']}: {row['count']} jobs")
 
     finally:
         scraper.close()
