@@ -7,8 +7,9 @@ Supports both PostgreSQL and JSON fallback
 import os
 import json
 import asyncio
-from datetime import datetime
-from typing import Dict, List, Optional, Any
+import re
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Any, Tuple
 import asyncpg
 from dataclasses import dataclass
 
@@ -35,11 +36,134 @@ class JobDatabase:
         self.db_url = os.environ.get('DATABASE_URL')
         self.use_postgres = bool(self.db_url)
         self.json_file = "jobs_database.json"
-        
+
         if self.use_postgres:
             print("🐘 Using PostgreSQL database")
         else:
             print("📄 Using JSON file fallback")
+
+    @staticmethod
+    def normalize_job_title(title: str) -> str:
+        """
+        Normalize job title by removing seniority levels, location info, and common variations.
+        This helps identify when a company reposts the same job.
+        """
+        if not title:
+            return ""
+
+        # Convert to lowercase
+        normalized = title.lower().strip()
+
+        # Remove seniority levels
+        normalized = re.sub(r'\b(senior|sr\.?|junior|jr\.?|mid-level|mid level|lead|principal|staff|i|ii|iii|iv|v)\b', '', normalized, flags=re.IGNORECASE)
+
+        # Remove location info
+        normalized = re.sub(r'\b(remote|hybrid|onsite|on-site)\b', '', normalized, flags=re.IGNORECASE)
+
+        # Remove employment type
+        normalized = re.sub(r'\b(full time|full-time|part time|part-time|contract|temporary)\b', '', normalized, flags=re.IGNORECASE)
+
+        # Remove special characters except spaces and dashes
+        normalized = re.sub(r'[^a-z0-9\s\-]', '', normalized)
+
+        # Collapse multiple spaces into one
+        normalized = re.sub(r'\s+', ' ', normalized)
+
+        return normalized.strip()
+
+    async def check_if_repost(self, company: str, title: str, country: str, days_window: int = 30) -> Tuple[bool, Optional[str]]:
+        """
+        Check if a job is likely a repost of a job the user has already applied to.
+
+        Args:
+            company: Company name
+            title: Job title
+            country: Country where job is located
+            days_window: Number of days to look back for similar jobs (default 30)
+
+        Returns:
+            Tuple of (is_repost: bool, original_job_id: Optional[str])
+        """
+        if not self.use_postgres:
+            return False, None
+
+        normalized_title = self.normalize_job_title(title)
+        if not normalized_title:
+            return False, None
+
+        conn = await self.get_connection()
+        if not conn:
+            return False, None
+
+        try:
+            # Check if we have a matching signature in the last X days
+            cutoff_date = datetime.now() - timedelta(days=days_window)
+
+            result = await conn.fetchrow("""
+                SELECT original_job_id, applied_date
+                FROM job_signatures
+                WHERE LOWER(company) = LOWER($1)
+                  AND normalized_title = $2
+                  AND (country = $3 OR country IS NULL OR $3 IS NULL)
+                  AND applied_date >= $4
+                ORDER BY applied_date DESC
+                LIMIT 1
+            """, company, normalized_title, country, cutoff_date)
+
+            if result:
+                print(f"🔍 Detected repost: '{title}' at {company} (originally applied on {result['applied_date'].strftime('%Y-%m-%d')})")
+                return True, result['original_job_id']
+
+            return False, None
+
+        except Exception as e:
+            print(f"⚠️  Error checking for repost: {e}")
+            return False, None
+        finally:
+            await conn.close()
+
+    async def add_job_signature(self, company: str, title: str, country: str, job_id: str) -> bool:
+        """
+        Add a job signature to track that the user has applied to this type of job at this company.
+
+        Args:
+            company: Company name
+            title: Job title
+            country: Country where job is located
+            job_id: ID of the job
+
+        Returns:
+            bool: Success status
+        """
+        if not self.use_postgres:
+            return False
+
+        normalized_title = self.normalize_job_title(title)
+        if not normalized_title:
+            return False
+
+        conn = await self.get_connection()
+        if not conn:
+            return False
+
+        try:
+            await conn.execute("""
+                INSERT INTO job_signatures (company, normalized_title, country, original_job_id)
+                VALUES ($1, $2, $3, $4)
+                ON CONFLICT (company, normalized_title, country)
+                DO UPDATE SET
+                    applied_date = CURRENT_TIMESTAMP,
+                    original_job_id = EXCLUDED.original_job_id
+            """, company, normalized_title, country, job_id)
+
+            print(f"✅ Added job signature: '{normalized_title}' at {company}")
+            return True
+
+        except Exception as e:
+            print(f"⚠️  Error adding job signature: {e}")
+            return False
+        finally:
+            await conn.close()
 
     def _parse_datetime_string(self, date_string: Optional[str]) -> Optional[datetime]:
         """Parse datetime string to datetime object"""
@@ -245,8 +369,8 @@ class JobDatabase:
             return self._update_job_status_json(job_id, applied, rejected)
 
         try:
-            # First check if job exists
-            existing = await conn.fetchrow("SELECT id, rejected, applied FROM jobs WHERE id = $1", job_id)
+            # First check if job exists and get its details
+            existing = await conn.fetchrow("SELECT id, rejected, applied, title, company, country FROM jobs WHERE id = $1", job_id)
             if not existing:
                 print(f"❌ DEBUG: Job {job_id} not found in PostgreSQL database")
                 return False
@@ -307,6 +431,15 @@ class JobDatabase:
                 print(f"🔍 DEBUG: Final verification OUTSIDE transaction - job {job_id}: rejected={final_check['rejected']}, applied={final_check['applied']}")
             else:
                 print(f"❌ DEBUG: Final verification failed - job {job_id} not found")
+
+            # If marking as applied, add job signature for deduplication
+            if applied and rows_affected > 0:
+                await self.add_job_signature(
+                    company=existing['company'],
+                    title=existing['title'],
+                    country=existing['country'],
+                    job_id=job_id
+                )
 
             return rows_affected > 0
         except Exception as e:
@@ -411,6 +544,7 @@ class JobDatabase:
             updated_jobs = 0
             new_software = 0
             new_hr = 0
+            skipped_reposts = 0
 
             for job_id, job_data in jobs_data.items():
                 if job_id.startswith("_"):  # Skip metadata
@@ -418,7 +552,20 @@ class JobDatabase:
 
                 # Check if job exists
                 existing = await conn.fetchrow("SELECT id, applied FROM jobs WHERE id = $1", job_id)
-                
+
+                # If this is a new job, check if it's a repost
+                if not existing:
+                    title = str(job_data['title'])[:500] if job_data.get('title') else 'No title'
+                    company = str(job_data['company'])[:300] if job_data.get('company') else 'Unknown'
+                    country = str(job_data.get('country', ''))[:100] if job_data.get('country') else None
+
+                    is_repost, original_job_id = await self.check_if_repost(company, title, country, days_window=30)
+
+                    if is_repost:
+                        print(f"⏭️  Skipping repost: '{title}' at {company} (you applied to a similar job)")
+                        skipped_reposts += 1
+                        continue  # Skip this job entirely
+
                 if existing:
                     # Update existing job, preserve applied status
                     scraped_at = self._parse_datetime_string(job_data.get('scraped_at'))
@@ -489,6 +636,8 @@ class JobDatabase:
             """, len(jobs_data), new_jobs, updated_jobs, f"Synced from local scraper")
 
             print(f"✅ PostgreSQL: {new_jobs} new jobs ({new_software} software, {new_hr} HR), {updated_jobs} updated jobs")
+            if skipped_reposts > 0:
+                print(f"⏭️  Skipped {skipped_reposts} reposted jobs (already applied to similar positions)")
 
             # IMPORTANT: Clean up old jobs to maintain 300 per country limit
             print(f"\n✂️ Cleaning up old jobs (maintaining 300 per country)...")
@@ -503,7 +652,8 @@ class JobDatabase:
                 "new_software": new_software,
                 "new_hr": new_hr,
                 "updated_jobs": updated_jobs,
-                "deleted_jobs": deleted_jobs
+                "deleted_jobs": deleted_jobs,
+                "skipped_reposts": skipped_reposts
             }
 
         except Exception as e:

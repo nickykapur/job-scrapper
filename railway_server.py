@@ -828,11 +828,106 @@ async def sync_jobs(request: SyncJobsRequest):
             "new_jobs": result.get("new_jobs", 0),
             "new_software": result.get("new_software", 0),
             "new_hr": result.get("new_hr", 0),
-            "updated_jobs": result.get("updated_jobs", 0)
+            "updated_jobs": result.get("updated_jobs", 0),
+            "skipped_reposts": result.get("skipped_reposts", 0)
         }
     except Exception as e:
         print(f"❌ Database sync failed: {e}")
         raise HTTPException(status_code=500, detail=f"Database sync failed: {str(e)}")
+
+@app.post("/api/admin/run-deduplication-migration")
+async def run_deduplication_migration():
+    """Run the job deduplication migration"""
+    if not db or not DATABASE_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    if not db.use_postgres:
+        raise HTTPException(status_code=500, detail="PostgreSQL database required for migration")
+
+    try:
+        print("🚀 Starting job deduplication migration...")
+
+        # Connect to database
+        conn = await db.get_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Could not connect to database")
+
+        # Read and execute migration SQL
+        migration_file = 'database_migrations/002_add_job_deduplication.sql'
+
+        if not os.path.exists(migration_file):
+            raise HTTPException(status_code=404, detail=f"Migration file not found: {migration_file}")
+
+        print(f"📄 Reading migration file: {migration_file}")
+        with open(migration_file, 'r') as f:
+            migration_sql = f.read()
+
+        print("🔄 Executing migration SQL...")
+        await conn.execute(migration_sql)
+        print("✅ Migration SQL executed successfully")
+
+        # Backfill job signatures for existing applied jobs
+        print("\n🔄 Backfilling job signatures for existing applied jobs...")
+
+        applied_jobs = await conn.fetch("""
+            SELECT id, title, company, country
+            FROM jobs
+            WHERE applied = TRUE
+            ORDER BY scraped_at DESC
+        """)
+
+        print(f"📊 Found {len(applied_jobs)} applied jobs")
+
+        backfilled = 0
+        errors = 0
+
+        for job in applied_jobs:
+            try:
+                # Add job signature
+                success = await db.add_job_signature(
+                    company=job['company'],
+                    title=job['title'],
+                    country=job['country'],
+                    job_id=job['id']
+                )
+
+                if success:
+                    backfilled += 1
+
+            except Exception as e:
+                print(f"⚠️  Error backfilling signature for job {job['id']}: {e}")
+                errors += 1
+                continue
+
+        await conn.close()
+
+        print(f"✅ Backfilled {backfilled} job signatures")
+        print("✅ Migration completed successfully!")
+
+        return {
+            "success": True,
+            "message": "Deduplication migration completed successfully",
+            "applied_jobs_found": len(applied_jobs),
+            "signatures_created": backfilled,
+            "errors": errors,
+            "info": {
+                "description": "Job deduplication is now active",
+                "features": [
+                    "Automatically detects and skips reposted jobs",
+                    "Tracks jobs for 30 days after application",
+                    "Normalizes job titles to match variations",
+                    "Works automatically during scraping"
+                ]
+            }
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Migration failed: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Migration failed: {str(e)}")
 
 # Catch-all route for React Router (SPA routing)
 @app.get("/{full_path:path}")
