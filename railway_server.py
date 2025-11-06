@@ -835,6 +835,78 @@ async def sync_jobs(request: SyncJobsRequest):
         print(f"❌ Database sync failed: {e}")
         raise HTTPException(status_code=500, detail=f"Database sync failed: {str(e)}")
 
+@app.post("/api/admin/backfill-rejected-signatures")
+async def backfill_rejected_signatures():
+    """Backfill job signatures for rejected jobs"""
+    if not db or not DATABASE_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    if not db.use_postgres:
+        raise HTTPException(status_code=500, detail="PostgreSQL database required")
+
+    try:
+        print("🚀 Backfilling job signatures for rejected jobs...")
+
+        # Connect to database
+        conn = await db.get_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Could not connect to database")
+
+        # Get all rejected jobs
+        rejected_jobs = await conn.fetch("""
+            SELECT id, title, company, country
+            FROM jobs
+            WHERE rejected = TRUE
+            ORDER BY scraped_at DESC
+        """)
+
+        print(f"📊 Found {len(rejected_jobs)} rejected jobs")
+
+        backfilled = 0
+        errors = 0
+
+        for job in rejected_jobs:
+            try:
+                # Add job signature
+                success = await db.add_job_signature(
+                    company=job['company'],
+                    title=job['title'],
+                    country=job['country'],
+                    job_id=job['id']
+                )
+
+                if success:
+                    backfilled += 1
+
+            except Exception as e:
+                print(f"⚠️  Error backfilling signature for job {job['id']}: {e}")
+                errors += 1
+                continue
+
+        await conn.close()
+
+        print(f"✅ Backfilled {backfilled} job signatures for rejected jobs")
+
+        return {
+            "success": True,
+            "message": "Backfill completed successfully",
+            "rejected_jobs_found": len(rejected_jobs),
+            "signatures_created": backfilled,
+            "errors": errors,
+            "info": {
+                "description": "Rejected jobs are now tracked",
+                "benefit": "Companies that repost jobs you've rejected will be skipped automatically"
+            }
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Backfill failed: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Backfill failed: {str(e)}")
+
 @app.post("/api/admin/run-deduplication-migration")
 async def run_deduplication_migration():
     """Run the job deduplication migration"""

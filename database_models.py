@@ -432,14 +432,16 @@ class JobDatabase:
             else:
                 print(f"❌ DEBUG: Final verification failed - job {job_id} not found")
 
-            # If marking as applied, add job signature for deduplication
-            if applied and rows_affected > 0:
+            # If marking as applied OR rejected, add job signature for deduplication
+            if (applied or rejected) and rows_affected > 0:
                 await self.add_job_signature(
                     company=existing['company'],
                     title=existing['title'],
                     country=existing['country'],
                     job_id=job_id
                 )
+                if rejected:
+                    print(f"✅ Added job signature for rejected job (will skip future reposts)")
 
             return rows_affected > 0
         except Exception as e:

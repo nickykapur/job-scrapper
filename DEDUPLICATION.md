@@ -84,10 +84,26 @@ This will:
 - Create a job signature for every job you've marked as "applied"
 - Set up automatic title normalization
 
-### Step 2: Verify Installation
+### Step 2: Backfill Rejected Jobs (Optional but Recommended)
+
+If you have rejected jobs in your database, you should also track them to avoid seeing reposts:
+
+```bash
+# Run via API
+curl -X POST "https://web-production-110bb.up.railway.app/api/admin/backfill-rejected-signatures" \
+  -H "Content-Type: application/json" | python3 -m json.tool
+```
+
+This will:
+- Find all jobs marked as "rejected"
+- Create signatures for them
+- Prevent these jobs from showing up if companies repost them
+
+### Step 3: Verify Installation
 
 The migration script will show you:
 - Number of applied jobs found
+- Number of rejected jobs found
 - Number of job signatures created
 - Any errors encountered
 
@@ -99,10 +115,12 @@ The deduplication system works automatically once installed:
 
 1. **When scraping:** Reposts are automatically detected and skipped
 2. **When applying:** Job signature is automatically created
-3. **In logs:** You'll see messages like:
+3. **When rejecting:** Job signature is automatically created (prevents seeing reposts of rejected jobs)
+4. **In logs:** You'll see messages like:
    ```
    ⏭️  Skipping repost: 'Software Engineer' at Google (you applied to a similar job)
    ⏭️  Skipped 3 reposted jobs (already applied to similar positions)
+   ✅ Added job signature for rejected job (will skip future reposts)
    ```
 
 ### Adjusting the Time Window
