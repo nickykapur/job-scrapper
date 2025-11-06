@@ -65,6 +65,7 @@ COPY daily_dublin_update.py .
 COPY daily_multi_country_update.py .
 COPY sync_to_railway.py .
 COPY jobs_database.json .
+COPY database_migrations/ ./database_migrations/
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
