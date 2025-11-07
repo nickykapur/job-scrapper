@@ -136,7 +136,7 @@ def send_to_slack(analytics):
                 "type": "header",
                 "text": {
                     "type": "plain_text",
-                    "text": "📊 Daily Analytics Report"
+                    "text": "Daily Analytics Report"
                 }
             },
             {
@@ -153,7 +153,7 @@ def send_to_slack(analytics):
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": "*👥 User Activity*\n\n" + "\n\n".join(user_stats)
+                    "text": "*User Activity*\n\n" + "\n\n".join(user_stats)
                 }
             },
             {
@@ -163,7 +163,7 @@ def send_to_slack(analytics):
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": "*⚡ Recent Activity (Last 24h)*\n\n" + "\n".join(recent_text)
+                    "text": "*Recent Activity (Last 24h)*\n\n" + "\n".join(recent_text)
                 }
             },
             {
@@ -173,7 +173,7 @@ def send_to_slack(analytics):
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": "*💼 Job Database Stats*"
+                    "text": "*Job Database Stats*"
                 }
             },
             {
@@ -183,15 +183,20 @@ def send_to_slack(analytics):
                     {"type": "mrkdwn", "text": f"*Software:*\n{safe_get('software_jobs')}"},
                     {"type": "mrkdwn", "text": f"*HR:*\n{safe_get('hr_jobs')}"},
                     {"type": "mrkdwn", "text": f"*Cybersecurity:*\n{safe_get('cybersecurity_jobs')}"},
-                    {"type": "mrkdwn", "text": f"*🇮🇪 Ireland:*\n{safe_get('ireland')}"},
-                    {"type": "mrkdwn", "text": f"*🇪🇸 Spain:*\n{safe_get('spain')}"},
-                    {"type": "mrkdwn", "text": f"*🇵🇦 Panama:*\n{safe_get('panama')}"},
-                    {"type": "mrkdwn", "text": f"*🇨🇱 Chile:*\n{safe_get('chile')}"},
-                    {"type": "mrkdwn", "text": f"*🇳🇱 Netherlands:*\n{safe_get('netherlands')}"},
-                    {"type": "mrkdwn", "text": f"*🇩🇪 Germany:*\n{safe_get('germany')}"},
-                    {"type": "mrkdwn", "text": f"*🇸🇪 Sweden:*\n{safe_get('sweden')}"},
-                    {"type": "mrkdwn", "text": f"*🇧🇪 Belgium:*\n{safe_get('belgium')}"},
-                    {"type": "mrkdwn", "text": f"*🇩🇰 Denmark:*\n{safe_get('denmark')}"}
+                    {"type": "mrkdwn", "text": f"*Ireland:*\n{safe_get('ireland')}"},
+                    {"type": "mrkdwn", "text": f"*Spain:*\n{safe_get('spain')}"},
+                    {"type": "mrkdwn", "text": f"*Panama:*\n{safe_get('panama')}"},
+                    {"type": "mrkdwn", "text": f"*Chile:*\n{safe_get('chile')}"},
+                    {"type": "mrkdwn", "text": f"*Netherlands:*\n{safe_get('netherlands')}"},
+                    {"type": "mrkdwn", "text": f"*Germany:*\n{safe_get('germany')}"}
+                ]
+            },
+            {
+                "type": "section",
+                "fields": [
+                    {"type": "mrkdwn", "text": f"*Sweden:*\n{safe_get('sweden')}"},
+                    {"type": "mrkdwn", "text": f"*Belgium:*\n{safe_get('belgium')}"},
+                    {"type": "mrkdwn", "text": f"*Denmark:*\n{safe_get('denmark')}"}
                 ]
             }
         ]
