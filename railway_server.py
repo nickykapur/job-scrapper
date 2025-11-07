@@ -836,6 +836,105 @@ async def sync_jobs(request: SyncJobsRequest):
         print(f"❌ Database sync failed: {e}")
         raise HTTPException(status_code=500, detail=f"Database sync failed: {str(e)}")
 
+@app.post("/api/admin/create-glo-user")
+async def create_glo_user_api():
+    """Create Glo user for cybersecurity jobs"""
+    if not db or not DATABASE_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    if not db.use_postgres:
+        raise HTTPException(status_code=500, detail="PostgreSQL database required")
+
+    try:
+        from user_database import UserDatabase
+
+        user_db = UserDatabase()
+
+        # Check if user already exists
+        existing_user = await user_db.get_user_by_username("glo")
+        if existing_user:
+            return {
+                "success": False,
+                "message": "User 'glo' already exists",
+                "user_id": existing_user['id']
+            }
+
+        print("🎯 Creating Glo user for cybersecurity jobs...")
+
+        # Create user
+        user = await user_db.create_user(
+            username="glo",
+            email="glo@jobtracker.local",
+            password="GloSecure2024!",
+            full_name="Glo - Cybersecurity",
+            is_admin=False
+        )
+
+        if not user:
+            raise HTTPException(status_code=500, detail="Failed to create user")
+
+        print(f"✅ User created: {user['username']} (ID: {user['id']})")
+
+        # Set cybersecurity preferences
+        cyber_preferences = {
+            "job_types": ["cybersecurity", "security", "soc"],
+            "keywords": [
+                "SOC Analyst", "Cybersecurity Analyst", "Security Analyst",
+                "Information Security Analyst", "Junior SOC Analyst",
+                "Security Operations", "Incident Response Analyst",
+                "Analista SOC", "Analista de Ciberseguridad", "Analista de Seguridad"
+            ],
+            "excluded_keywords": ["Physical Security", "Security Guard"],
+            "experience_levels": ["junior", "mid", "senior"],
+            "exclude_senior": False,
+            "preferred_countries": ["Spain", "Panama"],
+            "preferred_cities": ["Madrid", "Barcelona", "Panama City"],
+            "excluded_companies": [],
+            "preferred_companies": [],
+            "easy_apply_only": False,
+            "remote_only": False,
+            "email_notifications": True,
+            "daily_digest": False
+        }
+
+        success = await user_db.update_user_preferences(
+            user_id=user['id'],
+            preferences=cyber_preferences
+        )
+
+        if not success:
+            print("⚠️ User created but preferences not set")
+        else:
+            print("✅ Preferences set successfully")
+
+        return {
+            "success": True,
+            "message": "Glo user created successfully",
+            "user": {
+                "id": user['id'],
+                "username": user['username'],
+                "email": user['email'],
+                "full_name": user['full_name']
+            },
+            "credentials": {
+                "username": "glo",
+                "password": "GloSecure2024!"
+            },
+            "preferences": {
+                "job_types": "Cybersecurity, Security, SOC",
+                "countries": "Spain, Panama",
+                "languages": "English + Spanish"
+            }
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Failed to create Glo user: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to create user: {str(e)}")
+
 @app.post("/api/admin/backfill-rejected-signatures")
 async def backfill_rejected_signatures():
     """Backfill job signatures for rejected jobs"""
