@@ -781,7 +781,7 @@ async def get_jobs_legacy():
     return await load_jobs()
 
 @app.post("/api/update_job")
-async def update_job_api(request: JobUpdateRequest):
+async def update_job_api(request: JobUpdateRequest, current_user: Optional[Dict[str, Any]] = Depends(get_current_user_optional)):
     """Update job applied and/or rejected status - DATABASE ONLY"""
     if not db or not DATABASE_AVAILABLE:
         raise HTTPException(status_code=500, detail="Database not available")
@@ -789,11 +789,48 @@ async def update_job_api(request: JobUpdateRequest):
     try:
         print(f"🔄 DEBUG: Updating job {request.job_id} - applied: {request.applied}, rejected: {request.rejected}")
 
+        # Update the global jobs table (for backward compatibility)
         success = await db.update_job_status(
             job_id=request.job_id,
             applied=request.applied,
             rejected=request.rejected
         )
+
+        # If authenticated, also update user_job_interactions table
+        if current_user and success:
+            from user_database import UserDatabase
+            user_db = UserDatabase()
+
+            user_id = current_user.get('user_id')
+
+            if user_id:
+                conn = await db.get_connection()
+                if conn:
+                    try:
+                        # Update or insert user interaction
+                        if request.applied:
+                            await conn.execute("""
+                                INSERT INTO user_job_interactions (user_id, job_id, applied, applied_at, created_at, updated_at)
+                                VALUES ($1, $2, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                                ON CONFLICT (user_id, job_id) DO UPDATE SET
+                                    applied = TRUE,
+                                    applied_at = CURRENT_TIMESTAMP,
+                                    updated_at = CURRENT_TIMESTAMP
+                            """, user_id, request.job_id)
+                            print(f"✅ Updated user_job_interactions for user {user_id}: applied")
+
+                        if request.rejected:
+                            await conn.execute("""
+                                INSERT INTO user_job_interactions (user_id, job_id, rejected, rejected_at, created_at, updated_at)
+                                VALUES ($1, $2, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                                ON CONFLICT (user_id, job_id) DO UPDATE SET
+                                    rejected = TRUE,
+                                    rejected_at = CURRENT_TIMESTAMP,
+                                    updated_at = CURRENT_TIMESTAMP
+                            """, user_id, request.job_id)
+                            print(f"✅ Updated user_job_interactions for user {user_id}: rejected")
+                    finally:
+                        await conn.close()
 
         if success:
             print(f"✅ DEBUG: Job {request.job_id} updated successfully in database")
@@ -806,9 +843,9 @@ async def update_job_api(request: JobUpdateRequest):
         raise HTTPException(status_code=500, detail=f"Database update failed: {str(e)}")
 
 @app.post("/update_job")
-async def update_job_legacy(request: JobUpdateRequest):
+async def update_job_legacy(request: JobUpdateRequest, current_user: Optional[Dict[str, Any]] = Depends(get_current_user_optional)):
     """Legacy endpoint - redirects to proper API"""
-    return await update_job_api(request)
+    return await update_job_api(request, current_user)
 
 @app.post("/sync_jobs")
 async def sync_jobs(request: SyncJobsRequest):

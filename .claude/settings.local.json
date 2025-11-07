@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(python3:*)",
-      "Bash(PGPASSWORD=JcWFAlWypXvRisiQPVlOlGVFEIRgsgxl psql:*)"
+      "Bash(PGPASSWORD=JcWFAlWypXvRisiQPVlOlGVFEIRgsgxl psql:*)",
+      "Bash(curl -s -X POST \"https://web-production-110bb.up.railway.app/api/admin/fix-analytics\" -H \"Content-Type: application/json\")"
     ],
     "deny": [],
     "ask": []
