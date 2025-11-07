@@ -873,6 +873,44 @@ async def sync_jobs(request: SyncJobsRequest):
         print(f"❌ Database sync failed: {e}")
         raise HTTPException(status_code=500, detail=f"Database sync failed: {str(e)}")
 
+@app.post("/api/admin/clear-user-interactions")
+async def clear_user_interactions():
+    """Clear user_job_interactions table to start fresh tracking"""
+    if not db or not DATABASE_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    if not db.use_postgres:
+        raise HTTPException(status_code=500, detail="PostgreSQL database required")
+
+    try:
+        conn = await db.get_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Could not connect to database")
+
+        # Get count before clearing
+        before_count = await conn.fetchval("SELECT COUNT(*) FROM user_job_interactions")
+
+        # Clear all interactions
+        await conn.execute("DELETE FROM user_job_interactions")
+
+        after_count = await conn.fetchval("SELECT COUNT(*) FROM user_job_interactions")
+
+        await conn.close()
+
+        return {
+            "success": True,
+            "message": "Cleared user interactions - fresh start for accurate tracking",
+            "interactions_deleted": before_count,
+            "interactions_remaining": after_count,
+            "note": "Going forward, each user's apply/reject will be tracked individually"
+        }
+
+    except Exception as e:
+        print(f"❌ Error clearing interactions: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to clear interactions: {str(e)}")
+
 @app.post("/api/admin/fix-analytics")
 async def fix_analytics_api():
     """Fix analytics by migrating jobs to user_job_interactions table"""
