@@ -836,6 +836,72 @@ async def sync_jobs(request: SyncJobsRequest):
         print(f"❌ Database sync failed: {e}")
         raise HTTPException(status_code=500, detail=f"Database sync failed: {str(e)}")
 
+@app.post("/api/admin/update-all-user-countries")
+async def update_all_user_countries():
+    """Update all users to include all countries being scraped"""
+    if not db or not DATABASE_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    if not db.use_postgres:
+        raise HTTPException(status_code=500, detail="PostgreSQL database required")
+
+    try:
+        from user_database import UserDatabase
+        user_db = UserDatabase()
+
+        # All countries being scraped
+        all_countries = [
+            "Ireland", "Spain", "Panama", "Chile",
+            "Netherlands", "Germany", "Sweden",
+            "Belgium", "Denmark"
+        ]
+
+        results = []
+
+        # Get all users
+        conn = await db.get_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Could not connect to database")
+
+        users = await conn.fetch("SELECT id, username FROM users")
+
+        for user in users:
+            user_id = user['id']
+            username = user['username']
+
+            # Get current preferences
+            prefs = await user_db.get_user_preferences(user_id)
+
+            if prefs:
+                # Update to include all countries
+                prefs['preferred_countries'] = all_countries
+
+                success = await user_db.update_user_preferences(user_id, prefs)
+
+                results.append({
+                    "user_id": user_id,
+                    "username": username,
+                    "success": success,
+                    "countries_set": all_countries
+                })
+
+                print(f"✅ Updated {username} to include all {len(all_countries)} countries")
+
+        await conn.close()
+
+        return {
+            "success": True,
+            "message": f"Updated {len(results)} users to include all countries",
+            "results": results,
+            "countries": all_countries
+        }
+
+    except Exception as e:
+        print(f"❌ Failed to update user countries: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to update: {str(e)}")
+
 @app.post("/api/admin/create-glo-user")
 async def create_glo_user_api():
     """Create Glo user for cybersecurity jobs"""
