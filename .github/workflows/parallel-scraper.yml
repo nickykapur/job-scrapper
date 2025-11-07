@@ -11,7 +11,7 @@ jobs:
   scrape-country:
     runs-on: ubuntu-latest
 
-    # Run 9 countries in parallel
+    # Run 9 countries in parallel (all job types: software, HR, cybersecurity)
     strategy:
       matrix:
         country:
@@ -59,14 +59,15 @@ jobs:
           if [ "${{ steps.scrape.outcome }}" == "success" ]; then
             SOFTWARE_JOBS="${{ steps.scrape.outputs.software_jobs }}"
             HR_JOBS="${{ steps.scrape.outputs.hr_jobs }}"
+            CYBER_JOBS="${{ steps.scrape.outputs.cybersecurity_jobs }}"
             TOTAL_JOBS="${{ steps.scrape.outputs.jobs_found }}"
-            echo "[SUCCESS] ${{ matrix.country.name }}: $TOTAL_JOBS new jobs (Software: $SOFTWARE_JOBS, HR: $HR_JOBS)"
+            echo "[SUCCESS] ${{ matrix.country.name }}: $TOTAL_JOBS new jobs (Software: $SOFTWARE_JOBS, HR: $HR_JOBS, Cybersecurity: $CYBER_JOBS)"
 
             # Send to Slack if configured
             if [ -n "$SLACK_WEBHOOK_URL" ]; then
               # Different message based on whether new jobs were found
               if [ "$TOTAL_JOBS" -gt "0" ]; then
-                MESSAGE="*${{ matrix.country.name }}*: $SOFTWARE_JOBS software | $HR_JOBS HR positions"
+                MESSAGE="*${{ matrix.country.name }}*: $SOFTWARE_JOBS software | $HR_JOBS HR | $CYBER_JOBS cybersecurity"
               else
                 MESSAGE="*${{ matrix.country.name }}*: No new jobs found"
               fi

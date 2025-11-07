@@ -274,11 +274,23 @@ class LinkedInJobScraper:
         return jobs_dict
     
     def is_software_related_job(self, title):
-        """Check if a job title is relevant (software OR HR/recruitment)"""
+        """Check if a job title is relevant (software OR HR/recruitment OR cybersecurity)"""
         if not title:
             return False
 
         title_lower = title.lower()
+
+        # Cybersecurity keywords (English and Spanish)
+        cybersecurity_keywords = [
+            'soc analyst', 'cybersecurity', 'cyber security', 'security analyst',
+            'information security', 'infosec', 'security operations', 'siem',
+            'threat detection', 'incident response', 'security engineer',
+            'penetration test', 'ethical hacker', 'security architect',
+            'vulnerability', 'compliance', 'risk analyst',
+            # Spanish
+            'analista soc', 'analista de ciberseguridad', 'seguridad de la información',
+            'operaciones de seguridad', 'respuesta a incidentes', 'ingeniero de seguridad'
+        ]
 
         # Software-related keywords
         software_keywords = [
@@ -339,7 +351,10 @@ class LinkedInJobScraper:
 
             # Manual labor
             'warehouse', 'logistics coordinator', 'construction', 'driver', 'delivery',
-            'maintenance tech', 'security guard', 'cleaner', 'janitor',
+            'maintenance tech', 'cleaner', 'janitor',
+
+            # Physical security (not cybersecurity)
+            'security guard', 'security officer',
         ]
 
         # Special handling for borderline cases
@@ -354,10 +369,19 @@ class LinkedInJobScraper:
             if positive in title_lower:
                 return True
 
-        # Check for hard exclusions
+        # Check for hard exclusions (but allow if it contains security analyst or engineer)
         for exclude in exclude_keywords:
-            if exclude in title_lower and 'engineer' not in title_lower and 'developer' not in title_lower:
-                return False
+            if exclude in title_lower:
+                # Exception: Allow if cybersecurity-related
+                if any(cyber in title_lower for cyber in ['security analyst', 'security engineer', 'cybersecurity']):
+                    continue
+                if 'engineer' not in title_lower and 'developer' not in title_lower:
+                    return False
+
+        # Check for cybersecurity keywords
+        for keyword in cybersecurity_keywords:
+            if keyword in title_lower:
+                return True
 
         # Check for software keywords
         for keyword in software_keywords:
@@ -449,6 +473,16 @@ class LinkedInJobScraper:
         """Detect job type from title and description"""
         text = f"{title} {description}".lower()
 
+        # Cybersecurity keywords (check first - most specific)
+        cybersecurity_keywords = [
+            'soc analyst', 'cybersecurity', 'cyber security', 'security analyst',
+            'information security', 'infosec', 'security operations', 'siem',
+            'threat detection', 'incident response', 'security engineer',
+            'penetration test', 'ethical hacker', 'security architect',
+            'analista soc', 'analista de ciberseguridad', 'seguridad de la información',
+            'operaciones de seguridad', 'respuesta a incidentes'
+        ]
+
         # HR/Recruitment keywords
         hr_keywords = [
             'hr officer', 'hr coordinator', 'hr generalist', 'hr specialist',
@@ -464,7 +498,12 @@ class LinkedInJobScraper:
             'javascript', 'node', 'java', 'web developer'
         ]
 
-        # Check for HR first (more specific)
+        # Check for cybersecurity first (most specific)
+        for keyword in cybersecurity_keywords:
+            if keyword in text:
+                return 'cybersecurity'
+
+        # Check for HR (more specific than software)
         for keyword in hr_keywords:
             if keyword in text:
                 return 'hr'
