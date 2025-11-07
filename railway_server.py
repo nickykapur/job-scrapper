@@ -836,6 +836,113 @@ async def sync_jobs(request: SyncJobsRequest):
         print(f"❌ Database sync failed: {e}")
         raise HTTPException(status_code=500, detail=f"Database sync failed: {str(e)}")
 
+@app.post("/api/admin/fix-analytics")
+async def fix_analytics_api():
+    """Fix analytics by migrating jobs to user_job_interactions table"""
+    if not db or not DATABASE_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    if not db.use_postgres:
+        raise HTTPException(status_code=500, detail="PostgreSQL database required")
+
+    try:
+        conn = await db.get_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Could not connect to database")
+
+        print("🔍 Checking user_job_interactions table...")
+
+        # Check if table exists
+        table_exists = await conn.fetchval("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables
+                WHERE table_schema = 'public'
+                AND table_name = 'user_job_interactions'
+            )
+        """)
+
+        if not table_exists:
+            print("❌ user_job_interactions table does not exist!")
+            print("   Running multi-user migration...")
+
+            # Read and execute migration
+            with open('database_migrations/001_add_multi_user_support.sql', 'r') as f:
+                migration_sql = f.read()
+
+            await conn.execute(migration_sql)
+            print("✅ Migration executed successfully")
+
+        # Check current interaction count
+        interaction_count = await conn.fetchval("SELECT COUNT(*) FROM user_job_interactions")
+        print(f"📊 Current interactions: {interaction_count}")
+
+        print("🔄 Migrating applied/rejected jobs...")
+
+        # Get all users
+        users = await conn.fetch("SELECT id, username FROM users")
+        results = []
+
+        for user in users:
+            user_id = user['id']
+            username = user['username']
+
+            # Count jobs to migrate
+            applied_jobs = await conn.fetchval("SELECT COUNT(*) FROM jobs WHERE applied = TRUE")
+            rejected_jobs = await conn.fetchval("SELECT COUNT(*) FROM jobs WHERE rejected = TRUE")
+
+            # Migrate applied jobs
+            await conn.execute("""
+                INSERT INTO user_job_interactions (user_id, job_id, applied, applied_at, created_at, updated_at)
+                SELECT $1, id, TRUE, COALESCE(updated_at, created_at), COALESCE(updated_at, created_at), CURRENT_TIMESTAMP
+                FROM jobs
+                WHERE applied = TRUE
+                ON CONFLICT (user_id, job_id) DO UPDATE SET
+                    applied = TRUE,
+                    applied_at = COALESCE(EXCLUDED.applied_at, user_job_interactions.applied_at),
+                    updated_at = CURRENT_TIMESTAMP
+            """, user_id)
+
+            # Migrate rejected jobs
+            await conn.execute("""
+                INSERT INTO user_job_interactions (user_id, job_id, rejected, rejected_at, created_at, updated_at)
+                SELECT $1, id, TRUE, COALESCE(updated_at, created_at), COALESCE(updated_at, created_at), CURRENT_TIMESTAMP
+                FROM jobs
+                WHERE rejected = TRUE
+                ON CONFLICT (user_id, job_id) DO UPDATE SET
+                    rejected = TRUE,
+                    rejected_at = COALESCE(EXCLUDED.rejected_at, user_job_interactions.rejected_at),
+                    updated_at = CURRENT_TIMESTAMP
+            """, user_id)
+
+            results.append({
+                "username": username,
+                "applied_migrated": applied_jobs,
+                "rejected_migrated": rejected_jobs
+            })
+
+            print(f"✅ {username}: Migrated {applied_jobs} applied, {rejected_jobs} rejected")
+
+        # Get final count
+        final_count = await conn.fetchval("SELECT COUNT(*) FROM user_job_interactions")
+
+        await conn.close()
+
+        return {
+            "success": True,
+            "message": "Analytics fixed successfully",
+            "table_existed": table_exists,
+            "interactions_before": interaction_count,
+            "interactions_after": final_count,
+            "users_processed": len(results),
+            "results": results
+        }
+
+    except Exception as e:
+        print(f"❌ Error fixing analytics: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to fix analytics: {str(e)}")
+
 @app.post("/api/admin/update-all-user-countries")
 async def update_all_user_countries():
     """Update all users to include all countries being scraped"""

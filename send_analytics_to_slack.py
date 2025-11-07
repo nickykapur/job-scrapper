@@ -69,7 +69,8 @@ async def get_analytics():
                 COUNT(*) FILTER (WHERE country = 'Belgium') as belgium,
                 COUNT(*) FILTER (WHERE country = 'Denmark') as denmark,
                 COUNT(*) FILTER (WHERE job_type = 'software') as software_jobs,
-                COUNT(*) FILTER (WHERE job_type = 'hr') as hr_jobs
+                COUNT(*) FILTER (WHERE job_type = 'hr') as hr_jobs,
+                COUNT(*) FILTER (WHERE job_type = 'cybersecurity') as cybersecurity_jobs
             FROM jobs
         """)
 
@@ -92,7 +93,17 @@ def send_to_slack(analytics):
     # Build user stats
     user_stats = []
     for user in analytics['users']:
-        job_type_name = "Software" if user['job_types'] and 'software' in user['job_types'] else "HR"
+        # Determine job type display name
+        job_types = user['job_types'] or []
+        if 'software' in job_types:
+            job_type_name = "Software"
+        elif 'hr' in job_types or 'recruitment' in job_types:
+            job_type_name = "HR"
+        elif 'cybersecurity' in job_types or 'security' in job_types or 'soc' in job_types:
+            job_type_name = "Cybersecurity"
+        else:
+            job_type_name = "General"
+
         last_login = "Never" if not user['last_login'] else f"<t:{int(user['last_login'].timestamp())}:R>"
 
         user_stats.append(
@@ -161,6 +172,7 @@ def send_to_slack(analytics):
                     {"type": "mrkdwn", "text": f"*Total Jobs:*\n{tj['total']}"},
                     {"type": "mrkdwn", "text": f"*Software:*\n{tj['software_jobs']}"},
                     {"type": "mrkdwn", "text": f"*HR:*\n{tj['hr_jobs']}"},
+                    {"type": "mrkdwn", "text": f"*Cybersecurity:*\n{tj['cybersecurity_jobs']}"},
                     {"type": "mrkdwn", "text": f"*Ireland:*\n{tj['ireland']}"},
                     {"type": "mrkdwn", "text": f"*Spain:*\n{tj['spain']}"},
                     {"type": "mrkdwn", "text": f"*Panama:*\n{tj['panama']}"},
