@@ -8,7 +8,7 @@ export function getCountryFromLocation(location: string): string {
 
   const locationLower = location.toLowerCase();
 
-  // Check for all 9 actively scraped cities and countries
+  // Check for all 10 actively scraped cities and countries
   if (locationLower.includes("dublin") || locationLower.includes("ireland")) {
     return "Ireland";
   } else if (locationLower.includes("barcelona") || locationLower.includes("madrid") || locationLower.includes("spain")) {
@@ -27,6 +27,8 @@ export function getCountryFromLocation(location: string): string {
     return "Belgium";
   } else if (locationLower.includes("copenhagen") || locationLower.includes("denmark") || locationLower.includes("danmark")) {
     return "Denmark";
+  } else if (locationLower.includes("luxembourg")) {
+    return "Luxembourg";
   } else {
     return "Unknown";
   }
@@ -62,6 +64,8 @@ export function getCityFromLocation(location: string): string {
     return "Brussels";
   } else if (locationLower.includes("copenhagen")) {
     return "Copenhagen";
+  } else if (locationLower.includes("luxembourg")) {
+    return "Luxembourg City";
   } else {
     // Try to extract first part of location as city
     const parts = location.split(',');
@@ -83,6 +87,7 @@ export function getCountryFlag(country: string): string {
     'Sweden': '🇸🇪',
     'Belgium': '🇧🇪',
     'Denmark': '🇩🇰',
+    'Luxembourg': '🇱🇺',
   };
   return flags[country] || '🏳️';
 }
