@@ -483,6 +483,15 @@ class LinkedInJobScraper:
             'operaciones de seguridad', 'respuesta a incidentes'
         ]
 
+        # Sales/Business Development keywords (check second - specific)
+        sales_keywords = [
+            'account manager', 'account executive', 'bdr', 'sdr',
+            'business development representative', 'sales development representative',
+            'sales representative', 'inside sales', 'outbound sales',
+            'saas sales', 'b2b sales', 'customer success manager',
+            'account management', 'business development manager'
+        ]
+
         # HR/Recruitment keywords
         hr_keywords = [
             'hr officer', 'hr coordinator', 'hr generalist', 'hr specialist',
@@ -502,6 +511,11 @@ class LinkedInJobScraper:
         for keyword in cybersecurity_keywords:
             if keyword in text:
                 return 'cybersecurity'
+
+        # Check for sales (before HR and software to avoid false positives)
+        for keyword in sales_keywords:
+            if keyword in text:
+                return 'sales'
 
         # Check for HR (more specific than software)
         for keyword in hr_keywords:

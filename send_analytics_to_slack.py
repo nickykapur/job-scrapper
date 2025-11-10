@@ -71,7 +71,8 @@ async def get_analytics():
                 COUNT(*) FILTER (WHERE country = 'Luxembourg') as luxembourg,
                 COUNT(*) FILTER (WHERE job_type = 'software') as software_jobs,
                 COUNT(*) FILTER (WHERE job_type = 'hr') as hr_jobs,
-                COUNT(*) FILTER (WHERE job_type = 'cybersecurity') as cybersecurity_jobs
+                COUNT(*) FILTER (WHERE job_type = 'cybersecurity') as cybersecurity_jobs,
+                COUNT(*) FILTER (WHERE job_type = 'sales') as sales_jobs
             FROM jobs
         """)
 
@@ -102,6 +103,8 @@ def send_to_slack(analytics):
             job_type_name = "HR"
         elif 'cybersecurity' in job_types or 'security' in job_types or 'soc' in job_types:
             job_type_name = "Cybersecurity"
+        elif 'sales' in job_types or 'business_development' in job_types or 'account_management' in job_types:
+            job_type_name = "Sales"
         else:
             job_type_name = "General"
 
@@ -184,17 +187,18 @@ def send_to_slack(analytics):
                     {"type": "mrkdwn", "text": f"*Software:*\n{safe_get('software_jobs')}"},
                     {"type": "mrkdwn", "text": f"*HR:*\n{safe_get('hr_jobs')}"},
                     {"type": "mrkdwn", "text": f"*Cybersecurity:*\n{safe_get('cybersecurity_jobs')}"},
+                    {"type": "mrkdwn", "text": f"*Sales:*\n{safe_get('sales_jobs')}"},
                     {"type": "mrkdwn", "text": f"*Ireland:*\n{safe_get('ireland')}"},
                     {"type": "mrkdwn", "text": f"*Spain:*\n{safe_get('spain')}"},
                     {"type": "mrkdwn", "text": f"*Panama:*\n{safe_get('panama')}"},
                     {"type": "mrkdwn", "text": f"*Chile:*\n{safe_get('chile')}"},
-                    {"type": "mrkdwn", "text": f"*Netherlands:*\n{safe_get('netherlands')}"},
-                    {"type": "mrkdwn", "text": f"*Germany:*\n{safe_get('germany')}"}
+                    {"type": "mrkdwn", "text": f"*Netherlands:*\n{safe_get('netherlands')}"}
                 ]
             },
             {
                 "type": "section",
                 "fields": [
+                    {"type": "mrkdwn", "text": f"*Germany:*\n{safe_get('germany')}"},
                     {"type": "mrkdwn", "text": f"*Sweden:*\n{safe_get('sweden')}"},
                     {"type": "mrkdwn", "text": f"*Belgium:*\n{safe_get('belgium')}"},
                     {"type": "mrkdwn", "text": f"*Denmark:*\n{safe_get('denmark')}"},

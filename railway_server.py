@@ -1183,6 +1183,111 @@ async def create_glo_user_api():
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to create user: {str(e)}")
 
+
+@app.post("/api/admin/create-sales-user")
+async def create_sales_user_api():
+    """Create Sales user for business development and sales jobs"""
+    if not db or not DATABASE_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    if not db.use_postgres:
+        raise HTTPException(status_code=500, detail="PostgreSQL database required")
+
+    try:
+        from user_database import UserDatabase
+
+        user_db = UserDatabase()
+
+        # Check if user already exists
+        existing_user = await user_db.get_user_by_username("sales")
+        if existing_user:
+            return {
+                "success": False,
+                "message": "User 'sales' already exists",
+                "user_id": existing_user['id']
+            }
+
+        print("🎯 Creating Sales user for business development jobs...")
+
+        # Create user
+        user = await user_db.create_user(
+            username="sales",
+            email="sales@jobtracker.local",
+            password="SalesPro2024!",
+            full_name="Sales - Business Development",
+            is_admin=False
+        )
+
+        if not user:
+            raise HTTPException(status_code=500, detail="Failed to create user")
+
+        print(f"✅ User created: {user['username']} (ID: {user['id']})")
+
+        # Set sales preferences
+        sales_preferences = {
+            "job_types": ["sales", "business_development", "account_management"],
+            "keywords": [
+                "Account Manager", "Account Executive", "BDR",
+                "Business Development Representative", "Sales Development Representative", "SDR",
+                "Inside Sales", "Sales Representative", "Junior Account Executive",
+                "SaaS Sales", "B2B Sales", "Customer Success Manager",
+                "Account Management", "Business Development Manager"
+            ],
+            "excluded_keywords": ["Director", "VP", "Head of", "Chief", "Retail", "Insurance", "Real Estate"],
+            "experience_levels": ["entry", "junior", "mid"],
+            "exclude_senior": True,
+            "preferred_countries": [
+                "Ireland", "Spain", "Panama", "Chile",
+                "Netherlands", "Germany", "Sweden", "Belgium",
+                "Denmark", "Luxembourg"
+            ],
+            "preferred_cities": [],
+            "excluded_companies": [],
+            "preferred_companies": [],
+            "easy_apply_only": False,
+            "remote_only": False,
+            "email_notifications": True,
+            "daily_digest": False
+        }
+
+        success = await user_db.update_user_preferences(
+            user_id=user['id'],
+            preferences=sales_preferences
+        )
+
+        if not success:
+            print("⚠️ User created but preferences not set")
+        else:
+            print("✅ Preferences set successfully")
+
+        return {
+            "success": True,
+            "message": "Sales user created successfully",
+            "user": {
+                "id": user['id'],
+                "username": user['username'],
+                "email": user['email'],
+                "full_name": user['full_name']
+            },
+            "credentials": {
+                "username": "sales",
+                "password": "SalesPro2024!"
+            },
+            "preferences": {
+                "job_types": "Sales, BDR, SDR, Account Executive",
+                "countries": "All 10 countries",
+                "focus": "SaaS, B2B Sales, Entry to Mid-Level"
+            }
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Failed to create Sales user: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to create user: {str(e)}")
+
 @app.post("/api/admin/backfill-rejected-signatures")
 async def backfill_rejected_signatures():
     """Backfill job signatures for rejected jobs"""
