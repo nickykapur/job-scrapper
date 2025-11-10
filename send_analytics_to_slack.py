@@ -68,6 +68,7 @@ async def get_analytics():
                 COUNT(*) FILTER (WHERE country = 'Sweden') as sweden,
                 COUNT(*) FILTER (WHERE country = 'Belgium') as belgium,
                 COUNT(*) FILTER (WHERE country = 'Denmark') as denmark,
+                COUNT(*) FILTER (WHERE country = 'Luxembourg') as luxembourg,
                 COUNT(*) FILTER (WHERE job_type = 'software') as software_jobs,
                 COUNT(*) FILTER (WHERE job_type = 'hr') as hr_jobs,
                 COUNT(*) FILTER (WHERE job_type = 'cybersecurity') as cybersecurity_jobs
@@ -196,7 +197,8 @@ def send_to_slack(analytics):
                 "fields": [
                     {"type": "mrkdwn", "text": f"*Sweden:*\n{safe_get('sweden')}"},
                     {"type": "mrkdwn", "text": f"*Belgium:*\n{safe_get('belgium')}"},
-                    {"type": "mrkdwn", "text": f"*Denmark:*\n{safe_get('denmark')}"}
+                    {"type": "mrkdwn", "text": f"*Denmark:*\n{safe_get('denmark')}"},
+                    {"type": "mrkdwn", "text": f"*Luxembourg:*\n{safe_get('luxembourg')}"}
                 ]
             }
         ]

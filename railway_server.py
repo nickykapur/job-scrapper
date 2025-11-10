@@ -1035,7 +1035,7 @@ async def update_all_user_countries():
         all_countries = [
             "Ireland", "Spain", "Panama", "Chile",
             "Netherlands", "Germany", "Sweden",
-            "Belgium", "Denmark"
+            "Belgium", "Denmark", "Luxembourg"
         ]
 
         results = []

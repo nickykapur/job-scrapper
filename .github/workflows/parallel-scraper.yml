@@ -11,7 +11,7 @@ jobs:
   scrape-country:
     runs-on: ubuntu-latest
 
-    # Run 9 countries in parallel (all job types: software, HR, cybersecurity)
+    # Run 10 countries in parallel (all job types: software, HR, cybersecurity)
     strategy:
       matrix:
         country:
@@ -24,7 +24,8 @@ jobs:
           - { location: "Stockholm, Sweden", name: "Sweden" }
           - { location: "Brussels, Belgium", name: "Belgium" }
           - { location: "Copenhagen, Denmark", name: "Denmark" }
-      max-parallel: 9  # Run all 9 at once
+          - { location: "Luxembourg City, Luxembourg", name: "Luxembourg" }
+      max-parallel: 10  # Run all 10 at once
       fail-fast: false  # Continue even if one fails
 
     steps:

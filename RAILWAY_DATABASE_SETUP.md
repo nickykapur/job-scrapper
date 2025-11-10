@@ -111,13 +111,9 @@ git commit -m "Add PostgreSQL database support
 
 - Add database models and connection handling
 - Update FastAPI server to use PostgreSQL/JSON fallback
-- Add sync utility for local scraper → Railway database  
+- Add sync utility for local scraper → Railway database
 - Preserve applied job status across scraper runs
-- Add database schema and setup instructions
-
-🤖 Generated with Claude Code
-
-Co-Authored-By: Claude <noreply@anthropic.com>"
+- Add database schema and setup instructions"
 
 # Push to Railway
 git push origin main

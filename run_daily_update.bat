@@ -19,7 +19,7 @@ python daily_update.py
 REM Add, commit, and push to git
 echo 🔄 Updating git repository...
 git add jobs_database.json
-git commit -m "🤖 Daily job update - %date%"
+git commit -m "Daily job update - %date%"
 git push
 
 echo ✅ Daily update completed!

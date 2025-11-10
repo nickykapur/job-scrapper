@@ -58,6 +58,7 @@ const CountryJobTabs: React.FC<CountryJobTabsProps> = ({
     'Sweden': { flag: '🇸🇪', color: '#00BCD4' },
     'Belgium': { flag: '🇧🇪', color: '#FFC107' },
     'Denmark': { flag: '🇩🇰', color: '#F44336' },
+    'Luxembourg': { flag: '🇱🇺', color: '#3F51B5' },
   };
 
   // Process jobs data

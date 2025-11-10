@@ -28,11 +28,7 @@ if [[ -n $(git status --porcelain) ]]; then
 - Fixed HR job filtering in linkedin_job_scraper.py
 - Added database migration endpoint in railway_server.py
 - Optimized job cleanup to keep newest 300 jobs instead of deleting all
-- Added parallel scraping workflow for 5-7 minute execution (85% faster)
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>"
+- Added parallel scraping workflow for 5-7 minute execution (85% faster)"
         echo "✅ Changes committed"
     else
         echo "❌ Cancelled. Please commit your changes manually first."
@@ -77,11 +73,7 @@ git commit -m "Enable parallel scraping workflow (5-7 min execution)
 - Disabled old sequential workflow (34 min)
 - Enabled new parallel workflow (5-7 min)
 - Added single country scraper for parallel execution
-- PUBLIC repos get unlimited GitHub Actions minutes - completely FREE!
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>"
+- PUBLIC repos get unlimited GitHub Actions minutes - completely FREE!"
 
 echo "   ✅ Changes committed"
 
