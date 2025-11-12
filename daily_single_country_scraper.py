@@ -51,8 +51,9 @@ def upload_jobs_to_railway(railway_url, jobs_data):
             new_hr = result.get('new_hr', 0)
             new_cybersecurity = result.get('new_cybersecurity', 0)
             new_sales = result.get('new_sales', 0)
+            new_finance = result.get('new_finance', 0)
             updated_jobs = result.get('updated_jobs', 0)
-            print(f"   [OK] New: {new_jobs} ({new_software} software, {new_hr} HR, {new_cybersecurity} cybersecurity, {new_sales} sales), Updated: {updated_jobs}")
+            print(f"   [OK] New: {new_jobs} ({new_software} software, {new_hr} HR, {new_cybersecurity} cybersecurity, {new_sales} sales, {new_finance} finance), Updated: {updated_jobs}")
             return {
                 'success': True,
                 'new_jobs': new_jobs,
@@ -60,14 +61,15 @@ def upload_jobs_to_railway(railway_url, jobs_data):
                 'new_hr': new_hr,
                 'new_cybersecurity': new_cybersecurity,
                 'new_sales': new_sales,
+                'new_finance': new_finance,
                 'updated_jobs': updated_jobs
             }
         else:
             print(f"   [ERROR] Upload failed: {response.status_code}")
-            return {'success': False, 'new_jobs': 0, 'new_software': 0, 'new_hr': 0, 'new_cybersecurity': 0, 'new_sales': 0, 'updated_jobs': 0}
+            return {'success': False, 'new_jobs': 0, 'new_software': 0, 'new_hr': 0, 'new_cybersecurity': 0, 'new_sales': 0, 'new_finance': 0, 'updated_jobs': 0}
     except Exception as e:
         print(f"   [ERROR] Upload error: {e}")
-        return {'success': False, 'new_jobs': 0, 'new_software': 0, 'new_hr': 0, 'new_cybersecurity': 0, 'new_sales': 0, 'updated_jobs': 0}
+        return {'success': False, 'new_jobs': 0, 'new_software': 0, 'new_hr': 0, 'new_cybersecurity': 0, 'new_sales': 0, 'new_finance': 0, 'updated_jobs': 0}
 
 def scrape_single_country(location, country_name, railway_url):
     """Scrape jobs for a single country"""
@@ -142,7 +144,22 @@ def scrape_single_country(location, country_name, railway_url):
         "Account Management"
     ]
 
-    search_terms = software_search_terms + hr_search_terms + cybersecurity_search_terms + sales_search_terms
+    finance_search_terms = [
+        "FP&A Analyst",
+        "Financial Planning Analyst",
+        "Financial Analyst",
+        "Fund Accounting",
+        "Fund Accountant",
+        "Fund Operations Analyst",
+        "Credit Analyst",
+        "Junior Financial Analyst",
+        "Accounting Analyst",
+        "Finance Analyst",
+        "Treasury Analyst",
+        "Investment Accounting"
+    ]
+
+    search_terms = software_search_terms + hr_search_terms + cybersecurity_search_terms + sales_search_terms + finance_search_terms
 
     # Initialize scraper
     scraper = LinkedInJobScraper(headless=True)
@@ -153,6 +170,7 @@ def scrape_single_country(location, country_name, railway_url):
     hr_jobs = {}
     cybersecurity_jobs = {}
     sales_jobs = {}
+    finance_jobs = {}
     successful_searches = 0
 
     try:
@@ -165,6 +183,7 @@ def scrape_single_country(location, country_name, railway_url):
             is_software = term in software_search_terms
             is_cybersecurity = term in cybersecurity_search_terms
             is_sales = term in sales_search_terms
+            is_finance = term in finance_search_terms
 
             try:
                 results = scraper.search_jobs(
@@ -189,6 +208,8 @@ def scrape_single_country(location, country_name, railway_url):
                                 cybersecurity_jobs[job_id] = job_data
                             elif is_sales:
                                 sales_jobs[job_id] = job_data
+                            elif is_finance:
+                                finance_jobs[job_id] = job_data
                             else:
                                 hr_jobs[job_id] = job_data
 
@@ -206,13 +227,14 @@ def scrape_single_country(location, country_name, railway_url):
 
     print(f"\n[SUMMARY] {country_name}:")
     print(f"   • Searches: {successful_searches}/{len(search_terms)}")
-    print(f"   • New jobs found: {len(all_new_jobs)} (Software: {len(software_jobs)}, HR: {len(hr_jobs)}, Cybersecurity: {len(cybersecurity_jobs)}, Sales: {len(sales_jobs)})")
+    print(f"   • New jobs found: {len(all_new_jobs)} (Software: {len(software_jobs)}, HR: {len(hr_jobs)}, Cybersecurity: {len(cybersecurity_jobs)}, Sales: {len(sales_jobs)}, Finance: {len(finance_jobs)})")
 
     # Upload to Railway and get actual new job counts
     actual_new_software = 0
     actual_new_hr = 0
     actual_new_cybersecurity = 0
     actual_new_sales = 0
+    actual_new_finance = 0
     actual_new_total = 0
 
     if all_new_jobs:
@@ -225,8 +247,9 @@ def scrape_single_country(location, country_name, railway_url):
             actual_new_hr = upload_result['new_hr']
             actual_new_cybersecurity = upload_result['new_cybersecurity']
             actual_new_sales = upload_result.get('new_sales', 0)
+            actual_new_finance = upload_result.get('new_finance', 0)
             print(f"   ✅ Upload successful!")
-            print(f"   📊 Actually added to DB: {actual_new_total} new ({actual_new_software} software, {actual_new_hr} HR, {actual_new_cybersecurity} cybersecurity, {actual_new_sales} sales)")
+            print(f"   📊 Actually added to DB: {actual_new_total} new ({actual_new_software} software, {actual_new_hr} HR, {actual_new_cybersecurity} cybersecurity, {actual_new_sales} sales, {actual_new_finance} finance)")
         else:
             print(f"   ❌ Upload failed!")
             return False
@@ -234,7 +257,7 @@ def scrape_single_country(location, country_name, railway_url):
         print(f"\n[SKIP] No new jobs to upload")
 
     # Output for GitHub Actions summary
-    print(f"\n::notice title={country_name} Complete::{actual_new_total} new jobs added ({actual_new_software} software, {actual_new_hr} HR, {actual_new_cybersecurity} cybersecurity, {actual_new_sales} sales)")
+    print(f"\n::notice title={country_name} Complete::{actual_new_total} new jobs added ({actual_new_software} software, {actual_new_hr} HR, {actual_new_cybersecurity} cybersecurity, {actual_new_sales} sales, {actual_new_finance} finance)")
 
     # Set output for GitHub Actions - use ACTUAL new counts, not scraped counts
     if os.getenv('GITHUB_OUTPUT'):
@@ -244,6 +267,7 @@ def scrape_single_country(location, country_name, railway_url):
             f.write(f"hr_jobs={actual_new_hr}\n")
             f.write(f"cybersecurity_jobs={actual_new_cybersecurity}\n")
             f.write(f"sales_jobs={actual_new_sales}\n")
+            f.write(f"finance_jobs={actual_new_finance}\n")
             f.write(f"country={country_name}\n")
 
     print(f"\n✅ {country_name} scraping complete!")

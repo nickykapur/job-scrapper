@@ -11,11 +11,12 @@ jobs:
   scrape-country:
     runs-on: ubuntu-latest
 
-    # Run 10 countries in parallel (all job types: software, HR, cybersecurity)
+    # Run 11 countries in parallel (all job types: software, HR, cybersecurity, sales, finance)
     strategy:
       matrix:
         country:
           - { location: "Dublin, County Dublin, Ireland", name: "Ireland" }
+          - { location: "London, England, United Kingdom", name: "United Kingdom" }
           - { location: "Madrid, Community of Madrid, Spain", name: "Spain" }
           - { location: "Panama City, Panama", name: "Panama" }
           - { location: "Santiago, Chile", name: "Chile" }
@@ -25,7 +26,7 @@ jobs:
           - { location: "Brussels, Belgium", name: "Belgium" }
           - { location: "Copenhagen, Denmark", name: "Denmark" }
           - { location: "Luxembourg City, Luxembourg", name: "Luxembourg" }
-      max-parallel: 10  # Run all 10 at once
+      max-parallel: 11  # Run all 11 at once
       fail-fast: false  # Continue even if one fails
 
     steps:
@@ -59,8 +60,9 @@ jobs:
             HR_JOBS="${{ steps.scrape.outputs.hr_jobs }}"
             CYBER_JOBS="${{ steps.scrape.outputs.cybersecurity_jobs }}"
             SALES_JOBS="${{ steps.scrape.outputs.sales_jobs }}"
+            FINANCE_JOBS="${{ steps.scrape.outputs.finance_jobs }}"
             TOTAL_JOBS="${{ steps.scrape.outputs.jobs_found }}"
-            echo "[SUCCESS] ${{ matrix.country.name }}: $TOTAL_JOBS new jobs (Software: $SOFTWARE_JOBS, HR: $HR_JOBS, Cybersecurity: $CYBER_JOBS, Sales: $SALES_JOBS)"
+            echo "[SUCCESS] ${{ matrix.country.name }}: $TOTAL_JOBS new jobs (Software: $SOFTWARE_JOBS, HR: $HR_JOBS, Cybersecurity: $CYBER_JOBS, Sales: $SALES_JOBS, Finance: $FINANCE_JOBS)"
           else
             echo "[FAILED] ${{ matrix.country.name }}: Scraping failed"
           fi
@@ -128,7 +130,7 @@ jobs:
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "*Run Summary*\n:white_check_mark: All 10 countries processed\n:clock3: Duration: ~6 minutes"
+                  "text": "*Run Summary*\n:white_check_mark: All 11 countries processed\n:clock3: Duration: ~6 minutes"
                 }
               },
               {
@@ -145,7 +147,7 @@ jobs:
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "*Countries Scraped:*\n:flag-ie: Ireland | :flag-es: Spain | :flag-pa: Panama | :flag-cl: Chile | :flag-nl: Netherlands\n:flag-de: Germany | :flag-se: Sweden | :flag-be: Belgium | :flag-dk: Denmark | :flag-lu: Luxembourg"
+                  "text": "*Countries Scraped:*\n:flag-ie: Ireland | :flag-gb: UK | :flag-es: Spain | :flag-pa: Panama | :flag-cl: Chile | :flag-nl: Netherlands\n:flag-de: Germany | :flag-se: Sweden | :flag-be: Belgium | :flag-dk: Denmark | :flag-lu: Luxembourg"
                 }
               },
               {
@@ -180,16 +182,16 @@ jobs:
           echo "#### Results" >> $GITHUB_STEP_SUMMARY
           echo "- **Total Jobs in Database:** ${{ steps.cleanup.outputs.total_jobs }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Jobs Removed:** ${{ steps.cleanup.outputs.jobs_deleted }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Countries Processed:** 10" >> $GITHUB_STEP_SUMMARY
+          echo "- **Countries Processed:** 11" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "#### Links" >> $GITHUB_STEP_SUMMARY
           echo "- [View Dashboard](https://web-production-110bb.up.railway.app)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Next run: Check cron schedule" >> $GITHUB_STEP_SUMMARY
 
-# Speed: 10 parallel jobs × 6 minutes = ~6-7 minutes total
+# Speed: 11 parallel jobs × 6 minutes = ~6-7 minutes total
 # PUBLIC repos get UNLIMITED GitHub Actions minutes - completely FREE!
-# Usage: 10 jobs × 6 min × 7 runs/day × 30 days = 12,600 minutes/month
+# Usage: 11 jobs × 6 min × 7 runs/day × 30 days = 13,860 minutes/month
 # Cost: $0 (FREE for public repositories)
 #
 # Notifications: 1 consolidated message per run (7/day) + 1 daily digest (1/day) = 8 notifications/day total
