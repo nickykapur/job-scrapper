@@ -492,6 +492,22 @@ class LinkedInJobScraper:
             'account management', 'business development manager'
         ]
 
+        # Finance/Accounting keywords (check before HR to avoid false positives)
+        finance_keywords = [
+            'fp&a analyst', 'fp&a', 'financial planning and analysis',
+            'financial planning analyst', 'financial analyst', 'junior financial analyst',
+            'fund accounting', 'fund accountant', 'fund accounting associate',
+            'fund administrator', 'investment accounting', 'portfolio accounting',
+            'fund operations', 'fund operations analyst', 'fund operations associate',
+            'investment operations', 'asset management operations',
+            'credit analyst', 'credit risk analyst', 'junior credit analyst',
+            'financial reporting', 'management accountant', 'accountant',
+            'junior accountant', 'accounting analyst', 'finance associate',
+            'finance analyst', 'treasury analyst', 'cash management',
+            'corporate finance', 'finance business partner', 'financial reporting analyst',
+            'financial modeling', 'variance analysis', 'budgeting analyst', 'forecasting analyst'
+        ]
+
         # HR/Recruitment keywords
         hr_keywords = [
             'hr officer', 'hr coordinator', 'hr generalist', 'hr specialist',
@@ -516,6 +532,11 @@ class LinkedInJobScraper:
         for keyword in sales_keywords:
             if keyword in text:
                 return 'sales'
+
+        # Check for finance (before HR to avoid false positives with "financial" in other contexts)
+        for keyword in finance_keywords:
+            if keyword in text:
+                return 'finance'
 
         # Check for HR (more specific than software)
         for keyword in hr_keywords:

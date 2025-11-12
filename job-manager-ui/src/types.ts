@@ -14,6 +14,8 @@ export interface Job {
   first_seen?: string;
   last_seen_24h?: string;
   country?: string;
+  job_type?: 'software' | 'hr' | 'cybersecurity' | 'sales' | 'finance' | 'other';
+  experience_level?: 'entry' | 'junior' | 'mid' | 'senior';
 }
 
 export interface JobStats {
@@ -28,4 +30,5 @@ export interface FilterState {
   status: 'all' | 'applied' | 'not-applied' | 'rejected' | 'new';
   search: string;
   sort: 'newest' | 'oldest' | 'title' | 'company';
+  jobType: 'all' | 'software' | 'hr' | 'cybersecurity' | 'sales' | 'finance';
 }

@@ -217,6 +217,7 @@ function App() {
     status: 'all',
     search: '',
     sort: 'newest',
+    jobType: 'all',
   });
 
 
@@ -472,6 +473,9 @@ function App() {
 
         // IMPORTANT: Hide rejected jobs by default unless specifically viewing rejected jobs
         if (filters.status !== 'rejected' && job.rejected) return false;
+
+        // Job type filter
+        if (filters.jobType && filters.jobType !== 'all' && job.job_type !== filters.jobType) return false;
 
         // Search filter
         if (filters.search) {

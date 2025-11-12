@@ -70,6 +70,22 @@ export const FilterControls: React.FC<FilterControlsProps> = ({
             </Select>
           </FormControl>
 
+          <FormControl size="small" sx={{ minWidth: 140 }}>
+            <InputLabel>Job Type</InputLabel>
+            <Select
+              value={filters.jobType || 'all'}
+              label="Job Type"
+              onChange={(e) => onFiltersChange({ ...filters, jobType: e.target.value as any })}
+            >
+              <MenuItem value="all">All Types</MenuItem>
+              <MenuItem value="software">Software</MenuItem>
+              <MenuItem value="hr">HR</MenuItem>
+              <MenuItem value="cybersecurity">Cybersecurity</MenuItem>
+              <MenuItem value="sales">Sales</MenuItem>
+              <MenuItem value="finance">Finance</MenuItem>
+            </Select>
+          </FormControl>
+
           <TextField
             size="small"
             label="Filter by keyword..."

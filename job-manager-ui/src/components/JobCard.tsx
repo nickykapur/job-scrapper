@@ -99,24 +99,55 @@ export const JobCard: React.FC<JobCardProps> = ({
             )}
           </Box>
 
-          <Box display="flex" alignItems="center" justifyContent="space-between">
+          <Box display="flex" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={0.5}>
             <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.8125rem' }}>
               {job.posted_date}
             </Typography>
-            {job.easy_apply && (
-              <Chip
-                label="Quick Apply"
-                size="small"
-                sx={{
-                  height: 20,
-                  bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)',
-                  color: '#10b981',
-                  fontSize: '0.65rem',
-                  fontWeight: 600,
-                  borderRadius: 1,
-                }}
-              />
-            )}
+            <Box display="flex" gap={0.5} alignItems="center">
+              {job.job_type && job.job_type !== 'other' && (
+                <Chip
+                  label={job.job_type === 'hr' ? 'HR' : job.job_type.charAt(0).toUpperCase() + job.job_type.slice(1)}
+                  size="small"
+                  sx={{
+                    height: 20,
+                    bgcolor: (theme) => {
+                      const colors: Record<string, string> = {
+                        software: theme.palette.mode === 'dark' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.1)',
+                        hr: theme.palette.mode === 'dark' ? 'rgba(139, 92, 246, 0.2)' : 'rgba(139, 92, 246, 0.1)',
+                        cybersecurity: theme.palette.mode === 'dark' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)',
+                        sales: theme.palette.mode === 'dark' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)',
+                        finance: theme.palette.mode === 'dark' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(34, 197, 94, 0.1)',
+                      };
+                      return colors[job.job_type!] || 'rgba(128, 128, 128, 0.1)';
+                    },
+                    color: {
+                      software: '#3b82f6',
+                      hr: '#8b5cf6',
+                      cybersecurity: '#ef4444',
+                      sales: '#f59e0b',
+                      finance: '#22c55e',
+                    }[job.job_type] || '#808080',
+                    fontSize: '0.65rem',
+                    fontWeight: 600,
+                    borderRadius: 1,
+                  }}
+                />
+              )}
+              {job.easy_apply && (
+                <Chip
+                  label="Quick Apply"
+                  size="small"
+                  sx={{
+                    height: 20,
+                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)',
+                    color: '#10b981',
+                    fontSize: '0.65rem',
+                    fontWeight: 600,
+                    borderRadius: 1,
+                  }}
+                />
+              )}
+            </Box>
           </Box>
         </Stack>
 

@@ -354,6 +354,21 @@ async def get_jobs_api(current_user: Optional[Dict[str, Any]] = Depends(get_curr
                                     if any(kw in title_desc for kw in hr_keywords):
                                         type_match = True
                                         break
+                                elif pref_type == 'cybersecurity' or pref_type == 'security' or pref_type == 'soc':
+                                    cyber_keywords = ['soc analyst', 'cybersecurity', 'cyber security', 'security analyst', 'information security', 'infosec', 'security engineer', 'security operations', 'incident response', 'threat', 'vulnerability']
+                                    if any(kw in title_desc for kw in cyber_keywords):
+                                        type_match = True
+                                        break
+                                elif pref_type == 'sales' or pref_type == 'business_development' or pref_type == 'account_management':
+                                    sales_keywords = ['account manager', 'account executive', 'bdr', 'business development', 'sales development', 'sdr', 'sales representative', 'sales', 'customer success', 'account management', 'revenue']
+                                    if any(kw in title_desc for kw in sales_keywords):
+                                        type_match = True
+                                        break
+                                elif pref_type == 'finance' or pref_type == 'accounting' or pref_type == 'financial_analysis':
+                                    finance_keywords = ['fp&a', 'financial planning', 'financial analyst', 'fund accounting', 'fund accountant', 'fund operations', 'credit analyst', 'accounting analyst', 'finance analyst', 'treasury analyst', 'investment accounting', 'accountant', 'financial reporting', 'management accountant']
+                                    if any(kw in title_desc for kw in finance_keywords):
+                                        type_match = True
+                                        break
                             if not type_match:
                                 continue
 
