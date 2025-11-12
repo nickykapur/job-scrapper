@@ -93,14 +93,40 @@ jobs:
           echo "jobs_deleted=$JOBS_DELETED" >> $GITHUB_OUTPUT
           echo "total_jobs=$TOTAL_JOBS" >> $GITHUB_OUTPUT
 
-      - name: Get job statistics
+      - name: Get job statistics and user activity
         id: stats
         run: |
           # Get job counts by country and type
           STATS=$(curl -s "https://web-production-110bb.up.railway.app/api/jobs/stats")
           echo "$STATS" | python3 -m json.tool
 
-          # Parse stats (you'll need to add this endpoint)
+          # Get user application activity (last 24h)
+          USER_ACTIVITY=$(curl -s "https://web-production-110bb.up.railway.app/api/admin/user-activity")
+          echo "$USER_ACTIVITY" | python3 -m json.tool
+
+          # Parse and format user activity for Slack
+          ACTIVITY_TEXT=$(echo "$USER_ACTIVITY" | python3 -c "
+          import sys, json
+          try:
+              data = json.load(sys.stdin)
+              users = data.get('users', [])
+              if not users:
+                  print('No user activity in last 24 hours')
+              else:
+                  for user in users:
+                      applied = user.get('applied_24h', 0)
+                      rejected = user.get('rejected_24h', 0)
+                      if applied > 0 or rejected > 0:
+                          print(f\"• *{user['username']}*: {applied} applied, {rejected} rejected\")
+          except:
+              print('Error fetching user activity')
+          " || echo "• No recent activity")
+
+          echo "user_activity<<EOF" >> $GITHUB_OUTPUT
+          echo "$ACTIVITY_TEXT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          # Parse stats
           echo "stats_json<<EOF" >> $GITHUB_OUTPUT
           echo "$STATS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -139,6 +165,16 @@ jobs:
                   {"type": "mrkdwn", "text": "*Total Jobs:*\n${{ steps.cleanup.outputs.total_jobs }}"},
                   {"type": "mrkdwn", "text": "*Cleaned:*\n${{ steps.cleanup.outputs.jobs_deleted }}"}
                 ]
+              },
+              {
+                "type": "divider"
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*User Activity (Last 24h)*\n${{ steps.stats.outputs.user_activity }}"
+                }
               },
               {
                 "type": "divider"

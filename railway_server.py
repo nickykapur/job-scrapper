@@ -1402,6 +1402,58 @@ async def create_finance_user_api():
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to create user: {str(e)}")
 
+@app.get("/api/admin/user-activity")
+async def get_user_activity():
+    """Get user activity for last 24 hours"""
+    if not db or not DATABASE_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    if not db.use_postgres:
+        raise HTTPException(status_code=500, detail="PostgreSQL database required")
+
+    try:
+        conn = await db.get_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Could not connect to database")
+
+        # Get recent activity (last 24 hours)
+        recent_activity = await conn.fetch("""
+            SELECT
+                u.username,
+                u.full_name,
+                COUNT(DISTINCT uji.job_id) FILTER (WHERE uji.applied = TRUE AND uji.applied_at > NOW() - INTERVAL '24 hours') as applied_24h,
+                COUNT(DISTINCT uji.job_id) FILTER (WHERE uji.rejected = TRUE AND uji.rejected_at > NOW() - INTERVAL '24 hours') as rejected_24h,
+                COUNT(DISTINCT uji.job_id) FILTER (WHERE uji.applied = TRUE) as total_applied,
+                COUNT(DISTINCT uji.job_id) FILTER (WHERE uji.rejected = TRUE) as total_rejected
+            FROM users u
+            LEFT JOIN user_job_interactions uji ON u.id = uji.user_id
+            GROUP BY u.username, u.full_name
+            ORDER BY u.username
+        """)
+
+        users = []
+        for row in recent_activity:
+            users.append({
+                'username': row['username'],
+                'full_name': row['full_name'],
+                'applied_24h': row['applied_24h'],
+                'rejected_24h': row['rejected_24h'],
+                'total_applied': row['total_applied'],
+                'total_rejected': row['total_rejected']
+            })
+
+        return {
+            'success': True,
+            'users': users,
+            'timestamp': datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        print(f"❌ Failed to get user activity: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to get user activity: {str(e)}")
+
 @app.post("/api/admin/backfill-rejected-signatures")
 async def backfill_rejected_signatures():
     """Backfill job signatures for rejected jobs"""
