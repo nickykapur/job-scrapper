@@ -866,6 +866,8 @@ async def sync_jobs(request: SyncJobsRequest):
             "new_software": result.get("new_software", 0),
             "new_hr": result.get("new_hr", 0),
             "new_cybersecurity": result.get("new_cybersecurity", 0),
+            "new_sales": result.get("new_sales", 0),
+            "new_finance": result.get("new_finance", 0),
             "updated_jobs": result.get("updated_jobs", 0),
             "skipped_reposts": result.get("skipped_reposts", 0)
         }

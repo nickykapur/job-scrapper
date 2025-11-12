@@ -547,6 +547,8 @@ class JobDatabase:
             new_software = 0
             new_hr = 0
             new_cybersecurity = 0
+            new_sales = 0
+            new_finance = 0
             skipped_reposts = 0
 
             for job_id, job_data in jobs_data.items():
@@ -626,13 +628,17 @@ class JobDatabase:
                          country, job_type, experience_level)
                     new_jobs += 1
 
-                    # Track software vs HR vs cybersecurity new jobs
+                    # Track software vs HR vs cybersecurity vs sales vs finance new jobs
                     if job_type == 'software':
                         new_software += 1
                     elif job_type == 'hr':
                         new_hr += 1
                     elif job_type == 'cybersecurity':
                         new_cybersecurity += 1
+                    elif job_type == 'sales':
+                        new_sales += 1
+                    elif job_type == 'finance':
+                        new_finance += 1
             
             # Log scraping session
             await conn.execute("""
@@ -640,7 +646,7 @@ class JobDatabase:
                 VALUES ($1, $2, $3, $4)
             """, len(jobs_data), new_jobs, updated_jobs, f"Synced from local scraper")
 
-            print(f"✅ PostgreSQL: {new_jobs} new jobs ({new_software} software, {new_hr} HR, {new_cybersecurity} cybersecurity), {updated_jobs} updated jobs")
+            print(f"✅ PostgreSQL: {new_jobs} new jobs ({new_software} software, {new_hr} HR, {new_cybersecurity} cybersecurity, {new_sales} sales, {new_finance} finance), {updated_jobs} updated jobs")
             if skipped_reposts > 0:
                 print(f"⏭️  Skipped {skipped_reposts} reposted jobs (already applied to similar positions)")
 
@@ -657,6 +663,8 @@ class JobDatabase:
                 "new_software": new_software,
                 "new_hr": new_hr,
                 "new_cybersecurity": new_cybersecurity,
+                "new_sales": new_sales,
+                "new_finance": new_finance,
                 "updated_jobs": updated_jobs,
                 "deleted_jobs": deleted_jobs,
                 "skipped_reposts": skipped_reposts
