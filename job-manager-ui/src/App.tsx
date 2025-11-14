@@ -37,6 +37,7 @@ import SystemDesignIcon from '@mui/icons-material/Architecture';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import LogoutIcon from '@mui/icons-material/Logout';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import AnalyticsIcon from '@mui/icons-material/Analytics';
 import { JobCard } from './components/JobCard';
 import { StatsCards } from './components/StatsCards';
 import { FilterControls } from './components/FilterControls';
@@ -44,6 +45,7 @@ import { JobLoadingInfo } from './components/JobLoadingInfo';
 import { JobSections } from './components/JobSections';
 import { Training } from './components/Training';
 import { SystemDesign } from './components/SystemDesign';
+import { Analytics } from './components/Analytics';
 import JobSearch from './components/JobSearch';
 import CountryStats from './components/CountryStats';
 import { jobApi } from './services/api';
@@ -203,7 +205,10 @@ function App() {
     message: string;
     severity: 'success' | 'error' | 'info';
   } | null>(null);
-  const [currentTab, setCurrentTab] = useState<'dashboard' | 'training' | 'system-design'>('dashboard');
+  const [currentTab, setCurrentTab] = useState<'dashboard' | 'training' | 'system-design' | 'analytics'>('dashboard');
+
+  // Check if current user is software_admin or has admin access
+  const hasAnalyticsAccess = user?.username === 'software_admin' || user?.username === 'admin' || user?.is_admin === true;
   
   // Lazy theme creation to avoid heavy computation on every render
   const theme = useMemo(() => {
@@ -720,6 +725,49 @@ function App() {
               primaryTypographyProps={{ fontWeight: 600, fontSize: '0.9375rem' }}
             />
           </ListItem>
+
+          {/* Analytics - only for software_admin */}
+          {hasAnalyticsAccess && (
+            <ListItem
+              button
+              selected={currentTab === 'analytics'}
+              onClick={() => setCurrentTab('analytics')}
+              sx={{
+                borderRadius: 2,
+                mb: 1,
+                py: 1.25,
+                '&.Mui-selected': {
+                  bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(139, 92, 246, 0.15)' : 'rgba(139, 92, 246, 0.1)',
+                  borderLeft: '3px solid',
+                  borderColor: 'secondary.main',
+                  '&:hover': {
+                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(139, 92, 246, 0.2)' : 'rgba(139, 92, 246, 0.15)',
+                  },
+                },
+                '&:hover': {
+                  bgcolor: 'action.hover',
+                },
+              }}
+            >
+              <ListItemIcon>
+                <AnalyticsIcon sx={{ color: currentTab === 'analytics' ? 'secondary.main' : 'text.secondary' }} />
+              </ListItemIcon>
+              <ListItemText
+                primary="Analytics"
+                primaryTypographyProps={{ fontWeight: 600, fontSize: '0.9375rem' }}
+              />
+              <Chip
+                label="Admin"
+                size="small"
+                sx={{
+                  height: 20,
+                  fontSize: '0.65rem',
+                  bgcolor: 'secondary.main',
+                  color: 'white',
+                }}
+              />
+            </ListItem>
+          )}
         </List>
 
         <Divider sx={{ my: 2, mx: 2 }} />
@@ -891,11 +939,17 @@ function App() {
               <Box sx={{ flexGrow: 1 }}>
                 <Typography variant="h6" component="div" sx={{ fontWeight: 700, fontSize: '1.125rem' }}>
                   {currentTab === 'dashboard' ? 'Jobs' :
-                   currentTab === 'training' ? 'DSA Training' : 'System Design'}
+                   currentTab === 'training' ? 'DSA Training' :
+                   currentTab === 'system-design' ? 'System Design' : 'Analytics'}
                 </Typography>
                 {currentTab === 'dashboard' && (
                   <Typography variant="caption" color="text.secondary">
                     {Object.keys(cleanJobs).length} active opportunities
+                  </Typography>
+                )}
+                {currentTab === 'analytics' && (
+                  <Typography variant="caption" color="text.secondary">
+                    Multi-user insights & statistics
                   </Typography>
                 )}
               </Box>
@@ -978,6 +1032,8 @@ function App() {
               {currentTab === 'training' && <Training />}
 
               {currentTab === 'system-design' && <SystemDesign />}
+
+              {currentTab === 'analytics' && hasAnalyticsAccess && <Analytics />}
             </Box>
           </Box>
         </Box>

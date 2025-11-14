@@ -73,6 +73,12 @@ export const jobApi = {
     const response = await api.get('/rejected_jobs');
     return response.data.rejected_job_ids || [];
   },
+
+  // Get analytics for all users (admin only)
+  getAnalytics: async (): Promise<any> => {
+    const response = await api.get('/api/admin/analytics');
+    return response.data;
+  },
 };
 
 export default api;

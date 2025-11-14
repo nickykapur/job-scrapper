@@ -493,7 +493,10 @@ class JobDatabase:
             return self._sync_jobs_json(jobs_data)
 
     async def _cleanup_old_jobs_postgres(self, conn, max_jobs_per_country: int = 300) -> int:
-        """Delete old jobs from PostgreSQL, keeping only max_jobs_per_country most recent per country"""
+        """Delete old jobs from PostgreSQL, keeping only max_jobs_per_country most recent per country
+
+        IMPORTANT: Never deletes jobs that users have interacted with (applied/rejected/saved)
+        """
         try:
             # Get list of countries
             countries = await conn.fetch("""
@@ -506,6 +509,7 @@ class JobDatabase:
                 country = row['country']
 
                 # Delete old jobs for this country, keeping max_jobs_per_country newest
+                # CRITICAL: Exclude jobs that users have interacted with
                 result = await conn.execute("""
                     DELETE FROM jobs
                     WHERE id IN (
@@ -518,6 +522,11 @@ class JobDatabase:
                                 ) as rn
                             FROM jobs
                             WHERE country = $1
+                            -- CRITICAL: Don't delete jobs users have interacted with
+                            AND NOT EXISTS (
+                                SELECT 1 FROM user_job_interactions uji
+                                WHERE uji.job_id = jobs.id
+                            )
                         ) ranked
                         WHERE rn > $2
                     )
@@ -650,9 +659,11 @@ class JobDatabase:
             if skipped_reposts > 0:
                 print(f"⏭️  Skipped {skipped_reposts} reposted jobs (already applied to similar positions)")
 
-            # IMPORTANT: Clean up old jobs to maintain 300 per country limit
-            print(f"\n✂️ Cleaning up old jobs (maintaining 300 per country)...")
-            deleted_jobs = await self._cleanup_old_jobs_postgres(conn, max_jobs_per_country=300)
+            # IMPORTANT: Clean up old jobs to maintain reasonable limit per country
+            # Increased from 300 to 1000 to prevent too-aggressive cleanup
+            # Jobs user has interacted with are preserved via user_job_interactions
+            print(f"\n✂️ Cleaning up old jobs (maintaining 1000 per country)...")
+            deleted_jobs = await self._cleanup_old_jobs_postgres(conn, max_jobs_per_country=1000)
             if deleted_jobs > 0:
                 print(f"🗑️  PostgreSQL: Deleted {deleted_jobs} old jobs total")
             else:

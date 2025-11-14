@@ -3,7 +3,8 @@
     "allow": [
       "Bash(python3:*)",
       "Bash(PGPASSWORD=JcWFAlWypXvRisiQPVlOlGVFEIRgsgxl psql:*)",
-      "Bash(curl -s -X POST \"https://web-production-110bb.up.railway.app/api/admin/fix-analytics\" -H \"Content-Type: application/json\")"
+      "Bash(curl -s -X POST \"https://web-production-110bb.up.railway.app/api/admin/fix-analytics\" -H \"Content-Type: application/json\")",
+      "Bash(export DATABASE_URL='postgresql://postgres:JcWFAlWypXvRisiQPVlOlGVFEIRgsgxl@switchback.proxy.rlwy.net:22276/railway':*)"
     ],
     "deny": [],
     "ask": []

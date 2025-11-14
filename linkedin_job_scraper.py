@@ -483,17 +483,22 @@ class LinkedInJobScraper:
             'operaciones de seguridad', 'respuesta a incidentes'
         ]
 
-        # Sales/Business Development keywords (check second - specific)
+        # Sales/Business Development keywords (English and Spanish)
         sales_keywords = [
+            # English
             'account manager', 'account executive', 'bdr', 'sdr',
             'business development representative', 'sales development representative',
             'sales representative', 'inside sales', 'outbound sales',
             'saas sales', 'b2b sales', 'customer success manager',
-            'account management', 'business development manager'
+            'account management', 'business development manager',
+            # Spanish
+            'ejecutivo de ventas', 'gerente de cuenta', 'representante de ventas',
+            'desarrollo de negocios', 'ventas', 'ejecutivo comercial'
         ]
 
-        # Finance/Accounting keywords (check before HR to avoid false positives)
+        # Finance/Accounting keywords (English and Spanish)
         finance_keywords = [
+            # English
             'fp&a analyst', 'fp&a', 'financial planning and analysis',
             'financial planning analyst', 'financial analyst', 'junior financial analyst',
             'fund accounting', 'fund accountant', 'fund accounting associate',
@@ -505,22 +510,36 @@ class LinkedInJobScraper:
             'junior accountant', 'accounting analyst', 'finance associate',
             'finance analyst', 'treasury analyst', 'cash management',
             'corporate finance', 'finance business partner', 'financial reporting analyst',
-            'financial modeling', 'variance analysis', 'budgeting analyst', 'forecasting analyst'
+            'financial modeling', 'variance analysis', 'budgeting analyst', 'forecasting analyst',
+            # Spanish
+            'analista financiero', 'contador', 'contabilidad', 'finanzas',
+            'analista de crédito', 'tesorería', 'contable', 'analista contable'
         ]
 
-        # HR/Recruitment keywords
+        # HR/Recruitment keywords (English and Spanish)
         hr_keywords = [
+            # English
             'hr officer', 'hr coordinator', 'hr generalist', 'hr specialist',
             'talent acquisition', 'recruiter', 'recruitment', 'recruiting',
             'people operations', 'people ops', 'people partner',
-            'hr assistant', 'human resources'
+            'hr assistant', 'human resources',
+            # Spanish
+            'recursos humanos', 'reclutador', 'reclutamiento', 'selección',
+            'talento humano', 'analista de recursos humanos', 'coordinador de rrhh'
         ]
 
-        # Software keywords
+        # Software keywords (English and Spanish)
         software_keywords = [
+            # English
             'software', 'developer', 'engineer', 'programming', 'programmer',
             'frontend', 'backend', 'full stack', 'devops', 'react', 'python',
-            'javascript', 'node', 'java', 'web developer'
+            'javascript', 'node', 'java', 'web developer', 'mobile developer',
+            # Spanish
+            'desarrollador', 'programador', 'ingeniero de software', 'ingeniero software',
+            'desarrollador web', 'desarrollador fullstack', 'desarrollador full stack',
+            'desarrollador frontend', 'desarrollador backend', 'arquitecto de software',
+            'arquitecto software', 'ingeniero', 'dev ', ' dev', 'qa automation',
+            'qa automatizador', 'desarrollador mobile', 'desarrollador móvil'
         ]
 
         # Check for cybersecurity first (most specific)

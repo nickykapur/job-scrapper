@@ -295,12 +295,59 @@ async def get_jobs_api(current_user: Optional[Dict[str, Any]] = Depends(get_curr
     if not current_user:
         return all_jobs
 
-    # If authenticated, filter by user preferences
+    # If authenticated, filter by user preferences AND user interactions
     try:
         if AUTH_AVAILABLE:
             from user_database import UserDatabase
             user_db = UserDatabase()
             preferences = await user_db.get_user_preferences(current_user['user_id'])
+
+            # Get this user's job interactions to filter out jobs they've already seen/interacted with
+            conn = await db.get_connection()
+            user_interactions = {}
+            user_signatures = set()  # Company+Title pairs user has already applied/rejected to
+            if conn:
+                try:
+                    # Get job IDs user has interacted with
+                    interactions = await conn.fetch("""
+                        SELECT job_id, applied, rejected, saved
+                        FROM user_job_interactions
+                        WHERE user_id = $1
+                    """, current_user['user_id'])
+
+                    user_interactions = {
+                        row['job_id']: {
+                            'applied': row['applied'],
+                            'rejected': row['rejected'],
+                            'saved': row['saved']
+                        }
+                        for row in interactions
+                    }
+
+                    # Also get job signatures (company+title) user has applied to
+                    # This catches cases where job was deleted and re-scraped with new ID
+                    signatures = await conn.fetch("""
+                        SELECT DISTINCT js.company, js.normalized_title
+                        FROM job_signatures js
+                        WHERE EXISTS (
+                            SELECT 1 FROM user_job_interactions uji
+                            WHERE uji.user_id = $1
+                            AND uji.job_id = js.original_job_id
+                            AND (uji.applied = TRUE OR uji.rejected = TRUE)
+                        )
+                    """, current_user['user_id'])
+
+                    for sig in signatures:
+                        signature_key = f"{sig['company'].lower()}|{sig['normalized_title'].lower()}"
+                        user_signatures.add(signature_key)
+
+                    print(f"[FILTER] User {current_user['user_id']} has {len(user_interactions)} job interactions, {len(user_signatures)} job signatures")
+                except Exception as e:
+                    print(f"[FILTER] Error loading user interactions: {e}")
+                    import traceback
+                    traceback.print_exc()
+                finally:
+                    await conn.close()
 
             if preferences:
                 filtered_jobs = {}
@@ -311,8 +358,27 @@ async def get_jobs_api(current_user: Optional[Dict[str, Any]] = Depends(get_curr
                         filtered_jobs[job_id] = job_data
                         continue
 
+                    # CRITICAL: Filter out jobs this user has already interacted with
+                    # Check 1: By job_id (direct match)
+                    if job_id in user_interactions:
+                        interaction = user_interactions[job_id]
+                        if interaction['applied'] or interaction['rejected']:
+                            print(f"[FILTER] Hiding job {job_id[:12]}... - user already {'applied' if interaction['applied'] else 'rejected'}")
+                            continue
+
+                    # Check 2: By company+title signature (catches re-scraped jobs with new IDs)
+                    company = job_data.get('company', '').strip()
+                    title = job_data.get('title', '').strip()
+                    if company and title:
+                        # Normalize title (remove senior, junior, etc.)
+                        normalized_title = db.normalize_job_title(title) if db else title.lower()
+                        signature_key = f"{company.lower()}|{normalized_title.lower()}"
+
+                        if signature_key in user_signatures:
+                            print(f"[FILTER] Hiding job {job_id[:12]}... - user already applied to '{title}' at {company} (repost with new ID)")
+                            continue
+
                     # Get job details for filtering
-                    title = job_data.get('title', '')
                     title_lower = title.lower()
                     description = job_data.get('description', '').lower()
                     location = job_data.get('location', '').lower()
@@ -1636,6 +1702,163 @@ async def run_deduplication_migration():
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Migration failed: {str(e)}")
+
+@app.get("/api/admin/analytics")
+async def get_analytics():
+    """Get analytics for all users - admin only"""
+    if not db or not DATABASE_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    if not db.use_postgres:
+        raise HTTPException(status_code=500, detail="PostgreSQL database required")
+
+    try:
+        from user_database import UserDatabase
+        user_db = UserDatabase()
+
+        conn = await db.get_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Could not connect to database")
+
+        # Get all users with their analytics
+        users_analytics = await conn.fetch("""
+            SELECT
+                u.id,
+                u.username,
+                u.email,
+                u.full_name,
+                u.created_at,
+                u.last_login,
+                u.is_admin,
+                up.job_types,
+                up.preferred_countries,
+                up.experience_levels,
+                COUNT(DISTINCT uji.job_id) FILTER (WHERE uji.applied = TRUE) as jobs_applied,
+                COUNT(DISTINCT uji.job_id) FILTER (WHERE uji.rejected = TRUE) as jobs_rejected,
+                COUNT(DISTINCT uji.job_id) FILTER (WHERE uji.saved = TRUE) as jobs_saved,
+                MAX(uji.updated_at) FILTER (WHERE uji.applied = TRUE) as last_application_date,
+                COUNT(DISTINCT uji.job_id) FILTER (WHERE uji.applied = TRUE AND uji.updated_at >= NOW() - INTERVAL '7 days') as applications_last_7_days,
+                COUNT(DISTINCT uji.job_id) FILTER (WHERE uji.applied = TRUE AND uji.updated_at >= NOW() - INTERVAL '30 days') as applications_last_30_days
+            FROM users u
+            LEFT JOIN user_preferences up ON u.id = up.user_id
+            LEFT JOIN user_job_interactions uji ON u.id = uji.user_id
+            GROUP BY u.id, u.username, u.email, u.full_name, u.created_at, u.last_login, u.is_admin, up.job_types, up.preferred_countries, up.experience_levels
+            ORDER BY u.created_at DESC
+        """)
+
+        # Get job type statistics
+        job_type_stats = await conn.fetch("""
+            SELECT
+                job_type,
+                COUNT(*) as total_jobs,
+                COUNT(*) FILTER (WHERE applied = TRUE) as applied_jobs,
+                COUNT(*) FILTER (WHERE rejected = TRUE) as rejected_jobs,
+                COUNT(*) FILTER (WHERE applied = FALSE AND rejected = FALSE) as available_jobs
+            FROM jobs
+            WHERE job_type IS NOT NULL
+            GROUP BY job_type
+            ORDER BY total_jobs DESC
+        """)
+
+        # Get country statistics
+        country_stats = await conn.fetch("""
+            SELECT
+                country,
+                COUNT(*) as total_jobs,
+                COUNT(*) FILTER (WHERE applied = TRUE) as applied_jobs,
+                COUNT(*) FILTER (WHERE rejected = TRUE) as rejected_jobs
+            FROM jobs
+            WHERE country IS NOT NULL
+            GROUP BY country
+            ORDER BY total_jobs DESC
+        """)
+
+        # Get application timeline (last 30 days)
+        timeline_stats = await conn.fetch("""
+            SELECT
+                DATE(updated_at) as date,
+                COUNT(DISTINCT job_id) as applications
+            FROM user_job_interactions
+            WHERE applied = TRUE
+            AND updated_at >= NOW() - INTERVAL '30 days'
+            GROUP BY DATE(updated_at)
+            ORDER BY date ASC
+        """)
+
+        await conn.close()
+
+        # Format results
+        users = []
+        for user in users_analytics:
+            users.append({
+                "id": user['id'],
+                "username": user['username'],
+                "email": user['email'],
+                "full_name": user['full_name'],
+                "created_at": user['created_at'].isoformat() if user['created_at'] else None,
+                "last_login": user['last_login'].isoformat() if user['last_login'] else None,
+                "is_admin": user['is_admin'],
+                "job_types": user['job_types'] or [],
+                "preferred_countries": user['preferred_countries'] or [],
+                "experience_levels": user['experience_levels'] or [],
+                "stats": {
+                    "jobs_applied": user['jobs_applied'],
+                    "jobs_rejected": user['jobs_rejected'],
+                    "jobs_saved": user['jobs_saved'],
+                    "last_application_date": user['last_application_date'].isoformat() if user['last_application_date'] else None,
+                    "applications_last_7_days": user['applications_last_7_days'],
+                    "applications_last_30_days": user['applications_last_30_days']
+                }
+            })
+
+        job_types = [
+            {
+                "job_type": row['job_type'],
+                "total_jobs": row['total_jobs'],
+                "applied_jobs": row['applied_jobs'],
+                "rejected_jobs": row['rejected_jobs'],
+                "available_jobs": row['available_jobs']
+            }
+            for row in job_type_stats
+        ]
+
+        countries = [
+            {
+                "country": row['country'],
+                "total_jobs": row['total_jobs'],
+                "applied_jobs": row['applied_jobs'],
+                "rejected_jobs": row['rejected_jobs']
+            }
+            for row in country_stats
+        ]
+
+        timeline = [
+            {
+                "date": row['date'].isoformat(),
+                "applications": row['applications']
+            }
+            for row in timeline_stats
+        ]
+
+        return {
+            "users": users,
+            "job_types": job_types,
+            "countries": countries,
+            "application_timeline": timeline,
+            "summary": {
+                "total_users": len(users),
+                "total_applications": sum(u['stats']['jobs_applied'] for u in users),
+                "total_rejections": sum(u['stats']['jobs_rejected'] for u in users),
+                "applications_last_7_days": sum(u['stats']['applications_last_7_days'] for u in users),
+                "applications_last_30_days": sum(u['stats']['applications_last_30_days'] for u in users)
+            }
+        }
+
+    except Exception as e:
+        print(f"❌ Error getting analytics: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to get analytics: {str(e)}")
 
 # Catch-all route for React Router (SPA routing)
 @app.get("/{full_path:path}")
