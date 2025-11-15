@@ -21,6 +21,9 @@ wheels/
 *.egg
 MANIFEST
 
+# But don't ignore TypeScript/JavaScript lib directories
+!job-manager-ui/src/lib/
+
 # Virtual Environments
 venv/
 .venv/

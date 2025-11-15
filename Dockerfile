@@ -1,5 +1,5 @@
 # Multi-stage build: React frontend + Python backend with browser support
-FROM node:18-alpine as frontend-build
+FROM node:22-alpine as frontend-build
 
 WORKDIR /app/frontend
 
