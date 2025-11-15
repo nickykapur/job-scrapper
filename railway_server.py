@@ -1736,9 +1736,9 @@ async def get_analytics():
                 COUNT(DISTINCT uji.job_id) FILTER (WHERE uji.applied = TRUE) as jobs_applied,
                 COUNT(DISTINCT uji.job_id) FILTER (WHERE uji.rejected = TRUE) as jobs_rejected,
                 COUNT(DISTINCT uji.job_id) FILTER (WHERE uji.saved = TRUE) as jobs_saved,
-                MAX(uji.updated_at) FILTER (WHERE uji.applied = TRUE) as last_application_date,
-                COUNT(DISTINCT uji.job_id) FILTER (WHERE uji.applied = TRUE AND uji.updated_at >= NOW() - INTERVAL '7 days') as applications_last_7_days,
-                COUNT(DISTINCT uji.job_id) FILTER (WHERE uji.applied = TRUE AND uji.updated_at >= NOW() - INTERVAL '30 days') as applications_last_30_days
+                MAX(uji.applied_at) FILTER (WHERE uji.applied = TRUE) as last_application_date,
+                COUNT(DISTINCT uji.job_id) FILTER (WHERE uji.applied = TRUE AND uji.applied_at >= NOW() - INTERVAL '7 days') as applications_last_7_days,
+                COUNT(DISTINCT uji.job_id) FILTER (WHERE uji.applied = TRUE AND uji.applied_at >= NOW() - INTERVAL '30 days') as applications_last_30_days
             FROM users u
             LEFT JOIN user_preferences up ON u.id = up.user_id
             LEFT JOIN user_job_interactions uji ON u.id = uji.user_id
@@ -1776,12 +1776,12 @@ async def get_analytics():
         # Get application timeline (last 30 days)
         timeline_stats = await conn.fetch("""
             SELECT
-                DATE(updated_at) as date,
+                DATE(applied_at) as date,
                 COUNT(DISTINCT job_id) as applications
             FROM user_job_interactions
             WHERE applied = TRUE
-            AND updated_at >= NOW() - INTERVAL '30 days'
-            GROUP BY DATE(updated_at)
+            AND applied_at >= NOW() - INTERVAL '30 days'
+            GROUP BY DATE(applied_at)
             ORDER BY date ASC
         """)
 
