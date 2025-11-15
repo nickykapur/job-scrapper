@@ -28,7 +28,7 @@ export interface JobStats {
 
 export interface FilterState {
   status: 'all' | 'applied' | 'not-applied' | 'rejected' | 'new';
-  search: string;
   sort: 'newest' | 'oldest' | 'title' | 'company';
   jobType: 'all' | 'software' | 'hr' | 'cybersecurity' | 'sales' | 'finance';
+  country: 'all' | string;
 }

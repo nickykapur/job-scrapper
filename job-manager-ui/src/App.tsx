@@ -54,9 +54,9 @@ const App: React.FC = () => {
 
   const [filters, setFilters] = useState<FilterState>({
     status: 'all',
-    search: '',
     sort: 'newest',
     jobType: 'all',
+    country: 'all',
   });
 
   // Responsive handler
@@ -166,13 +166,8 @@ const App: React.FC = () => {
       // Job type filter
       if (filters.jobType !== 'all' && job.job_type !== filters.jobType) return;
 
-      // Search filter
-      if (filters.search) {
-        const searchLower = filters.search.toLowerCase();
-        if (!job.title.toLowerCase().includes(searchLower) &&
-            !job.company.toLowerCase().includes(searchLower) &&
-            !job.location.toLowerCase().includes(searchLower)) return;
-      }
+      // Country filter
+      if (filters.country !== 'all' && job.country !== filters.country) return;
 
       filtered[id] = job;
     });

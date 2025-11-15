@@ -29,6 +29,31 @@ export const FilterControls: React.FC<FilterControlsProps> = ({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Country Filter */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Country</label>
+            <Select
+              value={filters.country || 'all'}
+              onValueChange={(value) => onFiltersChange({ ...filters, country: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by country" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Countries</SelectItem>
+                <SelectItem value="Belgium">Belgium</SelectItem>
+                <SelectItem value="Denmark">Denmark</SelectItem>
+                <SelectItem value="Germany">Germany</SelectItem>
+                <SelectItem value="Ireland">Ireland</SelectItem>
+                <SelectItem value="Luxembourg">Luxembourg</SelectItem>
+                <SelectItem value="Netherlands">Netherlands</SelectItem>
+                <SelectItem value="Spain">Spain</SelectItem>
+                <SelectItem value="Sweden">Sweden</SelectItem>
+                <SelectItem value="United Kingdom">United Kingdom</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Status Filter */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Status</label>
@@ -86,17 +111,6 @@ export const FilterControls: React.FC<FilterControlsProps> = ({
                 <SelectItem value="company">Company A-Z</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-
-          {/* Search Filter */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Search</label>
-            <Input
-              type="search"
-              placeholder="Search jobs..."
-              value={filters.search}
-              onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
-            />
           </div>
         </div>
       </CardContent>
