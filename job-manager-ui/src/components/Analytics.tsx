@@ -1,34 +1,25 @@
 import React, { useEffect, useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Grid,
-  Avatar,
-  Chip,
-  LinearProgress,
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
+  TableHeader,
   TableRow,
-  Paper,
-  Alert,
-  Skeleton,
-  useTheme,
-} from '@mui/material';
+} from '@/components/ui/table';
 import { motion } from 'framer-motion';
 import {
-  People as PeopleIcon,
-  Work as WorkIcon,
-  CheckCircle as CheckCircleIcon,
-  Cancel as CancelIcon,
-  TrendingUp as TrendingUpIcon,
-  Language as LanguageIcon,
-  Business as BusinessIcon,
-} from '@mui/icons-material';
+  Users,
+  Briefcase,
+  CheckCircle,
+  XCircle,
+  TrendingUp,
+  Globe,
+  Building2,
+} from 'lucide-react';
 import { jobApi } from '../services/api';
 
 interface UserAnalytics {

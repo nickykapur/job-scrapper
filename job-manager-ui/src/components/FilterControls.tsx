@@ -1,139 +1,105 @@
 import React from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import {
-  Paper,
-  Box,
-  FormControl,
-  InputLabel,
   Select,
-  MenuItem,
-  TextField,
-  Button,
-  Typography,
-  Stack,
-  Divider,
-} from '@mui/material';
-import {
-  Refresh as RefreshIcon,
-  Delete as DeleteIcon,
-  FilterList as FilterIcon,
-} from '@mui/icons-material';
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Filter } from 'lucide-react';
 import type { FilterState } from '../types';
 
 interface FilterControlsProps {
   filters: FilterState;
   onFiltersChange: (filters: FilterState) => void;
-  onRefresh: () => void;
-  onRemoveApplied: () => void;
-  isRefreshing?: boolean;
 }
 
 export const FilterControls: React.FC<FilterControlsProps> = ({
   filters,
   onFiltersChange,
-  onRefresh,
-  onRemoveApplied,
-  isRefreshing = false,
 }) => {
   return (
-    <Paper
-      sx={{
-        p: 3,
-        mb: 3,
-        borderRadius: 3,
-        background: (theme) => theme.palette.mode === 'dark'
-          ? 'linear-gradient(135deg, #1e1e1e 0%, #2a2a2a 100%)'
-          : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
-        border: '1px solid',
-        borderColor: 'divider',
-      }}
-    >
-      <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <FilterIcon color="primary" />
-        Job Management
-      </Typography>
+    <Card className="mb-6">
+      <CardContent className="p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Filter className="h-5 w-5 text-primary" />
+          <h3 className="text-lg font-semibold">Filters</h3>
+        </div>
 
-      <Stack spacing={3}>
-        {/* Filter Controls */}
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
-          <FormControl size="small" sx={{ minWidth: 140 }}>
-            <InputLabel>Filter by Status</InputLabel>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Status Filter */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Status</label>
             <Select
               value={filters.status}
-              label="Filter by Status"
-              onChange={(e) => onFiltersChange({ ...filters, status: e.target.value as any })}
+              onValueChange={(value) => onFiltersChange({ ...filters, status: value as any })}
             >
-              <MenuItem value="all">All Jobs</MenuItem>
-              <MenuItem value="new">New Only</MenuItem>
-              <MenuItem value="applied">Applied</MenuItem>
-              <MenuItem value="not-applied">Not Applied</MenuItem>
-              <MenuItem value="rejected">Rejected</MenuItem>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Jobs</SelectItem>
+                <SelectItem value="new">New Only</SelectItem>
+                <SelectItem value="applied">Applied</SelectItem>
+                <SelectItem value="not_applied">Not Applied</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+              </SelectContent>
             </Select>
-          </FormControl>
+          </div>
 
-          <FormControl size="small" sx={{ minWidth: 140 }}>
-            <InputLabel>Job Type</InputLabel>
+          {/* Job Type Filter */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Job Type</label>
             <Select
               value={filters.jobType || 'all'}
-              label="Job Type"
-              onChange={(e) => onFiltersChange({ ...filters, jobType: e.target.value as any })}
+              onValueChange={(value) => onFiltersChange({ ...filters, jobType: value as any })}
             >
-              <MenuItem value="all">All Types</MenuItem>
-              <MenuItem value="software">Software</MenuItem>
-              <MenuItem value="hr">HR</MenuItem>
-              <MenuItem value="cybersecurity">Cybersecurity</MenuItem>
-              <MenuItem value="sales">Sales</MenuItem>
-              <MenuItem value="finance">Finance</MenuItem>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="software">Software</SelectItem>
+                <SelectItem value="hr">HR</SelectItem>
+                <SelectItem value="cybersecurity">Cybersecurity</SelectItem>
+                <SelectItem value="sales">Sales</SelectItem>
+                <SelectItem value="finance">Finance</SelectItem>
+              </SelectContent>
             </Select>
-          </FormControl>
+          </div>
 
-          <TextField
-            size="small"
-            label="Filter by keyword..."
-            placeholder="e.g. React, Python, Senior"
-            value={filters.search}
-            onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
-            sx={{ minWidth: 250, flexGrow: 1, maxWidth: 400 }}
-          />
-
-          <FormControl size="small" sx={{ minWidth: 140 }}>
-            <InputLabel>Sort by</InputLabel>
+          {/* Sort Filter */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Sort By</label>
             <Select
               value={filters.sort}
-              label="Sort by"
-              onChange={(e) => onFiltersChange({ ...filters, sort: e.target.value as any })}
+              onValueChange={(value) => onFiltersChange({ ...filters, sort: value as any })}
             >
-              <MenuItem value="newest">Newest First</MenuItem>
-              <MenuItem value="oldest">Oldest First</MenuItem>
-              <MenuItem value="company">Company A-Z</MenuItem>
+              <SelectTrigger>
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">Newest First</SelectItem>
+                <SelectItem value="oldest">Oldest First</SelectItem>
+                <SelectItem value="company">Company A-Z</SelectItem>
+              </SelectContent>
             </Select>
-          </FormControl>
-        </Stack>
+          </div>
 
-        <Divider />
-
-        {/* Action Buttons */}
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems="center" flexWrap="wrap">
-          <Button
-            variant="contained"
-            startIcon={<RefreshIcon />}
-            onClick={onRefresh}
-            disabled={isRefreshing}
-            sx={{ minWidth: 140 }}
-          >
-            {isRefreshing ? 'Refreshing...' : 'Refresh Jobs'}
-          </Button>
-
-          <Button
-            variant="outlined"
-            startIcon={<DeleteIcon />}
-            onClick={onRemoveApplied}
-            color="error"
-            sx={{ minWidth: 160 }}
-          >
-            Remove Applied
-          </Button>
-        </Stack>
-      </Stack>
-    </Paper>
+          {/* Search Filter */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Search</label>
+            <Input
+              type="search"
+              placeholder="Search jobs..."
+              value={filters.search}
+              onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
+            />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };

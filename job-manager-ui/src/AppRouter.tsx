@@ -6,11 +6,11 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
-import { Box, CircularProgress } from '@mui/material';
+import { Loader2 } from 'lucide-react';
 import App from './App';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
-import SettingsPage from './pages/SettingsPage';
+// import SettingsPage from './pages/SettingsPage'; // Temporarily disabled - MUI migration pending
 import ProtectedRoute from './components/ProtectedRoute';
 
 const AppRouter: React.FC = () => {
@@ -19,9 +19,9 @@ const AppRouter: React.FC = () => {
   // Show loading spinner while checking authentication
   if (isLoading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
-        <CircularProgress />
-      </Box>
+      <div className="flex justify-center items-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
     );
   }
 
@@ -46,6 +46,7 @@ const AppRouter: React.FC = () => {
           </ProtectedRoute>
         }
       />
+      {/* Temporarily disabled - MUI migration pending
       <Route
         path="/settings"
         element={
@@ -54,6 +55,7 @@ const AppRouter: React.FC = () => {
           </ProtectedRoute>
         }
       />
+      */}
 
       {/* Catch all - redirect to home */}
       <Route path="*" element={<Navigate to="/" replace />} />

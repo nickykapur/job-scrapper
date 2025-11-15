@@ -1,19 +1,8 @@
 import React from 'react';
-import {
-  Card,
-  CardContent,
-  Typography,
-  Box,
-  Button,
-  Stack,
-  Chip,
-  alpha,
-} from '@mui/material';
-import {
-  OpenInNew as OpenInNewIcon,
-  Check as CheckIcon,
-  Close as RejectIcon,
-} from '@mui/icons-material';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { ExternalLink, Check, X } from 'lucide-react';
 import type { Job } from '../types';
 import { getCountryFromLocation } from '../utils/countryUtils';
 
@@ -32,217 +21,116 @@ export const JobCard: React.FC<JobCardProps> = ({
 }) => {
   const extractedCountry = job.country || getCountryFromLocation(job.location);
 
+  const jobTypeColors: Record<string, { bg: string; text: string }> = {
+    software: { bg: 'bg-blue-500/10 dark:bg-blue-500/20', text: 'text-blue-600 dark:text-blue-400' },
+    hr: { bg: 'bg-violet-500/10 dark:bg-violet-500/20', text: 'text-violet-600 dark:text-violet-400' },
+    cybersecurity: { bg: 'bg-red-500/10 dark:bg-red-500/20', text: 'text-red-600 dark:text-red-400' },
+    sales: { bg: 'bg-amber-500/10 dark:bg-amber-500/20', text: 'text-amber-600 dark:text-amber-400' },
+    finance: { bg: 'bg-emerald-500/10 dark:bg-emerald-500/20', text: 'text-emerald-600 dark:text-emerald-400' },
+  };
+
+  const jobTypeStyle = jobTypeColors[job.job_type || 'software'] || { bg: 'bg-gray-500/10', text: 'text-gray-600' };
+
   return (
-    <Card
-      sx={{
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        borderRadius: 2.5,
-        background: 'background.paper',
-        border: '1px solid',
-        borderColor: (theme) => theme.palette.mode === 'dark' ? '#2a2a2a' : '#e5e7eb',
-        transition: 'all 0.2s ease-in-out',
-        '&:hover': {
-          borderColor: (theme) => theme.palette.mode === 'dark' ? '#404040' : '#d1d5db',
-          boxShadow: (theme) => theme.palette.mode === 'dark'
-            ? '0 4px 12px rgba(0,0,0,0.3)'
-            : '0 4px 12px rgba(0,0,0,0.08)',
-          transform: 'translateY(-2px)',
-        },
-      }}
-    >
-      <CardContent sx={{ p: 3, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+    <Card className="h-full flex flex-col border-border hover:border-gray-400 dark:hover:border-gray-600 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
+      <CardContent className="p-6 flex-grow flex flex-col">
         {/* Company Name */}
-        <Typography
-          variant="caption"
-          sx={{
-            fontWeight: 600,
-            fontSize: '0.75rem',
-            color: 'text.secondary',
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            mb: 1
-          }}
-        >
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
           {job.company}
-        </Typography>
+        </p>
 
         {/* Job Title */}
-        <Typography
-          variant="h6"
-          sx={{
-            fontWeight: 700,
-            fontSize: '1rem',
-            mb: 2,
-            color: 'text.primary',
-            lineHeight: 1.4,
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-          }}
-        >
+        <h3 className="text-base font-bold mb-4 text-foreground line-clamp-2 leading-snug">
           {job.title}
-        </Typography>
+        </h3>
 
         {/* Job Details */}
-        <Stack spacing={1} sx={{ mb: 3, flexGrow: 1 }}>
-          <Box display="flex" alignItems="center" justifyContent="space-between">
-            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.8125rem' }}>
+        <div className="space-y-2 mb-6 flex-grow">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
               {job.location}
-            </Typography>
+            </p>
             {extractedCountry && extractedCountry !== 'Unknown' && (
-              <Typography variant="caption" sx={{ fontSize: '0.75rem', fontWeight: 600, color: 'primary.main' }}>
+              <p className="text-xs font-semibold text-primary">
                 {extractedCountry}
-              </Typography>
+              </p>
             )}
-          </Box>
+          </div>
 
-          <Box display="flex" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={0.5}>
-            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.8125rem' }}>
+          <div className="flex items-center justify-between flex-wrap gap-1">
+            <p className="text-sm text-muted-foreground">
               {job.posted_date}
-            </Typography>
-            <Box display="flex" gap={0.5} alignItems="center">
+            </p>
+            <div className="flex gap-1 items-center">
               {job.job_type && job.job_type !== 'other' && (
-                <Chip
-                  label={job.job_type === 'hr' ? 'HR' : job.job_type.charAt(0).toUpperCase() + job.job_type.slice(1)}
-                  size="small"
-                  sx={{
-                    height: 20,
-                    bgcolor: (theme) => {
-                      const colors: Record<string, string> = {
-                        software: theme.palette.mode === 'dark' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.1)',
-                        hr: theme.palette.mode === 'dark' ? 'rgba(139, 92, 246, 0.2)' : 'rgba(139, 92, 246, 0.1)',
-                        cybersecurity: theme.palette.mode === 'dark' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)',
-                        sales: theme.palette.mode === 'dark' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)',
-                        finance: theme.palette.mode === 'dark' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(34, 197, 94, 0.1)',
-                      };
-                      return colors[job.job_type!] || 'rgba(128, 128, 128, 0.1)';
-                    },
-                    color: {
-                      software: '#3b82f6',
-                      hr: '#8b5cf6',
-                      cybersecurity: '#ef4444',
-                      sales: '#f59e0b',
-                      finance: '#22c55e',
-                    }[job.job_type] || '#808080',
-                    fontSize: '0.65rem',
-                    fontWeight: 600,
-                    borderRadius: 1,
-                  }}
-                />
+                <Badge
+                  variant="outline"
+                  className={`h-5 text-[10px] font-semibold px-2 ${jobTypeStyle.bg} ${jobTypeStyle.text} border-0`}
+                >
+                  {job.job_type === 'hr' ? 'HR' : job.job_type.charAt(0).toUpperCase() + job.job_type.slice(1)}
+                </Badge>
               )}
               {job.easy_apply && (
-                <Chip
-                  label="Quick Apply"
-                  size="small"
-                  sx={{
-                    height: 20,
-                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)',
-                    color: '#10b981',
-                    fontSize: '0.65rem',
-                    fontWeight: 600,
-                    borderRadius: 1,
-                  }}
-                />
+                <Badge
+                  variant="outline"
+                  className="h-5 text-[10px] font-semibold px-2 bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-0"
+                >
+                  Quick Apply
+                </Badge>
               )}
-            </Box>
-          </Box>
-        </Stack>
+            </div>
+          </div>
+        </div>
 
         {/* Action Buttons */}
-        <Box>
+        <div>
           {!job.applied && !job.rejected && (
-            <Stack spacing={1.5}>
+            <div className="space-y-3">
               <Button
-                variant="contained"
-                size="medium"
+                className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold shadow-none hover:shadow-lg hover:shadow-blue-500/30 transition-all"
+                size="lg"
                 onClick={() => onApplyAndOpen(job.id, job.job_url)}
                 disabled={isUpdating}
-                endIcon={<OpenInNewIcon sx={{ fontSize: '1rem' }} />}
-                sx={{
-                  borderRadius: 2,
-                  fontWeight: 600,
-                  textTransform: 'none',
-                  fontSize: '0.875rem',
-                  py: 1.25,
-                  background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                  boxShadow: 'none',
-                  '&:hover': {
-                    background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-                    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
-                  },
-                }}
               >
                 {isUpdating ? 'Processing...' : 'Apply Now'}
+                <ExternalLink className="ml-2 h-4 w-4" />
               </Button>
 
               <Button
-                variant="text"
-                size="medium"
+                variant="ghost"
+                className="w-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 font-medium"
                 onClick={() => onRejectJob(job.id)}
                 disabled={isUpdating}
-                startIcon={<RejectIcon sx={{ fontSize: '1rem' }} />}
-                sx={{
-                  borderRadius: 2,
-                  fontWeight: 500,
-                  textTransform: 'none',
-                  fontSize: '0.875rem',
-                  py: 1,
-                  color: 'text.secondary',
-                  '&:hover': {
-                    color: 'error.main',
-                    backgroundColor: (theme) => alpha(theme.palette.error.main, 0.08),
-                  },
-                }}
               >
+                <X className="mr-2 h-4 w-4" />
                 Not Interested
               </Button>
-            </Stack>
+            </div>
           )}
 
           {job.applied && (
             <Button
-              variant="contained"
-              size="medium"
+              className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold cursor-not-allowed"
+              size="lg"
               disabled
-              startIcon={<CheckIcon />}
-              sx={{
-                borderRadius: 2,
-                fontWeight: 600,
-                textTransform: 'none',
-                fontSize: '0.875rem',
-                py: 1.25,
-                width: '100%',
-                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-              }}
             >
+              <Check className="mr-2 h-4 w-4" />
               Applied
             </Button>
           )}
 
           {job.rejected && (
             <Button
-              variant="contained"
-              size="medium"
+              variant="secondary"
+              className="w-full font-semibold cursor-not-allowed opacity-60"
+              size="lg"
               disabled
-              startIcon={<RejectIcon />}
-              sx={{
-                borderRadius: 2,
-                fontWeight: 600,
-                textTransform: 'none',
-                fontSize: '0.875rem',
-                py: 1.25,
-                width: '100%',
-                background: (theme) => alpha(theme.palette.text.secondary, 0.12),
-                color: 'text.secondary',
-              }}
             >
+              <X className="mr-2 h-4 w-4" />
               Rejected
             </Button>
           )}
-        </Box>
+        </div>
       </CardContent>
     </Card>
   );

@@ -1,18 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
-import {
-  Container,
-  Box,
-  Typography,
-  TextField,
-  Button,
-  Link,
-  CircularProgress,
-  InputAdornment,
-  IconButton,
-  alpha,
-} from '@mui/material';
-import { Visibility, VisibilityOff } from '@mui/icons-material';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useAuth } from '../contexts/AuthContext';
 
 const RegisterPage: React.FC = () => {
@@ -88,302 +78,185 @@ const RegisterPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <Container maxWidth="sm">
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
-          <CircularProgress />
-        </Box>
-      </Container>
+      <div className="flex justify-center items-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
     );
   }
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        bgcolor: (theme) => theme.palette.mode === 'dark' ? '#0a0a0a' : '#fafafa',
-        position: 'relative',
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '400px',
-          background: (theme) => theme.palette.mode === 'dark'
-            ? 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #7c3aed 100%)'
-            : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #8b5cf6 100%)',
-          opacity: 0.1,
-          zIndex: 0,
-        },
-      }}
-    >
-      <Container maxWidth="sm" sx={{ position: 'relative', zIndex: 1 }}>
-        <Box
-          display="flex"
-          flexDirection="column"
-          justifyContent="center"
-          minHeight="100vh"
-          py={4}
-        >
+    <div className="min-h-screen flex bg-background relative">
+      {/* Background gradient */}
+      <div className="absolute top-0 left-0 right-0 h-[400px] bg-gradient-to-br from-blue-500/10 via-blue-600/10 to-purple-500/10 -z-10" />
+
+      <div className="container max-w-sm mx-auto relative z-10">
+        <div className="flex flex-col justify-center min-h-screen py-4">
           {/* Logo */}
-          <Box mb={6}>
-            <Typography
-              variant="h4"
-              sx={{
-                fontWeight: 800,
-                fontSize: '2rem',
-                background: (theme) => theme.palette.mode === 'dark'
-                  ? 'linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%)'
-                  : 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                letterSpacing: '-0.02em',
-              }}
-            >
+          <div className="mb-12">
+            <h1 className="text-4xl font-extrabold bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent tracking-tight">
               JobHunt
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, fontWeight: 500 }}>
+            </h1>
+            <p className="text-sm text-muted-foreground mt-2 font-medium">
               Track and manage your career opportunities
-            </Typography>
-          </Box>
+            </p>
+          </div>
 
           {/* Register Card */}
-          <Box
-            sx={{
-              bgcolor: 'background.paper',
-              borderRadius: 3,
-              p: 4,
-              boxShadow: (theme) => theme.palette.mode === 'dark'
-                ? '0 8px 32px rgba(0,0,0,0.4)'
-                : '0 8px 32px rgba(0,0,0,0.08)',
-              border: '1px solid',
-              borderColor: (theme) => alpha(theme.palette.divider, 0.1),
-            }}
-          >
-            <Typography variant="h5" fontWeight={700} mb={1}>
-              Create your account
-            </Typography>
-
-            <Typography variant="body2" color="text.secondary" mb={4}>
+          <div className="bg-card rounded-lg p-8 shadow-lg border">
+            <h2 className="text-2xl font-bold mb-1">Create your account</h2>
+            <p className="text-sm text-muted-foreground mb-6">
               Start tracking your job applications today
-            </Typography>
+            </p>
 
             {/* Registration Form */}
             <form onSubmit={handleSubmit}>
-              <Box mb={2}>
-                <Typography variant="body2" fontWeight={600} mb={1} color="text.primary">
+              <div className="mb-4">
+                <label className="text-sm font-semibold mb-2 block">
                   Username
-                </Typography>
-                <TextField
-                  fullWidth
+                </label>
+                <Input
                   name="username"
+                  type="text"
                   placeholder="Choose a username"
-                  variant="outlined"
                   required
                   value={formData.username}
                   onChange={handleChange}
-                  error={!!errors.username}
-                  helperText={errors.username}
                   autoComplete="username"
                   autoFocus
                   disabled={isSubmitting}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      bgcolor: (theme) => theme.palette.mode === 'dark' ? '#1a1a1a' : '#f9fafb',
-                      borderRadius: 2,
-                      '& fieldset': { borderColor: 'transparent' },
-                      '&:hover fieldset': { borderColor: (theme) => alpha(theme.palette.primary.main, 0.3) },
-                      '&.Mui-focused fieldset': { borderColor: 'primary.main', borderWidth: '2px' },
-                    },
-                  }}
+                  className="bg-muted/50"
                 />
-              </Box>
+                {errors.username && (
+                  <p className="text-xs text-destructive mt-1">{errors.username}</p>
+                )}
+              </div>
 
-              <Box mb={2}>
-                <Typography variant="body2" fontWeight={600} mb={1} color="text.primary">
+              <div className="mb-4">
+                <label className="text-sm font-semibold mb-2 block">
                   Email
-                </Typography>
-                <TextField
-                  fullWidth
+                </label>
+                <Input
                   name="email"
                   type="email"
                   placeholder="your@email.com"
-                  variant="outlined"
                   required
                   value={formData.email}
                   onChange={handleChange}
-                  error={!!errors.email}
-                  helperText={errors.email}
                   autoComplete="email"
                   disabled={isSubmitting}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      bgcolor: (theme) => theme.palette.mode === 'dark' ? '#1a1a1a' : '#f9fafb',
-                      borderRadius: 2,
-                      '& fieldset': { borderColor: 'transparent' },
-                      '&:hover fieldset': { borderColor: (theme) => alpha(theme.palette.primary.main, 0.3) },
-                      '&.Mui-focused fieldset': { borderColor: 'primary.main', borderWidth: '2px' },
-                    },
-                  }}
+                  className="bg-muted/50"
                 />
-              </Box>
+                {errors.email && (
+                  <p className="text-xs text-destructive mt-1">{errors.email}</p>
+                )}
+              </div>
 
-              <Box mb={2}>
-                <Typography variant="body2" fontWeight={600} mb={1} color="text.primary">
-                  Full Name <span style={{ opacity: 0.6 }}>(optional)</span>
-                </Typography>
-                <TextField
-                  fullWidth
+              <div className="mb-4">
+                <label className="text-sm font-semibold mb-2 block">
+                  Full Name <span className="opacity-60">(optional)</span>
+                </label>
+                <Input
                   name="fullName"
+                  type="text"
                   placeholder="Your full name"
-                  variant="outlined"
                   value={formData.fullName}
                   onChange={handleChange}
                   autoComplete="name"
                   disabled={isSubmitting}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      bgcolor: (theme) => theme.palette.mode === 'dark' ? '#1a1a1a' : '#f9fafb',
-                      borderRadius: 2,
-                      '& fieldset': { borderColor: 'transparent' },
-                      '&:hover fieldset': { borderColor: (theme) => alpha(theme.palette.primary.main, 0.3) },
-                      '&.Mui-focused fieldset': { borderColor: 'primary.main', borderWidth: '2px' },
-                    },
-                  }}
+                  className="bg-muted/50"
                 />
-              </Box>
+              </div>
 
-              <Box mb={2}>
-                <Typography variant="body2" fontWeight={600} mb={1} color="text.primary">
+              <div className="mb-4">
+                <label className="text-sm font-semibold mb-2 block">
                   Password
-                </Typography>
-                <TextField
-                  fullWidth
-                  name="password"
-                  placeholder="Create a strong password"
-                  variant="outlined"
-                  required
-                  type={showPassword ? 'text' : 'password'}
-                  value={formData.password}
-                  onChange={handleChange}
-                  error={!!errors.password}
-                  helperText={errors.password}
-                  autoComplete="new-password"
-                  disabled={isSubmitting}
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          onClick={() => setShowPassword(!showPassword)}
-                          edge="end"
-                          disabled={isSubmitting}
-                          size="small"
-                        >
-                          {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      bgcolor: (theme) => theme.palette.mode === 'dark' ? '#1a1a1a' : '#f9fafb',
-                      borderRadius: 2,
-                      '& fieldset': { borderColor: 'transparent' },
-                      '&:hover fieldset': { borderColor: (theme) => alpha(theme.palette.primary.main, 0.3) },
-                      '&.Mui-focused fieldset': { borderColor: 'primary.main', borderWidth: '2px' },
-                    },
-                  }}
-                />
-              </Box>
+                </label>
+                <div className="relative">
+                  <Input
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Create a strong password"
+                    required
+                    value={formData.password}
+                    onChange={handleChange}
+                    autoComplete="new-password"
+                    disabled={isSubmitting}
+                    className="bg-muted/50 pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    disabled={isSubmitting}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p className="text-xs text-destructive mt-1">{errors.password}</p>
+                )}
+              </div>
 
-              <Box mb={3}>
-                <Typography variant="body2" fontWeight={600} mb={1} color="text.primary">
+              <div className="mb-6">
+                <label className="text-sm font-semibold mb-2 block">
                   Confirm Password
-                </Typography>
-                <TextField
-                  fullWidth
+                </label>
+                <Input
                   name="confirmPassword"
-                  placeholder="Re-enter your password"
-                  variant="outlined"
-                  required
                   type={showPassword ? 'text' : 'password'}
+                  placeholder="Re-enter your password"
+                  required
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  error={!!errors.confirmPassword}
-                  helperText={errors.confirmPassword}
                   autoComplete="new-password"
                   disabled={isSubmitting}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      bgcolor: (theme) => theme.palette.mode === 'dark' ? '#1a1a1a' : '#f9fafb',
-                      borderRadius: 2,
-                      '& fieldset': { borderColor: 'transparent' },
-                      '&:hover fieldset': { borderColor: (theme) => alpha(theme.palette.primary.main, 0.3) },
-                      '&.Mui-focused fieldset': { borderColor: 'primary.main', borderWidth: '2px' },
-                    },
-                  }}
+                  className="bg-muted/50"
                 />
-              </Box>
+                {errors.confirmPassword && (
+                  <p className="text-xs text-destructive mt-1">{errors.confirmPassword}</p>
+                )}
+              </div>
 
               <Button
-                fullWidth
                 type="submit"
-                variant="contained"
-                size="large"
+                className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold"
+                size="lg"
                 disabled={isSubmitting}
-                sx={{
-                  py: 1.5,
-                  borderRadius: 2,
-                  fontWeight: 600,
-                  fontSize: '0.9375rem',
-                  textTransform: 'none',
-                  background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                  boxShadow: 'none',
-                  '&:hover': {
-                    background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-                    boxShadow: '0 4px 12px rgba(37,99,235,0.4)',
-                  },
-                  '&:disabled': {
-                    background: (theme) => alpha(theme.palette.action.disabled, 0.12),
-                  },
-                }}
               >
-                {isSubmitting ? <CircularProgress size={24} color="inherit" /> : 'Create account'}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating account...
+                  </>
+                ) : (
+                  'Create account'
+                )}
               </Button>
             </form>
 
             {/* Login Link */}
-            <Box textAlign="center" mt={3}>
-              <Typography variant="body2" color="text.secondary">
+            <div className="text-center mt-6">
+              <p className="text-sm text-muted-foreground">
                 Already have an account?{' '}
-                <Link
-                  component={RouterLink}
+                <RouterLink
                   to="/login"
-                  underline="none"
-                  sx={{
-                    color: 'primary.main',
-                    fontWeight: 600,
-                    '&:hover': {
-                      textDecoration: 'underline',
-                    },
-                  }}
+                  className="text-primary font-semibold hover:underline"
                 >
                   Sign in
-                </Link>
-              </Typography>
-            </Box>
-          </Box>
+                </RouterLink>
+              </p>
+            </div>
+          </div>
 
           {/* Footer */}
-          <Box mt={6} textAlign="center">
-            <Typography variant="caption" color="text.secondary">
+          <div className="mt-12 text-center">
+            <p className="text-xs text-muted-foreground">
               By creating an account, you agree to our terms
-            </Typography>
-          </Box>
-        </Box>
-      </Container>
-    </Box>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 
