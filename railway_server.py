@@ -358,25 +358,29 @@ async def get_jobs_api(current_user: Optional[Dict[str, Any]] = Depends(get_curr
                         filtered_jobs[job_id] = job_data
                         continue
 
-                    # CRITICAL: Filter out jobs this user has already interacted with
-                    # Check 1: By job_id (direct match)
+                    # Merge user interaction status into job data
                     if job_id in user_interactions:
                         interaction = user_interactions[job_id]
-                        if interaction['applied'] or interaction['rejected']:
-                            print(f"[FILTER] Hiding job {job_id[:12]}... - user already {'applied' if interaction['applied'] else 'rejected'}")
-                            continue
+                        job_data = {**job_data}  # Create a copy
+                        job_data['applied'] = interaction['applied']
+                        job_data['rejected'] = interaction['rejected']
+                        job_data['saved'] = interaction['saved']
 
-                    # Check 2: By company+title signature (catches re-scraped jobs with new IDs)
+                    # Check if this is a repost of a job they already applied to
                     company = job_data.get('company', '').strip()
                     title = job_data.get('title', '').strip()
+                    is_repost = False
                     if company and title:
                         # Normalize title (remove senior, junior, etc.)
                         normalized_title = db.normalize_job_title(title) if db else title.lower()
                         signature_key = f"{company.lower()}|{normalized_title.lower()}"
 
-                        if signature_key in user_signatures:
-                            print(f"[FILTER] Hiding job {job_id[:12]}... - user already applied to '{title}' at {company} (repost with new ID)")
-                            continue
+                        if signature_key in user_signatures and job_id not in user_interactions:
+                            # This is a repost - mark as applied/rejected automatically
+                            is_repost = True
+                            job_data = {**job_data}
+                            job_data['applied'] = True  # Auto-mark reposts as applied
+                            print(f"[FILTER] Auto-marking repost {job_id[:12]}... as applied - '{title}' at {company}")
 
                     # Get job details for filtering
                     title_lower = title.lower()
@@ -504,6 +508,18 @@ async def get_jobs_api(current_user: Optional[Dict[str, Any]] = Depends(get_curr
                     filtered_jobs[job_id] = job_data
 
                 return filtered_jobs
+            else:
+                # User authenticated but no preferences - merge interactions with all jobs
+                merged_jobs = {}
+                for job_id, job_data in all_jobs.items():
+                    if job_id in user_interactions:
+                        interaction = user_interactions[job_id]
+                        job_data = {**job_data}
+                        job_data['applied'] = interaction['applied']
+                        job_data['rejected'] = interaction['rejected']
+                        job_data['saved'] = interaction['saved']
+                    merged_jobs[job_id] = job_data
+                return merged_jobs
     except Exception as e:
         print(f"Error filtering jobs by preferences: {e}")
         # On error, return all jobs
