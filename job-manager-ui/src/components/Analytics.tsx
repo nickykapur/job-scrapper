@@ -115,7 +115,6 @@ export const Analytics: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
-  const theme = useTheme();
 
   useEffect(() => {
     loadAnalytics();
