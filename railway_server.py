@@ -1876,6 +1876,181 @@ async def get_analytics():
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to get analytics: {str(e)}")
 
+@app.get("/api/analytics/personal")
+async def get_personal_analytics(current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Get personal analytics for the authenticated user - time patterns, country stats, application velocity"""
+    if not db or not DATABASE_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    try:
+        conn = await db.get_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Could not connect to database")
+
+        user_id = current_user['user_id']
+
+        # 1. Time-based patterns - Hour of day when user applies most
+        hourly_pattern = await conn.fetch("""
+            SELECT
+                EXTRACT(HOUR FROM applied_at) as hour,
+                COUNT(*) as applications
+            FROM user_job_interactions
+            WHERE user_id = $1 AND applied = TRUE AND applied_at IS NOT NULL
+            GROUP BY EXTRACT(HOUR FROM applied_at)
+            ORDER BY hour
+        """, user_id)
+
+        # 2. Day of week pattern
+        daily_pattern = await conn.fetch("""
+            SELECT
+                EXTRACT(DOW FROM applied_at) as day_of_week,
+                COUNT(*) as applications
+            FROM user_job_interactions
+            WHERE user_id = $1 AND applied = TRUE AND applied_at IS NOT NULL
+            GROUP BY EXTRACT(DOW FROM applied_at)
+            ORDER BY day_of_week
+        """, user_id)
+
+        # 3. Country-wise application distribution
+        country_stats = await conn.fetch("""
+            SELECT
+                j.country,
+                COUNT(*) FILTER (WHERE uji.applied = TRUE) as applied_count,
+                COUNT(*) FILTER (WHERE uji.rejected = TRUE) as rejected_count,
+                COUNT(*) FILTER (WHERE uji.saved = TRUE) as saved_count
+            FROM user_job_interactions uji
+            JOIN jobs j ON uji.job_id = j.id
+            WHERE uji.user_id = $1 AND j.country IS NOT NULL
+            GROUP BY j.country
+            ORDER BY applied_count DESC
+        """, user_id)
+
+        # 4. Application velocity - Applications per day for last 30 days
+        velocity_stats = await conn.fetch("""
+            SELECT
+                DATE(applied_at) as date,
+                COUNT(*) as applications
+            FROM user_job_interactions
+            WHERE user_id = $1
+            AND applied = TRUE
+            AND applied_at >= NOW() - INTERVAL '30 days'
+            GROUP BY DATE(applied_at)
+            ORDER BY date ASC
+        """, user_id)
+
+        # 5. Overall stats and streaks
+        overall_stats = await conn.fetchrow("""
+            SELECT
+                COUNT(*) FILTER (WHERE applied = TRUE) as total_applied,
+                COUNT(*) FILTER (WHERE rejected = TRUE) as total_rejected,
+                COUNT(*) FILTER (WHERE saved = TRUE) as total_saved,
+                COUNT(*) FILTER (WHERE applied = TRUE AND applied_at >= NOW() - INTERVAL '7 days') as applied_last_7_days,
+                COUNT(*) FILTER (WHERE applied = TRUE AND applied_at >= NOW() - INTERVAL '30 days') as applied_last_30_days,
+                MIN(applied_at) FILTER (WHERE applied = TRUE) as first_application,
+                MAX(applied_at) FILTER (WHERE applied = TRUE) as last_application
+            FROM user_job_interactions
+            WHERE user_id = $1
+        """, user_id)
+
+        # 6. Job type preferences
+        job_type_stats = await conn.fetch("""
+            SELECT
+                j.job_type,
+                COUNT(*) FILTER (WHERE uji.applied = TRUE) as applied_count,
+                COUNT(*) FILTER (WHERE uji.rejected = TRUE) as rejected_count
+            FROM user_job_interactions uji
+            JOIN jobs j ON uji.job_id = j.id
+            WHERE uji.user_id = $1 AND j.job_type IS NOT NULL
+            GROUP BY j.job_type
+            ORDER BY applied_count DESC
+        """, user_id)
+
+        # 7. Application success rate by experience level
+        experience_stats = await conn.fetch("""
+            SELECT
+                j.experience_level,
+                COUNT(*) FILTER (WHERE uji.applied = TRUE) as applied_count,
+                COUNT(*) FILTER (WHERE uji.rejected = TRUE) as rejected_count
+            FROM user_job_interactions uji
+            JOIN jobs j ON uji.job_id = j.id
+            WHERE uji.user_id = $1 AND j.experience_level IS NOT NULL
+            GROUP BY j.experience_level
+            ORDER BY applied_count DESC
+        """, user_id)
+
+        await conn.close()
+
+        # Calculate success rate
+        total_applied = overall_stats['total_applied'] or 0
+        total_rejected = overall_stats['total_rejected'] or 0
+        total_interactions = total_applied + total_rejected
+        success_rate = (total_applied / total_interactions * 100) if total_interactions > 0 else 0
+
+        # Calculate average applications per day (only counting days with activity)
+        days_active = len(velocity_stats)
+        avg_per_active_day = (total_applied / days_active) if days_active > 0 else 0
+
+        # Format day of week names
+        day_names = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+        return {
+            "hourly_pattern": [
+                {"hour": int(row['hour']), "applications": row['applications']}
+                for row in hourly_pattern
+            ],
+            "daily_pattern": [
+                {"day": day_names[int(row['day_of_week'])], "day_number": int(row['day_of_week']), "applications": row['applications']}
+                for row in daily_pattern
+            ],
+            "countries": [
+                {
+                    "country": row['country'],
+                    "applied": row['applied_count'],
+                    "rejected": row['rejected_count'],
+                    "saved": row['saved_count']
+                }
+                for row in country_stats
+            ],
+            "velocity": [
+                {"date": row['date'].isoformat(), "applications": row['applications']}
+                for row in velocity_stats
+            ],
+            "job_types": [
+                {
+                    "job_type": row['job_type'],
+                    "applied": row['applied_count'],
+                    "rejected": row['rejected_count']
+                }
+                for row in job_type_stats
+            ],
+            "experience_levels": [
+                {
+                    "level": row['experience_level'],
+                    "applied": row['applied_count'],
+                    "rejected": row['rejected_count']
+                }
+                for row in experience_stats
+            ],
+            "summary": {
+                "total_applied": total_applied,
+                "total_rejected": total_rejected,
+                "total_saved": overall_stats['total_saved'] or 0,
+                "applied_last_7_days": overall_stats['applied_last_7_days'] or 0,
+                "applied_last_30_days": overall_stats['applied_last_30_days'] or 0,
+                "first_application": overall_stats['first_application'].isoformat() if overall_stats['first_application'] else None,
+                "last_application": overall_stats['last_application'].isoformat() if overall_stats['last_application'] else None,
+                "success_rate": round(success_rate, 1),
+                "avg_per_active_day": round(avg_per_active_day, 1),
+                "days_active": days_active
+            }
+        }
+
+    except Exception as e:
+        print(f"❌ Error getting personal analytics: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to get personal analytics: {str(e)}")
+
 # Catch-all route for React Router (SPA routing)
 @app.get("/{full_path:path}")
 async def catch_all(full_path: str):

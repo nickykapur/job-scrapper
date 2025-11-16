@@ -79,6 +79,12 @@ export const jobApi = {
     const response = await api.get('/api/admin/analytics');
     return response.data;
   },
+
+  // Get personal analytics for current user
+  getPersonalAnalytics: async (): Promise<any> => {
+    const response = await api.get('/api/analytics/personal');
+    return response.data;
+  },
 };
 
 export default api;

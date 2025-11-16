@@ -26,6 +26,7 @@ import { FilterControls } from './components/FilterControls';
 import { Training } from './components/Training';
 import { SystemDesign } from './components/SystemDesign';
 import { Analytics } from './components/Analytics';
+import { PersonalAnalytics } from './components/PersonalAnalytics';
 // import JobSearch from './components/JobSearch';
 // import CountryStats from './components/CountryStats';
 import { jobApi } from './services/api';
@@ -44,7 +45,7 @@ const App: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [localRejectedCount, setLocalRejectedCount] = useState(0);
-  const [currentTab, setCurrentTab] = useState<'dashboard' | 'training' | 'system-design' | 'analytics'>('dashboard');
+  const [currentTab, setCurrentTab] = useState<'dashboard' | 'training' | 'system-design' | 'my-analytics' | 'analytics'>('dashboard');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   // Check if current user is software_admin or has admin access
@@ -220,6 +221,15 @@ const App: React.FC = () => {
         {hasSoftwareAccess && (
           <>
             <Button
+              variant={currentTab === 'my-analytics' ? 'secondary' : 'ghost'}
+              className="w-full justify-start"
+              onClick={() => { setCurrentTab('my-analytics'); if (isMobile) setDrawerOpen(false); }}
+            >
+              <BarChart3 className="mr-3 h-4 w-4" />
+              My Analytics
+            </Button>
+
+            <Button
               variant={currentTab === 'training' ? 'secondary' : 'ghost'}
               className="w-full justify-start"
               onClick={() => { setCurrentTab('training'); if (isMobile) setDrawerOpen(false); }}
@@ -329,6 +339,7 @@ const App: React.FC = () => {
             <div className="flex-1">
               <h2 className="text-lg font-bold">
                 {currentTab === 'dashboard' ? 'Jobs' :
+                 currentTab === 'my-analytics' ? 'My Analytics' :
                  currentTab === 'training' ? 'DSA Training' :
                  currentTab === 'system-design' ? 'System Design' : 'Analytics'}
               </h2>
@@ -391,6 +402,7 @@ const App: React.FC = () => {
               </>
             )}
 
+            {currentTab === 'my-analytics' && hasSoftwareAccess && <PersonalAnalytics />}
             {currentTab === 'training' && hasSoftwareAccess && <Training />}
             {currentTab === 'system-design' && hasSoftwareAccess && <SystemDesign />}
             {currentTab === 'analytics' && hasAnalyticsAccess && <Analytics />}
