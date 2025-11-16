@@ -159,10 +159,13 @@ const App: React.FC = () => {
       if (id.startsWith('_')) return;
 
       // Status filter
-      if (filters.status === 'applied' && !job.applied) return;
-      if (filters.status === 'not_applied' && (job.applied || job.rejected)) return;
-      if (filters.status === 'new' && !job.is_new) return;
-      if (filters.status === 'rejected' && !job.rejected) return;
+      if (filters.status === 'all') {
+        // Hide jobs that are already applied to or rejected
+        if (job.applied || job.rejected) return;
+      } else if (filters.status === 'applied' && !job.applied) return;
+      else if (filters.status === 'not_applied' && (job.applied || job.rejected)) return;
+      else if (filters.status === 'new' && !job.is_new) return;
+      else if (filters.status === 'rejected' && !job.rejected) return;
 
       // Job type filter
       if (filters.jobType !== 'all' && job.job_type !== filters.jobType) return;
