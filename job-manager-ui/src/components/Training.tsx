@@ -1,26 +1,20 @@
 import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Progress } from '@/components/ui/progress';
 import {
-  Box,
-  Typography,
-  Paper,
-  Grid,
-  Chip,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
-  Checkbox,
-  LinearProgress,
   Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Stack,
-} from '@mui/material';
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import { motion } from 'framer-motion';
 import {
-  ExpandMore as ExpandMoreIcon,
-  CheckCircle as CheckCircleIcon,
-  School as SchoolIcon,
-} from '@mui/icons-material';
+  GraduationCap,
+  CheckCircle,
+  Circle,
+} from 'lucide-react';
 
 interface TrainingItem {
   id: string;
@@ -136,9 +130,10 @@ const NEETCODE_ROADMAP: TrainingCategory[] = [
 
 const LOCAL_STORAGE_KEY = 'neetcode-training-progress';
 
+const MotionCard = motion(Card);
+
 export const Training: React.FC = () => {
   const [categories, setCategories] = useState<TrainingCategory[]>(NEETCODE_ROADMAP);
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['arrays']));
 
   // Load progress from localStorage on component mount
   useEffect(() => {
@@ -188,18 +183,6 @@ export const Training: React.FC = () => {
     saveProgress(updatedCategories);
   };
 
-  const toggleCategoryExpansion = (categoryId: string) => {
-    setExpandedCategories(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(categoryId)) {
-        newSet.delete(categoryId);
-      } else {
-        newSet.add(categoryId);
-      }
-      return newSet;
-    });
-  };
-
   const getCategoryProgress = (category: TrainingCategory) => {
     const completed = category.items.filter(item => item.completed).length;
     const total = category.items.length;
@@ -216,11 +199,11 @@ export const Training: React.FC = () => {
     };
   };
 
-  const getDifficultyColor = (difficulty: string) => {
+  const getDifficultyVariant = (difficulty: string): "default" | "secondary" | "destructive" => {
     switch (difficulty) {
-      case 'Easy': return 'success';
-      case 'Medium': return 'warning';
-      case 'Hard': return 'error';
+      case 'Easy': return 'secondary';
+      case 'Medium': return 'default';
+      case 'Hard': return 'destructive';
       default: return 'default';
     }
   };
@@ -228,200 +211,114 @@ export const Training: React.FC = () => {
   const overallProgress = getOverallProgress();
 
   return (
-    <Box sx={{ width: '100%' }}>
+    <div className="space-y-6">
       {/* Header */}
-      <Paper
-        sx={{
-          p: 3,
-          mb: 3,
-          borderRadius: 3,
-          background: (theme) => theme.palette.mode === 'dark'
-            ? 'linear-gradient(135deg, #1e1e1e 0%, #2a2a2a 100%)'
-            : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
-          border: '1px solid',
-          borderColor: 'divider',
-        }}
+      <MotionCard
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
       >
-        <Stack direction="row" alignItems="center" spacing={2} mb={2}>
-          <SchoolIcon color="primary" sx={{ fontSize: 32 }} />
-          <Box>
-            <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary' }}>
-              Training Roadmap
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              Track your progress through the Neetcode.io algorithm roadmap
-            </Typography>
-          </Box>
-        </Stack>
-
-        {/* Overall Progress */}
-        <Box sx={{ mt: 2 }}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
-            <Typography variant="subtitle1" fontWeight={600}>
-              Overall Progress
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {overallProgress.completed} / {overallProgress.total} problems completed
-            </Typography>
-          </Stack>
-          <LinearProgress
-            variant="determinate"
-            value={overallProgress.percentage}
-            sx={{
-              height: 8,
-              borderRadius: 4,
-              backgroundColor: 'rgba(0,0,0,0.1)',
-              '& .MuiLinearProgress-bar': {
-                borderRadius: 4,
-                background: 'linear-gradient(90deg, #4caf50 0%, #8bc34a 100%)',
-              },
-            }}
-          />
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            {overallProgress.percentage.toFixed(1)}% Complete
-          </Typography>
-        </Box>
-      </Paper>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <GraduationCap className="w-8 h-8 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-3xl font-bold">DSA Training Roadmap</CardTitle>
+              <p className="text-muted-foreground">
+                Track your progress through the Neetcode.io algorithm roadmap
+              </p>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-semibold">Overall Progress</span>
+              <span className="text-muted-foreground">
+                {overallProgress.completed} / {overallProgress.total} problems completed
+              </span>
+            </div>
+            <Progress value={overallProgress.percentage} className="h-3" />
+            <p className="text-xs text-muted-foreground">
+              {overallProgress.percentage.toFixed(1)}% Complete
+            </p>
+          </div>
+        </CardContent>
+      </MotionCard>
 
       {/* Training Categories */}
-      <Grid container spacing={2}>
+      <Accordion type="multiple" defaultValue={['arrays']} className="space-y-3">
         {categories.map((category) => {
           const progress = getCategoryProgress(category);
           return (
-            <Grid item xs={12} key={category.id}>
-              <Accordion
-                expanded={expandedCategories.has(category.id)}
-                onChange={() => toggleCategoryExpansion(category.id)}
-                sx={{
-                  borderRadius: 2,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                  '&:before': { display: 'none' },
-                  '&.Mui-expanded': {
-                    margin: 0,
-                  },
-                }}
-              >
-                <AccordionSummary
-                  expandIcon={<ExpandMoreIcon />}
-                  sx={{
-                    backgroundColor: 'background.paper',
-                    borderRadius: '8px 8px 0 0',
-                    '&.Mui-expanded': {
-                      minHeight: 56,
-                    },
-                    '& .MuiAccordionSummary-content': {
-                      margin: '12px 0',
-                      '&.Mui-expanded': {
-                        margin: '12px 0',
-                      },
-                    },
-                  }}
-                >
-                  <Stack direction="row" alignItems="center" spacing={2} sx={{ width: '100%', mr: 1 }}>
-                    <Box
-                      sx={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: 1,
-                        backgroundColor: 'primary.main',
-                        color: 'primary.contrastText',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontWeight: 600,
-                        fontSize: '0.875rem',
-                      }}
+            <AccordionItem
+              key={category.id}
+              value={category.id}
+              className="border rounded-lg bg-card"
+            >
+              <AccordionTrigger className="px-6 hover:no-underline">
+                <div className="flex items-center gap-3 w-full pr-4">
+                  <div className="w-10 h-10 rounded-md bg-primary text-primary-foreground flex items-center justify-center font-semibold">
+                    {category.icon}
+                  </div>
+                  <div className="flex-1 text-left">
+                    <h3 className="font-semibold">{category.name}</h3>
+                    <p className="text-sm text-muted-foreground">{category.description}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={progress.completed === progress.total ? "default" : "outline"}>
+                      {progress.completed === progress.total && <CheckCircle className="w-3 h-3 mr-1" />}
+                      {progress.completed}/{progress.total}
+                    </Badge>
+                    <span className="text-sm text-muted-foreground min-w-[40px]">
+                      {progress.percentage.toFixed(0)}%
+                    </span>
+                  </div>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="px-6 pb-4">
+                <div className="mb-4">
+                  <Progress value={progress.percentage} className="h-2" />
+                </div>
+                <div className="space-y-1">
+                  {category.items.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between p-3 rounded-md hover:bg-accent transition-colors"
                     >
-                      {category.icon}
-                    </Box>
-                    <Box sx={{ flexGrow: 1 }}>
-                      <Typography variant="h6" fontWeight={600}>
-                        {category.name}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {category.description}
-                      </Typography>
-                    </Box>
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <Chip
-                        label={`${progress.completed}/${progress.total}`}
-                        size="small"
-                        color={progress.completed === progress.total ? 'success' : 'default'}
-                        icon={progress.completed === progress.total ? <CheckCircleIcon /> : undefined}
-                      />
-                      <Typography variant="body2" color="text.secondary" sx={{ minWidth: 40 }}>
-                        {progress.percentage.toFixed(0)}%
-                      </Typography>
-                    </Stack>
-                  </Stack>
-                </AccordionSummary>
-                <AccordionDetails sx={{ pt: 0 }}>
-                  <Box sx={{ mb: 2 }}>
-                    <LinearProgress
-                      variant="determinate"
-                      value={progress.percentage}
-                      sx={{
-                        height: 6,
-                        borderRadius: 3,
-                        backgroundColor: 'rgba(0,0,0,0.1)',
-                        '& .MuiLinearProgress-bar': {
-                          borderRadius: 3,
-                        },
-                      }}
-                    />
-                  </Box>
-                  <List disablePadding>
-                    {category.items.map((item) => (
-                      <ListItem
-                        key={item.id}
-                        sx={{
-                          borderRadius: 1,
-                          mb: 0.5,
-                          '&:hover': {
-                            backgroundColor: 'action.hover',
-                          },
-                        }}
-                      >
-                        <ListItemText
-                          primary={
-                            <Stack direction="row" alignItems="center" spacing={1}>
-                              <Typography
-                                variant="body1"
-                                sx={{
-                                  textDecoration: item.completed ? 'line-through' : 'none',
-                                  opacity: item.completed ? 0.7 : 1,
-                                }}
-                              >
-                                {item.title}
-                              </Typography>
-                              <Chip
-                                label={item.difficulty}
-                                size="small"
-                                color={getDifficultyColor(item.difficulty) as any}
-                                variant="outlined"
-                              />
-                            </Stack>
-                          }
+                      <div className="flex items-center gap-3 flex-1">
+                        <Checkbox
+                          checked={item.completed}
+                          onCheckedChange={() => toggleItemCompletion(category.id, item.id)}
+                          className="mt-0.5"
                         />
-                        <ListItemSecondaryAction>
-                          <Checkbox
-                            edge="end"
-                            checked={item.completed}
-                            onChange={() => toggleItemCompletion(category.id, item.id)}
-                            color="success"
-                          />
-                        </ListItemSecondaryAction>
-                      </ListItem>
-                    ))}
-                  </List>
-                </AccordionDetails>
-              </Accordion>
-            </Grid>
+                        <div className="flex items-center gap-2 flex-1">
+                          <span
+                            className={`text-sm ${
+                              item.completed ? 'line-through text-muted-foreground' : ''
+                            }`}
+                          >
+                            {item.title}
+                          </span>
+                          <Badge variant={getDifficultyVariant(item.difficulty)} className="text-xs">
+                            {item.difficulty}
+                          </Badge>
+                        </div>
+                      </div>
+                      {item.completed && (
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
           );
         })}
-      </Grid>
-    </Box>
+      </Accordion>
+    </div>
   );
 };
+
+export default Training;

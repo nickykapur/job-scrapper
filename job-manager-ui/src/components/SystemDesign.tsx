@@ -1,38 +1,25 @@
 import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
 import {
-  Box,
-  Typography,
-  Paper,
-  Grid,
-  Chip,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
-  Checkbox,
-  LinearProgress,
   Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Stack,
-  Card,
-  CardContent,
-} from '@mui/material';
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import { motion } from 'framer-motion';
 import {
-  ExpandMore as ExpandMoreIcon,
-  CheckCircle as CheckCircleIcon,
-  Architecture as ArchitectureIcon,
-  Storage as DatabaseIcon,
-  CloudQueue as CloudIcon,
-  Security as SecurityIcon,
-  Speed as PerformanceIcon,
-  AccountTree as MicroservicesIcon,
-  OpenInNew as OpenInNewIcon,
-  Article as ArticleIcon,
-  VideoLibrary as VideoIcon,
-  Code as GitHubIcon,
-  School as TutorialIcon,
-} from '@mui/icons-material';
+  Building2,
+  CheckCircle,
+  ExternalLink,
+  FileText,
+  Video,
+  Code,
+  BookOpen,
+} from 'lucide-react';
 
 interface SystemDesignItem {
   id: string;
@@ -58,14 +45,14 @@ interface SystemDesignLevel {
   color: string;
 }
 
-// Comprehensive System Design Roadmap based on research and the provided structure
+// System Design Roadmap
 const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
   {
     id: 'foundation',
     name: 'Level 1: Foundation',
     description: 'Essential concepts and mindset for system design interviews',
     icon: 'F',
-    color: '#2196f3',
+    color: 'hsl(var(--chart-1))',
     items: [
       {
         id: 'about-tree',
@@ -85,36 +72,6 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         }
       },
       {
-        id: 'expectations-by-level',
-        title: 'Expectations by Level',
-        description: 'What interviewers look for from junior through staff engineer levels',
-        difficulty: 'Foundation',
-        completed: false,
-        category: 'concept',
-        resources: {
-          articles: [
-            'https://www.designgurus.io/blog/system-design-interview-fundamentals',
-            'https://blog.algomaster.io/p/30-system-design-concepts'
-          ]
-        }
-      },
-      {
-        id: 'requirement-collection',
-        title: 'Requirement Collection',
-        description: 'Extracting functional and non-functional requirements before designing',
-        difficulty: 'Foundation',
-        completed: false,
-        category: 'concept',
-        resources: {
-          articles: [
-            'https://algomaster.io/learn/system-design/what-is-system-design'
-          ],
-          tutorials: [
-            'https://www.geeksforgeeks.org/system-design/getting-started-with-system-design/'
-          ]
-        }
-      },
-      {
         id: 'cap-theorem',
         title: 'CAP Theorem',
         description: 'Understanding consistency, availability, and partition tolerance trade-offs',
@@ -123,12 +80,10 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         category: 'concept',
         resources: {
           articles: [
-            'https://dev.to/karanpratapsingh/system-design-cap-theorem-2n9j',
-            'https://www.geeksforgeeks.org/system-design/cap-theorem-in-system-design/'
+            'https://dev.to/karanpratapsingh/system-design-cap-theorem-2n9j'
           ],
           github: [
-            'https://github.com/Devinterview-io/cap-theorem-interview-questions',
-            'https://github.com/Jeevan-kumar-Raj/Grokking-System-Design/blob/master/basics/cap-theorem.md'
+            'https://github.com/Devinterview-io/cap-theorem-interview-questions'
           ]
         }
       },
@@ -142,9 +97,6 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         resources: {
           tutorials: [
             'https://www.geeksforgeeks.org/system-design/getting-started-with-system-design/'
-          ],
-          github: [
-            'https://github.com/karanpratapsingh/system-design'
           ]
         }
       },
@@ -155,17 +107,8 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
     name: 'Level 2: Core Skills',
     description: 'Building blocks of scalable distributed systems',
     icon: 'C',
-    color: '#ff9800',
+    color: 'hsl(var(--chart-2))',
     items: [
-      {
-        id: 'communication-skills',
-        title: 'How to Be a Good Communicator',
-        description: 'Narrating your thinking process without rambling during interviews',
-        difficulty: 'Intermediate',
-        completed: false,
-        category: 'concept',
-        resources: {},
-      },
       {
         id: 'distributed-communication',
         title: 'Distributed System Communication',
@@ -176,36 +119,9 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         resources: {},
       },
       {
-        id: 'api-design',
-        title: 'API Design - Should You Do It or Skip It?',
-        description: 'When REST APIs help and when they burn interview time',
-        difficulty: 'Intermediate',
-        completed: false,
-        category: 'concept',
-        resources: {},
-      },
-      {
-        id: 'entity-design',
-        title: 'Entity Design',
-        description: 'Lean, scalable data models that scale effectively',
-        difficulty: 'Intermediate',
-        completed: false,
-        category: 'concept',
-        resources: {},
-      },
-      {
         id: 'database-overview',
         title: 'Database Overview',
         description: 'SQL vs NoSQL, indexing, sharding, and trade-offs',
-        difficulty: 'Intermediate',
-        completed: false,
-        category: 'concept',
-        resources: {},
-      },
-      {
-        id: 'high-level-design',
-        title: 'High-Level Design',
-        description: 'The 10,000-foot blueprint that guides every deep dive',
         difficulty: 'Intermediate',
         completed: false,
         category: 'concept',
@@ -252,30 +168,12 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
     name: 'Level 3: Mastery',
     description: 'Advanced patterns and real-world system complexity',
     icon: 'M',
-    color: '#4caf50',
+    color: 'hsl(var(--chart-3))',
     items: [
       {
         id: 'microservice-vs-monolith',
         title: 'Microservice vs Monolith',
         description: 'Splitting vs staying whole with real-world cost/benefit analysis',
-        difficulty: 'Advanced',
-        completed: false,
-        category: 'deep-dive',
-        resources: {},
-      },
-      {
-        id: 'deep-dive',
-        title: 'Deep Dive Techniques',
-        description: 'Moving from big picture to component contracts, layer by layer',
-        difficulty: 'Advanced',
-        completed: false,
-        category: 'deep-dive',
-        resources: {},
-      },
-      {
-        id: 'workflow-engines',
-        title: 'Workflow Engines',
-        description: 'Orchestrating long-running business flows without chaos',
         difficulty: 'Advanced',
         completed: false,
         category: 'deep-dive',
@@ -300,15 +198,6 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         resources: {},
       },
       {
-        id: 'data-partitioning',
-        title: 'Data Partitioning & Sharding',
-        description: 'Horizontal partitioning strategies and shard key selection',
-        difficulty: 'Advanced',
-        completed: false,
-        category: 'deep-dive',
-        resources: {},
-      },
-      {
         id: 'event-driven-architecture',
         title: 'Event-Driven Architecture',
         description: 'Event sourcing, CQRS, and asynchronous processing patterns',
@@ -326,15 +215,6 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         category: 'deep-dive',
         resources: {},
       },
-      {
-        id: 'monitoring-observability',
-        title: 'Monitoring & Observability',
-        description: 'Metrics, logging, tracing, and system health monitoring',
-        difficulty: 'Advanced',
-        completed: false,
-        category: 'deep-dive',
-        resources: {},
-      },
     ],
   },
   {
@@ -342,7 +222,7 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
     name: 'Practice Problems',
     description: 'Real-world system design interview questions',
     icon: 'P',
-    color: '#9c27b0',
+    color: 'hsl(var(--chart-4))',
     items: [
       {
         id: 'design-twitter',
@@ -353,46 +233,9 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         category: 'practice',
         resources: {
           github: [
-            'https://github.com/donnemartin/system-design-primer#design-the-twitter-timeline-and-search',
-            'https://github.com/karanpratapsingh/system-design'
+            'https://github.com/donnemartin/system-design-primer#design-the-twitter-timeline-and-search'
           ]
         },
-      },
-      {
-        id: 'design-netflix',
-        title: 'Design Netflix',
-        description: 'Video streaming service with content delivery and recommendations',
-        difficulty: 'Advanced',
-        completed: false,
-        category: 'practice',
-        resources: {},
-      },
-      {
-        id: 'design-amazon',
-        title: 'Design Amazon E-commerce',
-        description: 'Online marketplace with inventory, orders, and payments',
-        difficulty: 'Advanced',
-        completed: false,
-        category: 'practice',
-        resources: {},
-      },
-      {
-        id: 'design-google-search',
-        title: 'Design Google Search',
-        description: 'Web search engine with crawling, indexing, and ranking',
-        difficulty: 'Advanced',
-        completed: false,
-        category: 'practice',
-        resources: {},
-      },
-      {
-        id: 'design-youtube',
-        title: 'Design YouTube',
-        description: 'Video upload, storage, streaming, and content management',
-        difficulty: 'Advanced',
-        completed: false,
-        category: 'practice',
-        resources: {},
       },
       {
         id: 'design-uber',
@@ -404,27 +247,9 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
         resources: {},
       },
       {
-        id: 'design-whatsapp',
-        title: 'Design WhatsApp',
-        description: 'Real-time messaging service with end-to-end encryption',
-        difficulty: 'Advanced',
-        completed: false,
-        category: 'practice',
-        resources: {},
-      },
-      {
         id: 'design-rate-limiter',
         title: 'Design Rate Limiter',
         description: 'API rate limiting service with various algorithms',
-        difficulty: 'Intermediate',
-        completed: false,
-        category: 'practice',
-        resources: {},
-      },
-      {
-        id: 'design-autocomplete',
-        title: 'Design Autocomplete/Typeahead',
-        description: 'Search suggestion system with fast response times',
         difficulty: 'Intermediate',
         completed: false,
         category: 'practice',
@@ -445,8 +270,19 @@ const SYSTEM_DESIGN_ROADMAP: SystemDesignLevel[] = [
 
 const LOCAL_STORAGE_KEY = 'system-design-progress';
 
+const MotionCard = motion(Card);
+
+const getResourceIcon = (type: string) => {
+  switch (type) {
+    case 'articles': return FileText;
+    case 'videos': return Video;
+    case 'github': return Code;
+    case 'tutorials': return BookOpen;
+    default: return ExternalLink;
+  }
+};
+
 export const SystemDesign: React.FC = () => {
-  // Ensure all items have resources property
   const initializedRoadmap = SYSTEM_DESIGN_ROADMAP.map(level => ({
     ...level,
     items: level.items.map(item => ({
@@ -456,9 +292,7 @@ export const SystemDesign: React.FC = () => {
   }));
 
   const [levels, setLevels] = useState<SystemDesignLevel[]>(initializedRoadmap);
-  const [expandedLevels, setExpandedLevels] = useState<Set<string>>(new Set(['foundation']));
 
-  // Load progress from localStorage on component mount
   useEffect(() => {
     const savedProgress = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (savedProgress) {
@@ -470,7 +304,7 @@ export const SystemDesign: React.FC = () => {
             items: level.items.map(item => ({
               ...item,
               completed: progress[item.id] || false,
-              resources: item.resources || {}, // Ensure resources property exists
+              resources: item.resources || {},
             })),
           }))
         );
@@ -480,7 +314,6 @@ export const SystemDesign: React.FC = () => {
     }
   }, []);
 
-  // Save progress to localStorage whenever it changes
   const saveProgress = (updatedLevels: SystemDesignLevel[]) => {
     const progress: Record<string, boolean> = {};
     updatedLevels.forEach(level => {
@@ -507,18 +340,6 @@ export const SystemDesign: React.FC = () => {
     saveProgress(updatedLevels);
   };
 
-  const toggleLevelExpansion = (levelId: string) => {
-    setExpandedLevels(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(levelId)) {
-        newSet.delete(levelId);
-      } else {
-        newSet.add(levelId);
-      }
-      return newSet;
-    });
-  };
-
   const getLevelProgress = (level: SystemDesignLevel) => {
     const completed = level.items.filter(item => item.completed).length;
     const total = level.items.length;
@@ -535,291 +356,162 @@ export const SystemDesign: React.FC = () => {
     };
   };
 
-  const getDifficultyColor = (difficulty: string) => {
+  const getDifficultyVariant = (difficulty: string): "default" | "secondary" | "destructive" => {
     switch (difficulty) {
-      case 'Foundation': return 'info';
-      case 'Intermediate': return 'warning';
-      case 'Advanced': return 'error';
+      case 'Foundation': return 'secondary';
+      case 'Intermediate': return 'default';
+      case 'Advanced': return 'destructive';
       default: return 'default';
-    }
-  };
-
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'concept': return <ArchitectureIcon fontSize="small" />;
-      case 'practice': return <CloudIcon fontSize="small" />;
-      case 'deep-dive': return <SecurityIcon fontSize="small" />;
-      default: return <ArchitectureIcon fontSize="small" />;
-    }
-  };
-
-  const getResourceIcon = (type: string) => {
-    switch (type) {
-      case 'articles': return <ArticleIcon fontSize="small" />;
-      case 'videos': return <VideoIcon fontSize="small" />;
-      case 'github': return <GitHubIcon fontSize="small" />;
-      case 'tutorials': return <TutorialIcon fontSize="small" />;
-      default: return <OpenInNewIcon fontSize="small" />;
-    }
-  };
-
-  const getResourceLabel = (type: string) => {
-    switch (type) {
-      case 'articles': return 'Articles';
-      case 'videos': return 'Videos';
-      case 'github': return 'GitHub';
-      case 'tutorials': return 'Tutorials';
-      default: return 'Resources';
     }
   };
 
   const overallProgress = getOverallProgress();
 
   return (
-    <Box sx={{ width: '100%' }}>
+    <div className="space-y-6">
       {/* Header */}
-      <Paper
-        sx={{
-          p: 3,
-          mb: 3,
-          borderRadius: 3,
-          background: (theme) => theme.palette.mode === 'dark'
-            ? 'linear-gradient(135deg, #1e1e1e 0%, #2a2a2a 100%)'
-            : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
-          border: '1px solid',
-          borderColor: 'divider',
-        }}
+      <MotionCard
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
       >
-        <Stack direction="row" alignItems="center" spacing={2} mb={2}>
-          <ArchitectureIcon color="primary" sx={{ fontSize: 32 }} />
-          <Box>
-            <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary' }}>
-              System Design Roadmap
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              Master system design interviews with this comprehensive roadmap
-            </Typography>
-          </Box>
-        </Stack>
-
-        {/* Overall Progress */}
-        <Box sx={{ mt: 2 }}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
-            <Typography variant="subtitle1" fontWeight={600}>
-              Overall Progress
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {overallProgress.completed} / {overallProgress.total} topics completed
-            </Typography>
-          </Stack>
-          <LinearProgress
-            variant="determinate"
-            value={overallProgress.percentage}
-            sx={{
-              height: 8,
-              borderRadius: 4,
-              backgroundColor: 'rgba(0,0,0,0.1)',
-              '& .MuiLinearProgress-bar': {
-                borderRadius: 4,
-                background: 'linear-gradient(90deg, #2196f3 0%, #21cbf3 100%)',
-              },
-            }}
-          />
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            {overallProgress.percentage.toFixed(1)}% Complete
-          </Typography>
-        </Box>
-      </Paper>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Building2 className="w-8 h-8 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-3xl font-bold">System Design Roadmap</CardTitle>
+              <p className="text-muted-foreground">
+                Master system design interviews with this comprehensive roadmap
+              </p>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-semibold">Overall Progress</span>
+              <span className="text-muted-foreground">
+                {overallProgress.completed} / {overallProgress.total} topics completed
+              </span>
+            </div>
+            <Progress value={overallProgress.percentage} className="h-3" />
+            <p className="text-xs text-muted-foreground">
+              {overallProgress.percentage.toFixed(1)}% Complete
+            </p>
+          </div>
+        </CardContent>
+      </MotionCard>
 
       {/* Learning Levels */}
-      <Grid container spacing={2}>
+      <Accordion type="multiple" defaultValue={['foundation']} className="space-y-3">
         {levels.map((level) => {
           const progress = getLevelProgress(level);
           return (
-            <Grid item xs={12} key={level.id}>
-              <Accordion
-                expanded={expandedLevels.has(level.id)}
-                onChange={() => toggleLevelExpansion(level.id)}
-                sx={{
-                  borderRadius: 2,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                  '&:before': { display: 'none' },
-                  '&.Mui-expanded': {
-                    margin: 0,
-                  },
-                }}
-              >
-                <AccordionSummary
-                  expandIcon={<ExpandMoreIcon />}
-                  sx={{
-                    backgroundColor: 'background.paper',
-                    borderRadius: '8px 8px 0 0',
-                    '&.Mui-expanded': {
-                      minHeight: 56,
-                    },
-                    '& .MuiAccordionSummary-content': {
-                      margin: '12px 0',
-                      '&.Mui-expanded': {
-                        margin: '12px 0',
-                      },
-                    },
-                  }}
-                >
-                  <Stack direction="row" alignItems="center" spacing={2} sx={{ width: '100%', mr: 1 }}>
-                    <Box
-                      sx={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: 1,
-                        backgroundColor: level.color,
-                        color: 'white',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontWeight: 600,
-                        fontSize: '0.875rem',
-                      }}
+            <AccordionItem
+              key={level.id}
+              value={level.id}
+              className="border rounded-lg bg-card"
+            >
+              <AccordionTrigger className="px-6 hover:no-underline">
+                <div className="flex items-center gap-3 w-full pr-4">
+                  <div
+                    className="w-10 h-10 rounded-md text-white flex items-center justify-center font-semibold"
+                    style={{ backgroundColor: level.color }}
+                  >
+                    {level.icon}
+                  </div>
+                  <div className="flex-1 text-left">
+                    <h3 className="font-semibold">{level.name}</h3>
+                    <p className="text-sm text-muted-foreground">{level.description}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={progress.completed === progress.total ? "default" : "outline"}>
+                      {progress.completed === progress.total && <CheckCircle className="w-3 h-3 mr-1" />}
+                      {progress.completed}/{progress.total}
+                    </Badge>
+                    <span className="text-sm text-muted-foreground min-w-[40px]">
+                      {progress.percentage.toFixed(0)}%
+                    </span>
+                  </div>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="px-6 pb-4">
+                <div className="mb-4">
+                  <Progress value={progress.percentage} className="h-2" />
+                </div>
+                <div className="space-y-3">
+                  {level.items.map((item) => (
+                    <div
+                      key={item.id}
+                      className="p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
                     >
-                      {level.icon}
-                    </Box>
-                    <Box sx={{ flexGrow: 1 }}>
-                      <Typography variant="h6" fontWeight={600}>
-                        {level.name}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {level.description}
-                      </Typography>
-                    </Box>
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <Chip
-                        label={`${progress.completed}/${progress.total}`}
-                        size="small"
-                        color={progress.completed === progress.total ? 'success' : 'default'}
-                        icon={progress.completed === progress.total ? <CheckCircleIcon /> : undefined}
-                      />
-                      <Typography variant="body2" color="text.secondary" sx={{ minWidth: 40 }}>
-                        {progress.percentage.toFixed(0)}%
-                      </Typography>
-                    </Stack>
-                  </Stack>
-                </AccordionSummary>
-                <AccordionDetails sx={{ pt: 0 }}>
-                  <Box sx={{ mb: 2 }}>
-                    <LinearProgress
-                      variant="determinate"
-                      value={progress.percentage}
-                      sx={{
-                        height: 6,
-                        borderRadius: 3,
-                        backgroundColor: 'rgba(0,0,0,0.1)',
-                        '& .MuiLinearProgress-bar': {
-                          borderRadius: 3,
-                          backgroundColor: level.color,
-                        },
-                      }}
-                    />
-                  </Box>
-                  <List disablePadding>
-                    {level.items.map((item) => (
-                      <ListItem
-                        key={item.id}
-                        sx={{
-                          borderRadius: 1,
-                          mb: 0.5,
-                          '&:hover': {
-                            backgroundColor: 'action.hover',
-                          },
-                        }}
-                      >
-                        <ListItemText
-                          primary={
-                            <Stack direction="row" alignItems="center" spacing={1}>
-                              {getCategoryIcon(item.category)}
-                              <Typography
-                                variant="body1"
-                                sx={{
-                                  textDecoration: item.completed ? 'line-through' : 'none',
-                                  opacity: item.completed ? 0.7 : 1,
-                                }}
-                              >
-                                {item.title}
-                              </Typography>
-                              <Chip
-                                label={item.difficulty}
-                                size="small"
-                                color={getDifficultyColor(item.difficulty) as any}
-                                variant="outlined"
-                              />
-                            </Stack>
-                          }
-                          secondary={
-                            <Box sx={{ mt: 0.5 }}>
-                              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                {item.description}
-                              </Typography>
-                              {/* Learning Resources */}
-                              {item.resources && typeof item.resources === 'object' && (
-                                <Box sx={{ mt: 1 }}>
-                                  {['articles', 'videos', 'github', 'tutorials'].map(type => {
-                                    const links = item.resources[type as keyof typeof item.resources];
-                                    if (!links || !Array.isArray(links) || links.length === 0) return null;
-
-                                    return (
-                                      <Box key={type} sx={{ mb: 1 }}>
-                                        <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 0.5 }}>
-                                          {getResourceIcon(type)}
-                                          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-                                            {getResourceLabel(type)}:
-                                          </Typography>
-                                        </Stack>
-                                        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                                          {links.map((link, index) => (
-                                            <Chip
-                                              key={index}
-                                              label={`Link ${index + 1}`}
-                                              size="small"
-                                              variant="outlined"
-                                              onClick={() => window.open(link, '_blank')}
-                                              icon={<OpenInNewIcon fontSize="small" />}
-                                              sx={{
-                                                fontSize: '0.7rem',
-                                                height: 20,
-                                                cursor: 'pointer',
-                                                '&:hover': {
-                                                  backgroundColor: 'primary.light',
-                                                  color: 'primary.contrastText'
-                                                }
-                                              }}
-                                            />
-                                          ))}
-                                        </Stack>
-                                      </Box>
-                                    );
-                                  })}
-                                </Box>
-                              )}
-                            </Box>
-                          }
+                      <div className="flex items-start gap-3">
+                        <Checkbox
+                          checked={item.completed}
+                          onCheckedChange={() => toggleItemCompletion(level.id, item.id)}
+                          className="mt-1"
                         />
-                        <ListItemSecondaryAction>
-                          <Checkbox
-                            edge="end"
-                            checked={item.completed}
-                            onChange={() => toggleItemCompletion(level.id, item.id)}
-                            color="success"
-                          />
-                        </ListItemSecondaryAction>
-                      </ListItem>
-                    ))}
-                  </List>
-                </AccordionDetails>
-              </Accordion>
-            </Grid>
+                        <div className="flex-1 space-y-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span
+                              className={`font-medium ${
+                                item.completed ? 'line-through text-muted-foreground' : ''
+                              }`}
+                            >
+                              {item.title}
+                            </span>
+                            <Badge variant={getDifficultyVariant(item.difficulty)} className="text-xs">
+                              {item.difficulty}
+                            </Badge>
+                            {item.completed && (
+                              <CheckCircle className="w-4 h-4 text-green-500 ml-auto" />
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground">{item.description}</p>
+
+                          {/* Resources */}
+                          {item.resources && Object.keys(item.resources).length > 0 && (
+                            <div className="space-y-2 pt-2">
+                              {Object.entries(item.resources).map(([type, links]) => {
+                                if (!links || !Array.isArray(links) || links.length === 0) return null;
+                                const Icon = getResourceIcon(type);
+
+                                return (
+                                  <div key={type} className="flex items-start gap-2">
+                                    <Icon className="w-4 h-4 text-muted-foreground mt-0.5" />
+                                    <div className="flex-1 flex flex-wrap gap-2">
+                                      {links.map((link, index) => (
+                                        <Button
+                                          key={index}
+                                          variant="outline"
+                                          size="sm"
+                                          className="h-7 text-xs"
+                                          onClick={() => window.open(link, '_blank')}
+                                        >
+                                          {type} {index + 1}
+                                          <ExternalLink className="w-3 h-3 ml-1" />
+                                        </Button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
           );
         })}
-      </Grid>
-    </Box>
+      </Accordion>
+    </div>
   );
 };
+
+export default SystemDesign;

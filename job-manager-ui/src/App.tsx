@@ -23,10 +23,8 @@ import {
 import { JobCard } from './components/JobCard';
 import { StatsCards } from './components/StatsCards';
 import { FilterControls } from './components/FilterControls';
-// import { JobLoadingInfo } from './components/JobLoadingInfo';
-// import { JobSections } from './components/JobSections';
-// import { Training } from './components/Training';
-// import { SystemDesign } from './components/SystemDesign';
+import { Training } from './components/Training';
+import { SystemDesign } from './components/SystemDesign';
 import { Analytics } from './components/Analytics';
 // import JobSearch from './components/JobSearch';
 // import CountryStats from './components/CountryStats';
@@ -51,6 +49,9 @@ const App: React.FC = () => {
 
   // Check if current user is software_admin or has admin access
   const hasAnalyticsAccess = user?.username === 'software_admin' || user?.username === 'admin' || user?.is_admin === true;
+
+  // Check if current user has software role access
+  const hasSoftwareAccess = user?.username === 'software_admin' || user?.username === 'admin';
 
   const [filters, setFilters] = useState<FilterState>({
     status: 'all',
@@ -213,25 +214,27 @@ const App: React.FC = () => {
           Dashboard
         </Button>
 
-        {/* Temporarily disabled - MUI migration pending
-        <Button
-          variant={currentTab === 'training' ? 'secondary' : 'ghost'}
-          className="w-full justify-start"
-          onClick={() => { setCurrentTab('training'); if (isMobile) setDrawerOpen(false); }}
-        >
-          <GraduationCap className="mr-3 h-4 w-4" />
-          DSA Training
-        </Button>
+        {hasSoftwareAccess && (
+          <>
+            <Button
+              variant={currentTab === 'training' ? 'secondary' : 'ghost'}
+              className="w-full justify-start"
+              onClick={() => { setCurrentTab('training'); if (isMobile) setDrawerOpen(false); }}
+            >
+              <GraduationCap className="mr-3 h-4 w-4" />
+              DSA Training
+            </Button>
 
-        <Button
-          variant={currentTab === 'system-design' ? 'secondary' : 'ghost'}
-          className="w-full justify-start"
-          onClick={() => { setCurrentTab('system-design'); if (isMobile) setDrawerOpen(false); }}
-        >
-          <Building2 className="mr-3 h-4 w-4" />
-          System Design
-        </Button>
-        */}
+            <Button
+              variant={currentTab === 'system-design' ? 'secondary' : 'ghost'}
+              className="w-full justify-start"
+              onClick={() => { setCurrentTab('system-design'); if (isMobile) setDrawerOpen(false); }}
+            >
+              <Building2 className="mr-3 h-4 w-4" />
+              System Design
+            </Button>
+          </>
+        )}
 
         {hasAnalyticsAccess && (
           <Button
@@ -385,10 +388,8 @@ const App: React.FC = () => {
               </>
             )}
 
-            {/* Temporarily disabled - MUI migration pending
-            {currentTab === 'training' && <Training />}
-            {currentTab === 'system-design' && <SystemDesign />}
-            */}
+            {currentTab === 'training' && hasSoftwareAccess && <Training />}
+            {currentTab === 'system-design' && hasSoftwareAccess && <SystemDesign />}
             {currentTab === 'analytics' && hasAnalyticsAccess && <Analytics />}
           </div>
         </main>
