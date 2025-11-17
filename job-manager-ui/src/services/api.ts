@@ -85,6 +85,12 @@ export const jobApi = {
     const response = await api.get('/api/analytics/personal');
     return response.data;
   },
+
+  // Get rewards and gamification data for current user
+  getRewards: async (): Promise<any> => {
+    const response = await api.get('/api/rewards');
+    return response.data;
+  },
 };
 
 export default api;

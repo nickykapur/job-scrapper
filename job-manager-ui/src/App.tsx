@@ -19,6 +19,7 @@ import {
   User,
   BarChart3,
   X,
+  Trophy,
 } from 'lucide-react';
 import { JobCard } from './components/JobCard';
 import { StatsCards } from './components/StatsCards';
@@ -27,6 +28,7 @@ import { Training } from './components/Training';
 import { SystemDesign } from './components/SystemDesign';
 import { Analytics } from './components/Analytics';
 import { PersonalAnalytics } from './components/PersonalAnalytics';
+import { Rewards } from './components/Rewards';
 // import JobSearch from './components/JobSearch';
 // import CountryStats from './components/CountryStats';
 import { jobApi } from './services/api';
@@ -45,7 +47,7 @@ const App: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [localRejectedCount, setLocalRejectedCount] = useState(0);
-  const [currentTab, setCurrentTab] = useState<'dashboard' | 'training' | 'system-design' | 'my-analytics' | 'analytics'>('dashboard');
+  const [currentTab, setCurrentTab] = useState<'dashboard' | 'training' | 'system-design' | 'my-analytics' | 'analytics' | 'rewards'>('dashboard');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [timeAgo, setTimeAgo] = useState<string>('');
@@ -263,6 +265,15 @@ const App: React.FC = () => {
           My Analytics
         </Button>
 
+        <Button
+          variant={currentTab === 'rewards' ? 'secondary' : 'ghost'}
+          className="w-full justify-start"
+          onClick={() => { setCurrentTab('rewards'); if (isMobile) setDrawerOpen(false); }}
+        >
+          <Trophy className="mr-3 h-4 w-4" />
+          Rewards
+        </Button>
+
         {hasSoftwareAccess && (
           <>
             <Button
@@ -376,6 +387,7 @@ const App: React.FC = () => {
               <h2 className="text-lg font-bold">
                 {currentTab === 'dashboard' ? 'Jobs' :
                  currentTab === 'my-analytics' ? 'My Analytics' :
+                 currentTab === 'rewards' ? 'Rewards & Achievements' :
                  currentTab === 'training' ? 'DSA Training' :
                  currentTab === 'system-design' ? 'System Design' : 'Analytics'}
               </h2>
@@ -447,6 +459,7 @@ const App: React.FC = () => {
             )}
 
             {currentTab === 'my-analytics' && <PersonalAnalytics />}
+            {currentTab === 'rewards' && <Rewards />}
             {currentTab === 'training' && hasSoftwareAccess && <Training />}
             {currentTab === 'system-design' && hasSoftwareAccess && <SystemDesign />}
             {currentTab === 'analytics' && hasAnalyticsAccess && <Analytics />}

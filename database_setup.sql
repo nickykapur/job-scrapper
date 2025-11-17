@@ -44,9 +44,53 @@ CREATE TABLE IF NOT EXISTS scraping_sessions (
 );
 
 -- Insert initial metadata
-INSERT INTO scraping_sessions (notes) 
-VALUES ('Database initialized for LinkedIn Job Manager') 
+INSERT INTO scraping_sessions (notes)
+VALUES ('Database initialized for LinkedIn Job Manager')
 ON CONFLICT DO NOTHING;
+
+-- Gamification/Rewards System Tables
+
+-- User rewards and progress tracking
+CREATE TABLE IF NOT EXISTS user_rewards (
+    user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    total_points INTEGER DEFAULT 0,
+    level INTEGER DEFAULT 1,
+    current_streak INTEGER DEFAULT 0,
+    longest_streak INTEGER DEFAULT 0,
+    last_activity_date DATE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Track earned badges
+CREATE TABLE IF NOT EXISTS user_badges (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    badge_id VARCHAR(50) NOT NULL, -- e.g., 'first_step', 'job_hunter', 'week_warrior'
+    badge_name VARCHAR(100) NOT NULL,
+    badge_description TEXT,
+    points_awarded INTEGER DEFAULT 0,
+    earned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, badge_id)
+);
+
+-- Track countries user has applied to (for diversity achievements)
+CREATE TABLE IF NOT EXISTS user_countries (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    country VARCHAR(100) NOT NULL,
+    first_application_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    total_applications INTEGER DEFAULT 1,
+    UNIQUE(user_id, country)
+);
+
+-- Create indexes for rewards tables
+CREATE INDEX IF NOT EXISTS idx_user_rewards_user_id ON user_rewards(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_rewards_level ON user_rewards(level);
+CREATE INDEX IF NOT EXISTS idx_user_rewards_points ON user_rewards(total_points);
+CREATE INDEX IF NOT EXISTS idx_user_badges_user_id ON user_badges(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_badges_earned_at ON user_badges(earned_at);
+CREATE INDEX IF NOT EXISTS idx_user_countries_user_id ON user_countries(user_id);
 
 -- Useful queries for your reference:
 

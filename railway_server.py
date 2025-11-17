@@ -920,6 +920,51 @@ async def update_job_api(request: JobUpdateRequest, current_user: Optional[Dict[
                             """, user_id, request.job_id)
                             print(f"✅ Updated user_job_interactions for user {user_id}: applied")
 
+                            # Update streak tracking
+                            from datetime import date
+                            today = date.today()
+
+                            # Get current rewards data
+                            rewards = await conn.fetchrow("""
+                                SELECT current_streak, longest_streak, last_activity_date
+                                FROM user_rewards
+                                WHERE user_id = $1
+                            """, user_id)
+
+                            if rewards:
+                                current_streak = rewards['current_streak'] or 0
+                                longest_streak = rewards['longest_streak'] or 0
+                                last_activity = rewards['last_activity_date']
+
+                                # Calculate new streak
+                                if last_activity:
+                                    days_diff = (today - last_activity).days
+                                    if days_diff == 0:
+                                        # Same day, no change to streak
+                                        new_streak = current_streak
+                                    elif days_diff == 1:
+                                        # Consecutive day, increment streak
+                                        new_streak = current_streak + 1
+                                    else:
+                                        # Streak broken, restart
+                                        new_streak = 1
+                                else:
+                                    # First activity
+                                    new_streak = 1
+
+                                # Update longest streak if needed
+                                new_longest = max(longest_streak, new_streak)
+
+                                await conn.execute("""
+                                    UPDATE user_rewards
+                                    SET current_streak = $2,
+                                        longest_streak = $3,
+                                        last_activity_date = $4,
+                                        updated_at = CURRENT_TIMESTAMP
+                                    WHERE user_id = $1
+                                """, user_id, new_streak, new_longest, today)
+                                print(f"✅ Updated streak for user {user_id}: {new_streak} days")
+
                         if request.rejected:
                             await conn.execute("""
                                 INSERT INTO user_job_interactions (user_id, job_id, rejected, rejected_at, created_at, updated_at)
@@ -2054,6 +2099,199 @@ async def get_personal_analytics(current_user: Dict[str, Any] = Depends(get_curr
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to get personal analytics: {str(e)}")
+
+@app.get("/api/rewards")
+async def get_user_rewards(current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Get gamification rewards for the authenticated user - points, badges, streaks, level"""
+    if not db or not DATABASE_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    try:
+        conn = await db.get_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Could not connect to database")
+
+        user_id = current_user['user_id']
+
+        # Ensure user has a rewards record
+        await conn.execute("""
+            INSERT INTO user_rewards (user_id)
+            VALUES ($1)
+            ON CONFLICT (user_id) DO NOTHING
+        """, user_id)
+
+        # Get current rewards data
+        rewards_data = await conn.fetchrow("""
+            SELECT total_points, level, current_streak, longest_streak, last_activity_date
+            FROM user_rewards
+            WHERE user_id = $1
+        """, user_id)
+
+        # Calculate streak (check if user applied today or yesterday)
+        today = datetime.now().date()
+        current_streak = rewards_data['current_streak'] if rewards_data else 0
+        last_activity = rewards_data['last_activity_date'] if rewards_data else None
+
+        if last_activity:
+            days_since_activity = (today - last_activity).days
+            if days_since_activity > 1:
+                # Streak broken
+                current_streak = 0
+
+        # Get total applications breakdown
+        app_stats = await conn.fetchrow("""
+            SELECT
+                COUNT(*) FILTER (WHERE applied = TRUE) as total_applied,
+                COUNT(*) FILTER (WHERE saved = TRUE) as total_saved,
+                COUNT(*) FILTER (WHERE rejected = TRUE) as total_rejected,
+                COUNT(*) FILTER (WHERE applied = TRUE AND applied_at >= NOW() - INTERVAL '7 days') as applied_last_7_days,
+                COUNT(*) FILTER (WHERE applied = TRUE AND DATE(applied_at) = CURRENT_DATE) as applied_today,
+                COUNT(DISTINCT DATE(applied_at)) FILTER (WHERE applied = TRUE) as active_days
+            FROM user_job_interactions
+            WHERE user_id = $1
+        """, user_id)
+
+        total_applied = app_stats['total_applied'] or 0
+        total_saved = app_stats['total_saved'] or 0
+        total_rejected = app_stats['total_rejected'] or 0
+
+        # Calculate points (Base points without multipliers for now)
+        calculated_points = (total_applied * 10) + (total_saved * 2) + (total_rejected * 1)
+
+        # Determine level based on points
+        levels = [
+            (0, 1, "Beginner", "👶"),
+            (100, 2, "Applicant", "📝"),
+            (300, 3, "Job Seeker", "🎯"),
+            (750, 4, "Career Hunter", "💼"),
+            (1500, 5, "Application Pro", "⭐"),
+            (3000, 6, "Job Master", "👑"),
+            (7500, 7, "Career Legend", "🏆"),
+            (15000, 8, "Elite Hunter", "💎"),
+        ]
+
+        current_level = 1
+        level_name = "Beginner"
+        level_icon = "👶"
+        next_level_points = 100
+
+        for points_required, level, name, icon in levels:
+            if calculated_points >= points_required:
+                current_level = level
+                level_name = name
+                level_icon = icon
+
+        # Find next level
+        for points_required, level, name, icon in levels:
+            if level > current_level:
+                next_level_points = points_required
+                break
+
+        # Check and award badges
+        badge_definitions = [
+            # Volume badges
+            {'id': 'first_step', 'name': 'First Step', 'desc': 'Applied to first job', 'icon': '🎯', 'requirement': lambda stats: stats['total_applied'] >= 1, 'points': 50},
+            {'id': 'getting_started', 'name': 'Getting Started', 'desc': 'Applied to 5 jobs', 'icon': '🚀', 'requirement': lambda stats: stats['total_applied'] >= 5, 'points': 100},
+            {'id': 'job_hunter', 'name': 'Job Hunter', 'desc': 'Applied to 25 jobs', 'icon': '💼', 'requirement': lambda stats: stats['total_applied'] >= 25, 'points': 250},
+            {'id': 'career_seeker', 'name': 'Career Seeker', 'desc': 'Applied to 50 jobs', 'icon': '⭐', 'requirement': lambda stats: stats['total_applied'] >= 50, 'points': 500},
+            {'id': 'application_master', 'name': 'Application Master', 'desc': 'Applied to 100 jobs', 'icon': '👑', 'requirement': lambda stats: stats['total_applied'] >= 100, 'points': 1000},
+
+            # Streak badges
+            {'id': 'daily_grinder', 'name': 'Daily Grinder', 'desc': '3 day streak', 'icon': '📅', 'requirement': lambda stats: current_streak >= 3, 'points': 100},
+            {'id': 'week_warrior', 'name': 'Week Warrior', 'desc': '7 day streak', 'icon': '🎯', 'requirement': lambda stats: current_streak >= 7, 'points': 300},
+            {'id': 'month_marathon', 'name': 'Month Marathon', 'desc': '30 day streak', 'icon': '💪', 'requirement': lambda stats: current_streak >= 30, 'points': 1500},
+        ]
+
+        stats_for_badges = {
+            'total_applied': total_applied,
+            'total_saved': total_saved,
+            'total_rejected': total_rejected,
+        }
+
+        # Get already earned badges
+        earned_badges = await conn.fetch("""
+            SELECT badge_id, badge_name, badge_description, points_awarded, earned_at
+            FROM user_badges
+            WHERE user_id = $1
+            ORDER BY earned_at DESC
+        """, user_id)
+
+        earned_badge_ids = {b['badge_id'] for b in earned_badges}
+
+        # Award new badges
+        new_badges_awarded = []
+        for badge_def in badge_definitions:
+            if badge_def['id'] not in earned_badge_ids and badge_def['requirement'](stats_for_badges):
+                # Award badge
+                await conn.execute("""
+                    INSERT INTO user_badges (user_id, badge_id, badge_name, badge_description, points_awarded)
+                    VALUES ($1, $2, $3, $4, $5)
+                    ON CONFLICT (user_id, badge_id) DO NOTHING
+                """, user_id, badge_def['id'], badge_def['name'], badge_def['desc'], badge_def['points'])
+
+                new_badges_awarded.append({
+                    'id': badge_def['id'],
+                    'name': badge_def['name'],
+                    'description': badge_def['desc'],
+                    'icon': badge_def['icon'],
+                    'points': badge_def['points']
+                })
+
+                # Add badge points to total
+                calculated_points += badge_def['points']
+
+        # Update rewards record
+        await conn.execute("""
+            UPDATE user_rewards
+            SET total_points = $2,
+                level = $3,
+                current_streak = $4,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE user_id = $1
+        """, user_id, calculated_points, current_level, current_streak)
+
+        # Get country diversity count
+        countries_count = await conn.fetchval("""
+            SELECT COUNT(DISTINCT country)
+            FROM user_countries
+            WHERE user_id = $1
+        """, user_id) or 0
+
+        await conn.close()
+
+        return {
+            'points': calculated_points,
+            'level': current_level,
+            'level_name': level_name,
+            'level_icon': level_icon,
+            'next_level_points': next_level_points,
+            'points_to_next_level': max(0, next_level_points - calculated_points),
+            'current_streak': current_streak,
+            'longest_streak': rewards_data['longest_streak'] if rewards_data else 0,
+            'badges': [{
+                'id': b['badge_id'],
+                'name': b['badge_name'],
+                'description': b['badge_description'],
+                'points': b['points_awarded'],
+                'earned_at': b['earned_at'].isoformat()
+            } for b in earned_badges],
+            'new_badges': new_badges_awarded,
+            'stats': {
+                'total_applied': total_applied,
+                'total_saved': total_saved,
+                'total_rejected': total_rejected,
+                'applied_today': app_stats['applied_today'] or 0,
+                'applied_last_7_days': app_stats['applied_last_7_days'] or 0,
+                'active_days': app_stats['active_days'] or 0,
+                'countries_explored': countries_count
+            }
+        }
+
+    except Exception as e:
+        print(f"❌ Error getting rewards: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to get rewards: {str(e)}")
 
 # Catch-all route for React Router (SPA routing)
 @app.get("/{full_path:path}")
