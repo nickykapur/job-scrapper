@@ -152,25 +152,25 @@ class LinkedInJobScraper:
                 print(f"Firefox not available: {firefox_error}")
                 raise Exception("Neither Chrome nor Firefox browser is available. Please install one of them.")
         
-    def search_jobs(self, keywords, location="", date_filter="24h"):
+    def search_jobs(self, keywords, location="", date_filter="24h", easy_apply_filter=False):
         if not self.driver:
             self.setup_driver()
-            
+
         # LinkedIn job search URL with filters
         base_url = "https://www.linkedin.com/jobs/search"
-        
+
         # Map date filters to LinkedIn time parameters
         time_filters = {
             "24h": "r86400",    # 24 hours (86400 seconds)
-            "1d": "r86400",     # 1 day 
+            "1d": "r86400",     # 1 day
             "7d": "r604800",    # 7 days (604800 seconds)
             "1w": "r604800",    # 1 week
             "30d": "r2592000",  # 30 days (2592000 seconds)
             "1m": "r2592000"    # 1 month
         }
-        
+
         f_tpr_value = time_filters.get(date_filter, "r86400")  # Default to 24h
-        
+
         params = {
             "keywords": keywords,
             "location": location,
@@ -178,14 +178,19 @@ class LinkedInJobScraper:
             "position": "1",
             "pageNum": "0"
         }
-        
+
+        # Add Easy Apply filter if requested
+        if easy_apply_filter:
+            params["f_AL"] = "true"
+
         # Construct URL
         url = f"{base_url}?" + "&".join([f"{k}={v}" for k, v in params.items() if v])
-        
-        print(f"Searching jobs: {url}")
+
+        filter_label = " [Easy Apply]" if easy_apply_filter else ""
+        print(f"Searching jobs{filter_label}: {url}")
         self.driver.get(url)
         time.sleep(3)
-        
+
         # Wait for job listings to load
         try:
             WebDriverWait(self.driver, 15).until(
@@ -194,10 +199,10 @@ class LinkedInJobScraper:
         except:
             print("No job listings found or page didn't load properly")
             return []
-        
+
         # Additional wait for dynamic content to load
         time.sleep(3)
-        
+
         # Try to dismiss any popups or overlays
         try:
             # Common LinkedIn popup dismissal
@@ -211,33 +216,34 @@ class LinkedInJobScraper:
                     pass
         except:
             pass
-            
-        return self.scrape_job_listings()
+
+        return self.scrape_job_listings(easy_apply_filter=easy_apply_filter)
     
-    def scrape_job_listings(self):
+    def scrape_job_listings(self, easy_apply_filter=False):
         jobs_dict = {}
-        
+
         # Scroll to load more jobs
         self.scroll_to_load_jobs()
-        
+
         # Find all job cards - try multiple selectors
         job_cards = []
         selectors = [".job-search-card", ".base-card", ".job-result-card", "[data-entity-urn*='job']"]
-        
+
         for selector in selectors:
             cards = self.driver.find_elements(By.CSS_SELECTOR, selector)
             if cards:
                 job_cards = cards
                 break
-        
-        print(f"Found {len(job_cards)} job listings")
-        
+
+        filter_label = " (Easy Apply filter)" if easy_apply_filter else ""
+        print(f"Found {len(job_cards)} job listings{filter_label}")
+
         # Process all cards quickly without excessive scrolling
         extracted_count = 0
-        
+
         for card in job_cards:
             try:
-                job_data = self.extract_job_data(card)
+                job_data = self.extract_job_data(card, easy_apply_from_filter=easy_apply_filter)
                 if job_data:
                     # Check if this job already exists
                     if job_data['id'] in self.existing_jobs:
@@ -252,6 +258,9 @@ class LinkedInJobScraper:
                         job_data['applied'] = existing_job.get('applied', False)
                         job_data['rejected'] = existing_job.get('rejected', False)
                         job_data['is_new'] = False
+                        # Update easy_apply status if this search used the Easy Apply filter
+                        if easy_apply_filter:
+                            job_data['easy_apply'] = True
                     else:
                         job_data['is_new'] = True
                         job_data['rejected'] = False
@@ -261,13 +270,13 @@ class LinkedInJobScraper:
 
                     # Update existing jobs database
                     self.existing_jobs[job_data['id']] = job_data
-                    
+
             except Exception as e:
                 print(f"Error extracting job data: {e}")
                 continue
-        
+
         print(f"Successfully extracted {extracted_count} jobs out of {len(job_cards)} found")
-        
+
         self.jobs_data = list(jobs_dict.values())
         # Save updated database
         self.save_jobs_database()
@@ -630,7 +639,7 @@ class LinkedInJobScraper:
 
         return False
 
-    def extract_job_data(self, card):
+    def extract_job_data(self, card, easy_apply_from_filter=False):
         try:
             # Try multiple selectors for job title
             title = ""
@@ -789,7 +798,12 @@ class LinkedInJobScraper:
             job_id = self.generate_job_id(title, company, location)
 
             # Detect Easy Apply status
-            easy_apply = self.detect_easy_apply(card)
+            # Priority: use filter parameter if available, otherwise try to detect from card
+            if easy_apply_from_filter:
+                easy_apply = True
+            else:
+                # Fallback to card detection (though this rarely works on public pages)
+                easy_apply = self.detect_easy_apply(card)
 
             # Derive country from location
             country = self.get_country_from_location(location or "")

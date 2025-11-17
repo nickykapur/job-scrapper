@@ -186,10 +186,12 @@ def scrape_single_country(location, country_name, railway_url):
             is_finance = term in finance_search_terms
 
             try:
+                # First pass: Get ALL jobs (without Easy Apply filter)
                 results = scraper.search_jobs(
                     keywords=term,
                     location=location,
-                    date_filter="24h"
+                    date_filter="24h",
+                    easy_apply_filter=False
                 )
 
                 if results:
@@ -213,8 +215,48 @@ def scrape_single_country(location, country_name, railway_url):
                             else:
                                 hr_jobs[job_id] = job_data
 
-                    print(f"      ✓ Found {len(results)} jobs")
+                    print(f"      ✓ Found {len(results)} jobs (all)")
                     successful_searches += 1
+
+                    # Second pass: Get Easy Apply jobs ONLY to mark them
+                    try:
+                        easy_apply_results = scraper.search_jobs(
+                            keywords=term,
+                            location=location,
+                            date_filter="24h",
+                            easy_apply_filter=True
+                        )
+
+                        if easy_apply_results:
+                            easy_apply_count = 0
+                            for job_id, job_data in easy_apply_results.items():
+                                # Update the easy_apply flag for jobs we already have
+                                if job_id in all_new_jobs:
+                                    all_new_jobs[job_id]['easy_apply'] = True
+                                    easy_apply_count += 1
+                                else:
+                                    # Add new job that wasn't in the first pass (rare, but possible)
+                                    job_data["country"] = country_name
+                                    job_data["search_location"] = location
+                                    job_data['easy_apply'] = True
+                                    all_new_jobs[job_id] = job_data
+
+                                    # Track job type
+                                    if is_software:
+                                        software_jobs[job_id] = job_data
+                                    elif is_cybersecurity:
+                                        cybersecurity_jobs[job_id] = job_data
+                                    elif is_sales:
+                                        sales_jobs[job_id] = job_data
+                                    elif is_finance:
+                                        finance_jobs[job_id] = job_data
+                                    else:
+                                        hr_jobs[job_id] = job_data
+
+                            print(f"      ⚡ Marked {easy_apply_count} as Easy Apply")
+                    except Exception as ea_error:
+                        print(f"      ⚠ Easy Apply filter failed: {ea_error}")
+
                 else:
                     print(f"      ⊗ No new jobs found")
 
