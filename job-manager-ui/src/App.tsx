@@ -107,10 +107,12 @@ const App: React.FC = () => {
   }, [loadJobs]);
 
   const handleApplyAndOpen = async (jobId: string, jobUrl: string) => {
+    // Open the URL first (synchronously) to avoid popup blockers on mobile
+    window.open(jobUrl, '_blank');
+
     try {
       setUpdatingJobs(prev => new Set(prev).add(jobId));
       await jobApi.updateJob(jobId, true);
-      window.open(jobUrl, '_blank');
       setJobs(prev => ({
         ...prev,
         [jobId]: { ...prev[jobId], applied: true }
