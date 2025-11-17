@@ -9,7 +9,7 @@ COPY job-manager-ui/package.json job-manager-ui/package-lock.json ./
 # Install dependencies
 RUN npm ci --legacy-peer-deps --silent
 
-# Copy source code and build
+# Copy source code and build (cache bust: 2025-11-17-v2)
 COPY job-manager-ui/ ./
 RUN npm run build
 
