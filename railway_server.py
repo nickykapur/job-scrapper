@@ -27,11 +27,15 @@ except ImportError as e:
 # Import authentication routes
 try:
     from auth_routes import router as auth_router
+    from auth_utils import get_current_user
     AUTH_AVAILABLE = True
     print("✅ Authentication routes imported successfully")
 except ImportError as e:
     print(f"⚠️  Authentication routes not available: {e}")
     AUTH_AVAILABLE = False
+    # Define a dummy get_current_user if auth is not available
+    async def get_current_user():
+        raise HTTPException(status_code=501, detail="Authentication not available")
 
 app = FastAPI(title="LinkedIn Job Manager", version="1.0.0")
 
