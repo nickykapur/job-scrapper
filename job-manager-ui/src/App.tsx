@@ -63,6 +63,7 @@ const App: React.FC = () => {
     sort: 'newest',
     jobType: 'all',
     country: 'all',
+    quickApply: 'all',
   });
 
   // Responsive handler
@@ -148,12 +149,18 @@ const App: React.FC = () => {
 
     try {
       setUpdatingJobs(prev => new Set(prev).add(jobId));
-      await jobApi.updateJob(jobId, true);
+      const response = await jobApi.updateJob(jobId, true);
       setJobs(prev => ({
         ...prev,
         [jobId]: { ...prev[jobId], applied: true }
       }));
-      showNotification('Marked as applied', 'success');
+
+      // Show encouragement message if available
+      if (response.encouragement) {
+        showNotification(response.encouragement, 'success');
+      } else {
+        showNotification('Marked as applied', 'success');
+      }
     } catch (error) {
       showNotification('Failed to update job status', 'error');
     } finally {
@@ -211,6 +218,10 @@ const App: React.FC = () => {
 
       // Country filter
       if (filters.country !== 'all' && job.country !== filters.country) return;
+
+      // Quick Apply filter
+      if (filters.quickApply === 'quick_only' && !job.easy_apply) return;
+      if (filters.quickApply === 'non_quick' && job.easy_apply) return;
 
       filtered[id] = job;
     });

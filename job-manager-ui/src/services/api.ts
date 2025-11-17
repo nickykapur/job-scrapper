@@ -28,11 +28,12 @@ export const jobApi = {
   },
 
   // Update job status
-  updateJob: async (jobId: string, applied: boolean): Promise<void> => {
-    await api.post('/api/update_job', {
+  updateJob: async (jobId: string, applied: boolean): Promise<any> => {
+    const response = await api.post('/api/update_job', {
       job_id: jobId,
       applied: applied,
     });
+    return response.data;
   },
 
   // Reject job - using update_job endpoint
@@ -89,6 +90,12 @@ export const jobApi = {
   // Get rewards and gamification data for current user
   getRewards: async (): Promise<any> => {
     const response = await api.get('/api/rewards');
+    return response.data;
+  },
+
+  // Get personalized job search insights
+  getInsights: async (): Promise<any> => {
+    const response = await api.get('/api/insights');
     return response.data;
   },
 };

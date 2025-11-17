@@ -887,6 +887,9 @@ async def update_job_api(request: JobUpdateRequest, current_user: Optional[Dict[
     if not db or not DATABASE_AVAILABLE:
         raise HTTPException(status_code=500, detail="Database not available")
 
+    # Initialize encouragement message
+    encouragement_message = None
+
     try:
         print(f"🔄 DEBUG: Updating job {request.job_id} - applied: {request.applied}, rejected: {request.rejected}")
 
@@ -965,6 +968,100 @@ async def update_job_api(request: JobUpdateRequest, current_user: Optional[Dict[
                                 """, user_id, new_streak, new_longest, today)
                                 print(f"✅ Updated streak for user {user_id}: {new_streak} days")
 
+                            # Generate encouragement messages for milestones
+                            # Get job details (country/location)
+                            job_details = await conn.fetchrow("""
+                                SELECT country, location FROM jobs WHERE id = $1
+                            """, request.job_id)
+
+                            if job_details:
+                                job_country = job_details['country']
+                                job_location = job_details['location']
+
+                                # Get application stats
+                                stats = await conn.fetchrow("""
+                                    SELECT
+                                        COUNT(*) as total_applications,
+                                        COUNT(*) FILTER (WHERE DATE(applied_at) = CURRENT_DATE) as today_applications
+                                    FROM user_job_interactions uji
+                                    JOIN jobs j ON uji.job_id = j.id
+                                    WHERE uji.user_id = $1 AND uji.applied = TRUE
+                                """, user_id)
+
+                                total_apps = stats['total_applications']
+                                today_apps = stats['today_applications']
+
+                                # Check for country-specific milestones
+                                if job_country:
+                                    country_stats = await conn.fetchrow("""
+                                        SELECT COUNT(*) as country_applications
+                                        FROM user_job_interactions uji
+                                        JOIN jobs j ON uji.job_id = j.id
+                                        WHERE uji.user_id = $1 AND uji.applied = TRUE AND j.country = $2
+                                    """, user_id, job_country)
+
+                                    country_apps = country_stats['country_applications']
+
+                                    # Country milestones (5, 10, 25, 50)
+                                    if country_apps == 5:
+                                        encouragement_message = f"🌍 5 applications in {job_country}! You're exploring the market!"
+                                    elif country_apps == 10:
+                                        encouragement_message = f"🚀 10 applications in {job_country}! You're gaining momentum!"
+                                    elif country_apps == 25:
+                                        encouragement_message = f"💪 25 applications in {job_country}! You're crushing it!"
+                                    elif country_apps == 50:
+                                        encouragement_message = f"🏆 50 applications in {job_country}! You're a local legend!"
+                                    elif country_apps == 100:
+                                        encouragement_message = f"💎 100 applications in {job_country}! Absolutely incredible!"
+
+                                # Overall milestones (5, 10, 25, 50, 100, 200, 500)
+                                if not encouragement_message:
+                                    if total_apps == 5:
+                                        encouragement_message = "🎯 5 applications! You're off to a great start!"
+                                    elif total_apps == 10:
+                                        encouragement_message = "🌟 10 applications! Double digits, keep it up!"
+                                    elif total_apps == 25:
+                                        encouragement_message = "🔥 25 applications! You're on fire!"
+                                    elif total_apps == 50:
+                                        encouragement_message = "💪 50 applications! Half century milestone!"
+                                    elif total_apps == 100:
+                                        encouragement_message = "🏆 100 applications! Triple digits - amazing dedication!"
+                                    elif total_apps == 200:
+                                        encouragement_message = "🚀 200 applications! You're unstoppable!"
+                                    elif total_apps == 500:
+                                        encouragement_message = "💎 500 applications! You're a job hunting legend!"
+
+                                # Today milestones (5, 10, 20)
+                                if not encouragement_message:
+                                    if today_apps == 5:
+                                        encouragement_message = "⚡ 5 applications today! Great daily momentum!"
+                                    elif today_apps == 10:
+                                        encouragement_message = "🔥 10 applications today! You're crushing today's goal!"
+                                    elif today_apps == 20:
+                                        encouragement_message = "💪 20 applications today! Incredible productivity!"
+                                    elif today_apps == 30:
+                                        encouragement_message = "🚀 30 applications today! You're a machine!"
+
+                                # Streak milestones
+                                if not encouragement_message and new_streak > current_streak:
+                                    if new_streak == 3:
+                                        encouragement_message = "🔥 3-day streak! Building consistency!"
+                                    elif new_streak == 7:
+                                        encouragement_message = "⭐ 7-day streak! A full week of dedication!"
+                                    elif new_streak == 14:
+                                        encouragement_message = "💪 14-day streak! Two weeks strong!"
+                                    elif new_streak == 30:
+                                        encouragement_message = "🏆 30-day streak! A full month! You're incredible!"
+                                    elif new_streak == 60:
+                                        encouragement_message = "💎 60-day streak! Two months of consistency!"
+                                    elif new_streak == 100:
+                                        encouragement_message = "👑 100-day streak! You're a legend!"
+
+                            # Store encouragement message to return later
+                            if encouragement_message:
+                                # We'll return this with the response
+                                pass
+
                         if request.rejected:
                             await conn.execute("""
                                 INSERT INTO user_job_interactions (user_id, job_id, rejected, rejected_at, created_at, updated_at)
@@ -980,7 +1077,10 @@ async def update_job_api(request: JobUpdateRequest, current_user: Optional[Dict[
 
         if success:
             print(f"✅ DEBUG: Job {request.job_id} updated successfully in database")
-            return {"success": True, "message": f"Job {request.job_id} updated"}
+            response = {"success": True, "message": f"Job {request.job_id} updated"}
+            if encouragement_message:
+                response["encouragement"] = encouragement_message
+            return response
         else:
             print(f"❌ DEBUG: Job {request.job_id} not found in database")
             raise HTTPException(status_code=404, detail="Job not found")
@@ -2156,7 +2256,8 @@ async def get_user_rewards(current_user: Dict[str, Any] = Depends(get_current_us
         total_rejected = app_stats['total_rejected'] or 0
 
         # Calculate points (Base points without multipliers for now)
-        calculated_points = (total_applied * 10) + (total_saved * 2) + (total_rejected * 1)
+        # Only applying (+10) and saving (+2) give points, rejecting gives 0
+        calculated_points = (total_applied * 10) + (total_saved * 2)
 
         # Determine level based on points
         levels = [
@@ -2190,16 +2291,16 @@ async def get_user_rewards(current_user: Dict[str, Any] = Depends(get_current_us
         # Check and award badges
         badge_definitions = [
             # Volume badges
-            {'id': 'first_step', 'name': 'First Step', 'desc': 'Applied to first job', 'icon': '🎯', 'requirement': lambda stats: stats['total_applied'] >= 1, 'points': 50},
-            {'id': 'getting_started', 'name': 'Getting Started', 'desc': 'Applied to 5 jobs', 'icon': '🚀', 'requirement': lambda stats: stats['total_applied'] >= 5, 'points': 100},
-            {'id': 'job_hunter', 'name': 'Job Hunter', 'desc': 'Applied to 25 jobs', 'icon': '💼', 'requirement': lambda stats: stats['total_applied'] >= 25, 'points': 250},
-            {'id': 'career_seeker', 'name': 'Career Seeker', 'desc': 'Applied to 50 jobs', 'icon': '⭐', 'requirement': lambda stats: stats['total_applied'] >= 50, 'points': 500},
-            {'id': 'application_master', 'name': 'Application Master', 'desc': 'Applied to 100 jobs', 'icon': '👑', 'requirement': lambda stats: stats['total_applied'] >= 100, 'points': 1000},
+            {'id': 'first_step', 'name': 'First Step', 'desc': 'Applied to first job', 'requirement': lambda stats: stats['total_applied'] >= 1, 'points': 50},
+            {'id': 'getting_started', 'name': 'Getting Started', 'desc': 'Applied to 5 jobs', 'requirement': lambda stats: stats['total_applied'] >= 5, 'points': 100},
+            {'id': 'job_hunter', 'name': 'Job Hunter', 'desc': 'Applied to 25 jobs', 'requirement': lambda stats: stats['total_applied'] >= 25, 'points': 250},
+            {'id': 'career_seeker', 'name': 'Career Seeker', 'desc': 'Applied to 50 jobs', 'requirement': lambda stats: stats['total_applied'] >= 50, 'points': 500},
+            {'id': 'application_master', 'name': 'Application Master', 'desc': 'Applied to 100 jobs', 'requirement': lambda stats: stats['total_applied'] >= 100, 'points': 1000},
 
             # Streak badges
-            {'id': 'daily_grinder', 'name': 'Daily Grinder', 'desc': '3 day streak', 'icon': '📅', 'requirement': lambda stats: current_streak >= 3, 'points': 100},
-            {'id': 'week_warrior', 'name': 'Week Warrior', 'desc': '7 day streak', 'icon': '🎯', 'requirement': lambda stats: current_streak >= 7, 'points': 300},
-            {'id': 'month_marathon', 'name': 'Month Marathon', 'desc': '30 day streak', 'icon': '💪', 'requirement': lambda stats: current_streak >= 30, 'points': 1500},
+            {'id': 'daily_grinder', 'name': 'Daily Grinder', 'desc': '3 day streak', 'requirement': lambda stats: current_streak >= 3, 'points': 100},
+            {'id': 'week_warrior', 'name': 'Week Warrior', 'desc': '7 day streak', 'requirement': lambda stats: current_streak >= 7, 'points': 300},
+            {'id': 'month_marathon', 'name': 'Month Marathon', 'desc': '30 day streak', 'requirement': lambda stats: current_streak >= 30, 'points': 1500},
         ]
 
         stats_for_badges = {
@@ -2292,6 +2393,220 @@ async def get_user_rewards(current_user: Dict[str, Any] = Depends(get_current_us
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to get rewards: {str(e)}")
+
+@app.get("/api/insights")
+async def get_job_search_insights(current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Get personalized job search insights and recommendations"""
+
+    try:
+        user_id = current_user.get('user_id')
+        if not user_id:
+            raise HTTPException(status_code=401, detail="User ID not found")
+
+        conn = await db.get_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+
+        insights = []
+
+        # Get country application distribution
+        country_stats = await conn.fetch("""
+            SELECT
+                j.country,
+                COUNT(*) as applications,
+                COUNT(*) * 100.0 / SUM(COUNT(*)) OVER() as percentage
+            FROM user_job_interactions uji
+            JOIN jobs j ON uji.job_id = j.id
+            WHERE uji.user_id = $1 AND uji.applied = TRUE AND j.country IS NOT NULL
+            GROUP BY j.country
+            ORDER BY applications DESC
+        """, user_id)
+
+        total_applications = sum(stat['applications'] for stat in country_stats)
+
+        if total_applications >= 10:
+            # Check if user is too concentrated in one country
+            if country_stats:
+                top_country = country_stats[0]
+                top_country_name = top_country['country']
+                top_country_pct = top_country['percentage']
+                top_country_apps = top_country['applications']
+
+                # If more than 70% of applications are in one country
+                if top_country_pct > 70 and total_applications >= 15:
+                    other_countries = [c['country'] for c in country_stats[1:4] if c['country']]
+
+                    insight = {
+                        'type': 'diversification',
+                        'severity': 'high',
+                        'title': 'Consider Diversifying Your Search',
+                        'message': f"You've applied to {top_country_apps} jobs in {top_country_name} ({top_country_pct:.0f}% of total). Expanding to other markets could increase your opportunities!",
+                        'action': f"Try exploring: {', '.join(other_countries) if other_countries else 'other countries'}"
+                    }
+                    insights.append(insight)
+
+                # If more than 50% but less than 70%
+                elif top_country_pct > 50 and total_applications >= 20:
+                    insight = {
+                        'type': 'diversification',
+                        'severity': 'medium',
+                        'title': 'Good Market Focus',
+                        'message': f"You're focusing on {top_country_name} ({top_country_pct:.0f}%). Consider gradually expanding to other regions for more opportunities.",
+                        'action': 'Explore 1-2 additional countries'
+                    }
+                    insights.append(insight)
+
+        # Get available countries user hasn't applied to yet
+        unexplored_countries = await conn.fetch("""
+            SELECT DISTINCT j.country, COUNT(*) as available_jobs
+            FROM jobs j
+            WHERE j.country IS NOT NULL
+            AND j.country NOT IN (
+                SELECT DISTINCT j2.country
+                FROM user_job_interactions uji
+                JOIN jobs j2 ON uji.job_id = j2.id
+                WHERE uji.user_id = $1 AND uji.applied = TRUE AND j2.country IS NOT NULL
+            )
+            GROUP BY j.country
+            HAVING COUNT(*) >= 5
+            ORDER BY available_jobs DESC
+            LIMIT 5
+        """, user_id)
+
+        if unexplored_countries and total_applications >= 10:
+            unexplored_list = [f"{c['country']} ({c['available_jobs']} jobs)" for c in unexplored_countries[:3]]
+            insight = {
+                'type': 'opportunity',
+                'severity': 'info',
+                'title': 'Untapped Markets',
+                'message': f"There are {len(unexplored_countries)} countries with open positions you haven't explored yet.",
+                'action': f"Consider: {', '.join(unexplored_list)}"
+            }
+            insights.append(insight)
+
+        # Check application velocity (daily average)
+        velocity_stats = await conn.fetchrow("""
+            SELECT
+                COUNT(DISTINCT DATE(applied_at)) as active_days,
+                COUNT(*) as total_apps,
+                MAX(DATE(applied_at)) as last_application_date,
+                MIN(DATE(applied_at)) as first_application_date
+            FROM user_job_interactions
+            WHERE user_id = $1 AND applied = TRUE
+        """, user_id)
+
+        if velocity_stats and velocity_stats['active_days']:
+            active_days = velocity_stats['active_days']
+            total_apps = velocity_stats['total_apps']
+            avg_per_day = total_apps / active_days
+
+            # Get recent 7 days activity
+            recent_activity = await conn.fetchrow("""
+                SELECT COUNT(*) as recent_apps
+                FROM user_job_interactions
+                WHERE user_id = $1 AND applied = TRUE
+                AND applied_at >= CURRENT_DATE - INTERVAL '7 days'
+            """, user_id)
+
+            recent_apps = recent_activity['recent_apps'] if recent_activity else 0
+
+            # If user was active but has slowed down
+            if avg_per_day >= 2 and recent_apps < 5 and total_apps >= 20:
+                insight = {
+                    'type': 'motivation',
+                    'severity': 'medium',
+                    'title': 'Keep the Momentum Going!',
+                    'message': f"You were averaging {avg_per_day:.1f} applications per active day, but only {recent_apps} in the last week.",
+                    'action': 'Set a goal of 5-10 applications this week to rebuild momentum'
+                }
+                insights.append(insight)
+
+            # If user is doing well
+            elif recent_apps >= 10:
+                insight = {
+                    'type': 'success',
+                    'severity': 'positive',
+                    'title': 'Great Momentum!',
+                    'message': f"You've applied to {recent_apps} jobs in the last 7 days! You're on fire!",
+                    'action': 'Keep up this excellent pace'
+                }
+                insights.append(insight)
+
+        # Check if user should diversify job types
+        job_type_stats = await conn.fetch("""
+            SELECT
+                j.job_type,
+                COUNT(*) as applications,
+                COUNT(*) * 100.0 / SUM(COUNT(*)) OVER() as percentage
+            FROM user_job_interactions uji
+            JOIN jobs j ON uji.job_id = j.id
+            WHERE uji.user_id = $1 AND uji.applied = TRUE AND j.job_type IS NOT NULL
+            GROUP BY j.job_type
+            ORDER BY applications DESC
+        """, user_id)
+
+        if job_type_stats and total_applications >= 15:
+            top_type = job_type_stats[0]
+            if top_type['percentage'] > 80:
+                other_types = [jt['job_type'] for jt in job_type_stats[1:] if jt['job_type']]
+                insight = {
+                    'type': 'diversification',
+                    'severity': 'medium',
+                    'title': 'Expand Your Job Types',
+                    'message': f"Most of your applications are for {top_type['job_type']} roles ({top_type['percentage']:.0f}%).",
+                    'action': f"Consider exploring: {', '.join(other_types) if other_types else 'related positions'}"
+                }
+                insights.append(insight)
+
+        # Time-based insights - Best application times
+        time_stats = await conn.fetch("""
+            SELECT
+                EXTRACT(HOUR FROM applied_at) as hour,
+                COUNT(*) as applications
+            FROM user_job_interactions
+            WHERE user_id = $1 AND applied = TRUE
+            GROUP BY EXTRACT(HOUR FROM applied_at)
+            ORDER BY applications DESC
+            LIMIT 3
+        """, user_id)
+
+        if time_stats and total_applications >= 20:
+            peak_hours = [int(ts['hour']) for ts in time_stats]
+            if peak_hours:
+                formatted_hours = [f"{h:02d}:00" for h in peak_hours[:2]]
+                insight = {
+                    'type': 'pattern',
+                    'severity': 'info',
+                    'title': 'Your Peak Application Times',
+                    'message': f"You're most productive around {' and '.join(formatted_hours)}.",
+                    'action': 'Schedule your job search during these peak hours for best results'
+                }
+                insights.append(insight)
+
+        # If user has very few applications, motivate them
+        if total_applications < 5:
+            insight = {
+                'type': 'motivation',
+                'severity': 'info',
+                'title': 'Start Strong!',
+                'message': "You're just getting started. The more applications you submit, the better your chances!",
+                'action': 'Aim for 5 applications this week to build momentum'
+            }
+            insights.append(insight)
+
+        await conn.close()
+
+        return {
+            'insights': insights,
+            'total_insights': len(insights),
+            'generated_at': datetime.utcnow().isoformat()
+        }
+
+    except Exception as e:
+        print(f"❌ Error getting insights: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to get insights: {str(e)}")
 
 # Catch-all route for React Router (SPA routing)
 @app.get("/{full_path:path}")

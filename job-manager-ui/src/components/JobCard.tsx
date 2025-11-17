@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ExternalLink, Check, X } from 'lucide-react';
+import { ExternalLink, Check, X, Zap } from 'lucide-react';
 import type { Job } from '../types';
 import { getCountryFromLocation } from '../utils/countryUtils';
 
@@ -73,8 +73,9 @@ export const JobCard: React.FC<JobCardProps> = ({
               {job.easy_apply && (
                 <Badge
                   variant="outline"
-                  className="h-5 text-[10px] font-semibold px-2 bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-0"
+                  className="h-5 text-[10px] font-semibold px-2 bg-gradient-to-r from-emerald-500/20 to-green-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex items-center gap-0.5"
                 >
+                  <Zap className="w-3 h-3 fill-emerald-500" />
                   Quick Apply
                 </Badge>
               )}

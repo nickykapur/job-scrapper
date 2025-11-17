@@ -31,4 +31,5 @@ export interface FilterState {
   sort: 'newest' | 'oldest' | 'title' | 'company';
   jobType: 'all' | 'software' | 'hr' | 'cybersecurity' | 'sales' | 'finance';
   country: 'all' | string;
+  quickApply?: 'all' | 'quick_only' | 'non_quick';
 }

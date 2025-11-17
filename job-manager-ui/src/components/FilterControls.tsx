@@ -28,7 +28,7 @@ export const FilterControls: React.FC<FilterControlsProps> = ({
           <h3 className="text-lg font-semibold">Filters</h3>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           {/* Country Filter */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Country</label>
@@ -91,6 +91,24 @@ export const FilterControls: React.FC<FilterControlsProps> = ({
                 <SelectItem value="cybersecurity">Cybersecurity</SelectItem>
                 <SelectItem value="sales">Sales</SelectItem>
                 <SelectItem value="finance">Finance</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Quick Apply Filter */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Quick Apply</label>
+            <Select
+              value={filters.quickApply || 'all'}
+              onValueChange={(value) => onFiltersChange({ ...filters, quickApply: value as any })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by Quick Apply" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Jobs</SelectItem>
+                <SelectItem value="quick_only">Quick Apply Only</SelectItem>
+                <SelectItem value="non_quick">Non-Quick Apply</SelectItem>
               </SelectContent>
             </Select>
           </div>
