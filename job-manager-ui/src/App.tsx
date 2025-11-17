@@ -47,6 +47,8 @@ const App: React.FC = () => {
   const [localRejectedCount, setLocalRejectedCount] = useState(0);
   const [currentTab, setCurrentTab] = useState<'dashboard' | 'training' | 'system-design' | 'my-analytics' | 'analytics'>('dashboard');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [timeAgo, setTimeAgo] = useState<string>('');
 
   // Check if current user is software_admin or has admin access
   const hasAnalyticsAccess = user?.username === 'software_admin' || user?.username === 'admin' || user?.is_admin === true;
@@ -67,6 +69,35 @@ const App: React.FC = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Update "time ago" display every minute
+  useEffect(() => {
+    const updateTimeAgo = () => {
+      if (!lastUpdated) {
+        setTimeAgo('Never');
+        return;
+      }
+
+      const seconds = Math.floor((new Date().getTime() - lastUpdated.getTime()) / 1000);
+
+      if (seconds < 60) {
+        setTimeAgo('Just now');
+      } else if (seconds < 3600) {
+        const minutes = Math.floor(seconds / 60);
+        setTimeAgo(`${minutes} min${minutes > 1 ? 's' : ''} ago`);
+      } else if (seconds < 86400) {
+        const hours = Math.floor(seconds / 3600);
+        setTimeAgo(`${hours} hour${hours > 1 ? 's' : ''} ago`);
+      } else {
+        const days = Math.floor(seconds / 86400);
+        setTimeAgo(`${days} day${days > 1 ? 's' : ''} ago`);
+      }
+    };
+
+    updateTimeAgo();
+    const interval = setInterval(updateTimeAgo, 30000); // Update every 30 seconds
+    return () => clearInterval(interval);
+  }, [lastUpdated]);
 
   const showNotification = (message: string, severity: 'success' | 'error' | 'info' = 'info') => {
     if (severity === 'success') {
@@ -90,6 +121,9 @@ const App: React.FC = () => {
         !key.startsWith('_') && job.rejected === true
       );
       setLocalRejectedCount(rejectedJobs.length);
+
+      // Update last refreshed timestamp
+      setLastUpdated(new Date());
 
       if (!silent) showNotification('Jobs refreshed successfully', 'success');
     } catch (error) {
@@ -220,17 +254,17 @@ const App: React.FC = () => {
           Dashboard
         </Button>
 
+        <Button
+          variant={currentTab === 'my-analytics' ? 'secondary' : 'ghost'}
+          className="w-full justify-start"
+          onClick={() => { setCurrentTab('my-analytics'); if (isMobile) setDrawerOpen(false); }}
+        >
+          <BarChart3 className="mr-3 h-4 w-4" />
+          My Analytics
+        </Button>
+
         {hasSoftwareAccess && (
           <>
-            <Button
-              variant={currentTab === 'my-analytics' ? 'secondary' : 'ghost'}
-              className="w-full justify-start"
-              onClick={() => { setCurrentTab('my-analytics'); if (isMobile) setDrawerOpen(false); }}
-            >
-              <BarChart3 className="mr-3 h-4 w-4" />
-              My Analytics
-            </Button>
-
             <Button
               variant={currentTab === 'training' ? 'secondary' : 'ghost'}
               className="w-full justify-start"
@@ -346,9 +380,17 @@ const App: React.FC = () => {
                  currentTab === 'system-design' ? 'System Design' : 'Analytics'}
               </h2>
               {currentTab === 'dashboard' && (
-                <p className="text-sm text-muted-foreground">
-                  {Object.keys(cleanJobs).length} active opportunities
-                </p>
+                <div className="space-y-0.5">
+                  <p className="text-sm text-muted-foreground">
+                    {Object.keys(cleanJobs).length} active opportunities
+                  </p>
+                  {timeAgo && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <RefreshCw className="h-3 w-3" />
+                      Last updated: {timeAgo}
+                    </p>
+                  )}
+                </div>
               )}
             </div>
 
@@ -404,7 +446,7 @@ const App: React.FC = () => {
               </>
             )}
 
-            {currentTab === 'my-analytics' && hasSoftwareAccess && <PersonalAnalytics />}
+            {currentTab === 'my-analytics' && <PersonalAnalytics />}
             {currentTab === 'training' && hasSoftwareAccess && <Training />}
             {currentTab === 'system-design' && hasSoftwareAccess && <SystemDesign />}
             {currentTab === 'analytics' && hasAnalyticsAccess && <Analytics />}
