@@ -20,6 +20,7 @@ import {
   BarChart3,
   X,
   Trophy,
+  Users,
 } from 'lucide-react';
 import { JobCard } from './components/JobCard';
 import { StatsCards } from './components/StatsCards';
@@ -29,6 +30,7 @@ import { SystemDesign } from './components/SystemDesign';
 import { Analytics } from './components/Analytics';
 import { PersonalAnalytics } from './components/PersonalAnalytics';
 import { Rewards } from './components/Rewards';
+import { UserManagement } from './components/UserManagement';
 // import JobSearch from './components/JobSearch';
 // import CountryStats from './components/CountryStats';
 import { jobApi } from './services/api';
@@ -47,7 +49,7 @@ const App: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [localRejectedCount, setLocalRejectedCount] = useState(0);
-  const [currentTab, setCurrentTab] = useState<'dashboard' | 'training' | 'system-design' | 'my-analytics' | 'analytics' | 'rewards'>('dashboard');
+  const [currentTab, setCurrentTab] = useState<'dashboard' | 'training' | 'system-design' | 'my-analytics' | 'analytics' | 'rewards' | 'user-management'>('dashboard');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [timeAgo, setTimeAgo] = useState<string>('');
@@ -322,15 +324,27 @@ const App: React.FC = () => {
         )}
 
         {hasAnalyticsAccess && (
-          <Button
-            variant={currentTab === 'analytics' ? 'secondary' : 'ghost'}
-            className="w-full justify-start"
-            onClick={() => { setCurrentTab('analytics'); if (isMobile) setDrawerOpen(false); }}
-          >
-            <BarChart3 className="mr-3 h-4 w-4" />
-            Analytics
-            <Badge variant="secondary" className="ml-auto">Admin</Badge>
-          </Button>
+          <>
+            <Button
+              variant={currentTab === 'analytics' ? 'secondary' : 'ghost'}
+              className="w-full justify-start"
+              onClick={() => { setCurrentTab('analytics'); if (isMobile) setDrawerOpen(false); }}
+            >
+              <BarChart3 className="mr-3 h-4 w-4" />
+              Analytics
+              <Badge variant="secondary" className="ml-auto">Admin</Badge>
+            </Button>
+
+            <Button
+              variant={currentTab === 'user-management' ? 'secondary' : 'ghost'}
+              className="w-full justify-start"
+              onClick={() => { setCurrentTab('user-management'); if (isMobile) setDrawerOpen(false); }}
+            >
+              <Users className="mr-3 h-4 w-4" />
+              User Management
+              <Badge variant="secondary" className="ml-auto">Admin</Badge>
+            </Button>
+          </>
         )}
       </nav>
 
@@ -414,7 +428,8 @@ const App: React.FC = () => {
                  currentTab === 'my-analytics' ? 'My Analytics' :
                  currentTab === 'rewards' ? 'Rewards & Achievements' :
                  currentTab === 'training' ? 'DSA Training' :
-                 currentTab === 'system-design' ? 'System Design' : 'Analytics'}
+                 currentTab === 'system-design' ? 'System Design' :
+                 currentTab === 'user-management' ? 'User Management' : 'Analytics'}
               </h2>
               {currentTab === 'dashboard' && (
                 <div className="space-y-0.5">
@@ -488,6 +503,7 @@ const App: React.FC = () => {
             {currentTab === 'training' && hasSoftwareAccess && <Training />}
             {currentTab === 'system-design' && hasSoftwareAccess && <SystemDesign />}
             {currentTab === 'analytics' && hasAnalyticsAccess && <Analytics />}
+            {currentTab === 'user-management' && hasAnalyticsAccess && <UserManagement />}
           </div>
         </main>
       </div>
