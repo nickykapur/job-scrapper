@@ -212,7 +212,7 @@ jobs:
 
           # Check if scraping was skipped
           if [ "${{ steps.skip_check.outputs.skipped }}" == "true" ]; then
-            MESSAGE=$(cat <<EOF
+            MESSAGE=$(cat <<'EOF'
             {
               "blocks": [
                 {
@@ -244,11 +244,11 @@ jobs:
                 }
               ]
             }
-EOF
-            )
+          EOF
+          )
           else
             # Normal success message
-            MESSAGE=$(cat <<EOF
+            MESSAGE=$(cat <<'EOF'
             {
               "blocks": [
                 {
@@ -307,8 +307,8 @@ EOF
                 }
               ]
             }
-EOF
-            )
+          EOF
+          )
           fi
 
           curl -X POST "$SLACK_WEBHOOK_URL" \
