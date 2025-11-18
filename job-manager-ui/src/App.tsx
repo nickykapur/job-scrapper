@@ -54,11 +54,11 @@ const App: React.FC = () => {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [timeAgo, setTimeAgo] = useState<string>('');
 
-  // Check if current user is software_admin or has admin access
-  const hasAnalyticsAccess = user?.username === 'software_admin' || user?.username === 'admin' || user?.is_admin === true;
+  // Check if current user has admin access - strictly based on is_admin flag
+  const hasAdminAccess = user?.is_admin === true;
 
   // Check if current user has software role access
-  const hasSoftwareAccess = user?.username === 'software_admin' || user?.username === 'admin';
+  const hasSoftwareAccess = user?.username === 'software_admin' || user?.username === 'admin' || user?.is_admin === true;
 
   const [filters, setFilters] = useState<FilterState>({
     status: 'all',
@@ -323,7 +323,7 @@ const App: React.FC = () => {
           </>
         )}
 
-        {hasAnalyticsAccess && (
+        {hasAdminAccess && (
           <>
             <Button
               variant={currentTab === 'analytics' ? 'secondary' : 'ghost'}
@@ -502,8 +502,8 @@ const App: React.FC = () => {
             {currentTab === 'rewards' && <Rewards />}
             {currentTab === 'training' && hasSoftwareAccess && <Training />}
             {currentTab === 'system-design' && hasSoftwareAccess && <SystemDesign />}
-            {currentTab === 'analytics' && hasAnalyticsAccess && <Analytics />}
-            {currentTab === 'user-management' && hasAnalyticsAccess && <UserManagement />}
+            {currentTab === 'analytics' && hasAdminAccess && <Analytics />}
+            {currentTab === 'user-management' && hasAdminAccess && <UserManagement />}
           </div>
         </main>
       </div>
