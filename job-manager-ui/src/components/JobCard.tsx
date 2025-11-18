@@ -70,13 +70,25 @@ export const JobCard: React.FC<JobCardProps> = ({
                   {job.job_type === 'hr' ? 'HR' : job.job_type.charAt(0).toUpperCase() + job.job_type.slice(1)}
                 </Badge>
               )}
-              {job.easy_apply && (
+              {/* Show Easy Apply badge with verification status */}
+              {(job.easy_apply_status === 'confirmed' || job.easy_apply_status === 'probable' || (job.easy_apply && !job.easy_apply_status)) && (
                 <Badge
                   variant="outline"
-                  className="h-5 text-[10px] font-semibold px-2 bg-gradient-to-r from-emerald-500/20 to-green-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex items-center gap-0.5"
+                  className={`h-5 text-[10px] font-semibold px-2 flex items-center gap-0.5 ${
+                    job.easy_apply_status === 'confirmed'
+                      ? 'bg-gradient-to-r from-emerald-500/20 to-green-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                      : 'bg-gradient-to-r from-yellow-500/20 to-amber-500/20 text-yellow-700 dark:text-yellow-400 border border-yellow-500/30'
+                  }`}
+                  title={
+                    job.easy_apply_status === 'confirmed'
+                      ? 'Verified Quick Apply'
+                      : job.easy_apply_status === 'probable'
+                      ? 'Likely Quick Apply (unverified)'
+                      : 'Quick Apply (legacy data)'
+                  }
                 >
-                  <Zap className="w-3 h-3 fill-emerald-500" />
-                  Quick Apply
+                  <Zap className={`w-3 h-3 ${job.easy_apply_status === 'confirmed' ? 'fill-emerald-500' : 'fill-yellow-500'}`} />
+                  {job.easy_apply_status === 'confirmed' ? 'Quick Apply ✓' : 'Quick Apply ?'}
                 </Badge>
               )}
             </div>

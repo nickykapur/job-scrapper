@@ -219,9 +219,23 @@ const App: React.FC = () => {
       // Country filter
       if (filters.country !== 'all' && job.country !== filters.country) return;
 
-      // Quick Apply filter
-      if (filters.quickApply === 'quick_only' && !job.easy_apply) return;
-      if (filters.quickApply === 'non_quick' && job.easy_apply) return;
+      // Quick Apply filter with verification status support
+      if (filters.quickApply === 'confirmed_only' && job.easy_apply_status !== 'confirmed') return;
+      if (filters.quickApply === 'probable_only' && job.easy_apply_status !== 'probable') return;
+      if (filters.quickApply === 'quick_only') {
+        // Show both confirmed and probable, or legacy easy_apply=true
+        const hasQuickApply = job.easy_apply_status === 'confirmed' ||
+                               job.easy_apply_status === 'probable' ||
+                               (job.easy_apply && !job.easy_apply_status);
+        if (!hasQuickApply) return;
+      }
+      if (filters.quickApply === 'non_quick') {
+        // Show only non-quick apply jobs
+        const isQuickApply = job.easy_apply_status === 'confirmed' ||
+                              job.easy_apply_status === 'probable' ||
+                              (job.easy_apply && !job.easy_apply_status);
+        if (isQuickApply) return;
+      }
 
       filtered[id] = job;
     });

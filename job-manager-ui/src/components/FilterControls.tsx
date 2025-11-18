@@ -107,7 +107,9 @@ export const FilterControls: React.FC<FilterControlsProps> = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Jobs</SelectItem>
-                <SelectItem value="quick_only">Quick Apply Only</SelectItem>
+                <SelectItem value="confirmed_only">Verified Quick Apply ✓</SelectItem>
+                <SelectItem value="probable_only">Likely Quick Apply ?</SelectItem>
+                <SelectItem value="quick_only">Any Quick Apply</SelectItem>
                 <SelectItem value="non_quick">Non-Quick Apply</SelectItem>
               </SelectContent>
             </Select>

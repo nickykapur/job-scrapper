@@ -8,7 +8,10 @@ export interface Job {
   scraped_at: string;
   applied: boolean;
   rejected?: boolean;
-  easy_apply?: boolean;
+  easy_apply?: boolean; // Deprecated: Use easy_apply_status instead
+  easy_apply_status?: 'confirmed' | 'probable' | 'unverified' | 'false';
+  easy_apply_verified_at?: string;
+  easy_apply_verification_method?: 'detail_page_verified' | 'filter_parameter' | 'card_detection' | 'manual';
   is_new: boolean;
   category?: 'new' | 'last_24h' | 'existing';
   first_seen?: string;
@@ -31,5 +34,5 @@ export interface FilterState {
   sort: 'newest' | 'oldest' | 'title' | 'company';
   jobType: 'all' | 'software' | 'hr' | 'cybersecurity' | 'sales' | 'finance';
   country: 'all' | string;
-  quickApply?: 'all' | 'quick_only' | 'non_quick';
+  quickApply?: 'all' | 'quick_only' | 'non_quick' | 'confirmed_only' | 'probable_only';
 }

@@ -609,7 +609,7 @@ class LinkedInJobScraper:
         return new_job_data
 
     def detect_easy_apply(self, card):
-        """Detect if a job has LinkedIn Easy Apply"""
+        """Detect if a job has LinkedIn Easy Apply from card view"""
         easy_apply_selectors = [
             ".job-search-card__easy-apply-label",
             "[aria-label*='Easy Apply']",
@@ -638,6 +638,79 @@ class LinkedInJobScraper:
             pass
 
         return False
+
+    def verify_easy_apply_on_detail_page(self, job_url, max_wait_seconds=3):
+        """
+        Verify Easy Apply status by checking the job detail page.
+        This is more accurate than card detection or filter trust.
+
+        Returns: (bool, str) - (has_easy_apply, verification_method)
+        """
+        try:
+            # Save current URL to return to it later
+            current_url = self.driver.current_url
+
+            # Navigate to job detail page
+            self.driver.get(job_url)
+            time.sleep(max_wait_seconds)  # Wait for page to load
+
+            # Selectors for Easy Apply button on detail page
+            easy_apply_button_selectors = [
+                "button[class*='jobs-apply-button']",
+                "button[aria-label*='Easy Apply']",
+                ".jobs-apply-button--top-card",
+                "button:contains('Easy Apply')",
+                "[data-control-name='jobdetails_topcard_inapply']"
+            ]
+
+            # Check if Easy Apply button exists
+            for selector in easy_apply_button_selectors:
+                try:
+                    elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                    for element in elements:
+                        if element.is_displayed():
+                            button_text = element.text.lower()
+                            aria_label = element.get_attribute('aria-label') or ""
+
+                            if 'easy apply' in button_text or 'easy apply' in aria_label.lower():
+                                # Confirmed Easy Apply
+                                return True, 'detail_page_verified'
+                except:
+                    continue
+
+            # If no Easy Apply button found, check for regular Apply button (means NOT easy apply)
+            regular_apply_selectors = [
+                "button:contains('Apply')",
+                "a[class*='jobs-apply-button']"
+            ]
+
+            for selector in regular_apply_selectors:
+                try:
+                    elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                    for element in elements:
+                        if element.is_displayed():
+                            button_text = element.text.lower()
+                            # If it says "Apply" but NOT "Easy Apply", it's a regular application
+                            if 'apply' in button_text and 'easy' not in button_text:
+                                return False, 'detail_page_verified'
+                except:
+                    continue
+
+            # Could not determine - return unverified
+            return False, 'detail_page_unverified'
+
+        except Exception as e:
+            print(f"⚠️  Warning: Could not verify Easy Apply on detail page: {e}")
+            return False, 'detail_page_error'
+        finally:
+            # Return to original page (optional - may slow down scraping)
+            # Commenting out to improve performance
+            # try:
+            #     if current_url and current_url != job_url:
+            #         self.driver.get(current_url)
+            # except:
+            #     pass
+            pass
 
     def extract_job_data(self, card, easy_apply_from_filter=False):
         try:
@@ -797,13 +870,29 @@ class LinkedInJobScraper:
             # Generate unique job ID
             job_id = self.generate_job_id(title, company, location)
 
-            # Detect Easy Apply status
-            # Priority: use filter parameter if available, otherwise try to detect from card
+            # Detect Easy Apply status with confidence tracking
+            # NEW STRATEGY: Determine status and verification method
+            easy_apply = False
+            easy_apply_status = 'unverified'
+            easy_apply_verification_method = None
+
             if easy_apply_from_filter:
+                # Jobs from filter are marked as 'probable' but not confirmed
+                # We trust the filter but acknowledge it may have false positives
                 easy_apply = True
+                easy_apply_status = 'probable'
+                easy_apply_verification_method = 'filter_parameter'
             else:
-                # Fallback to card detection (though this rarely works on public pages)
-                easy_apply = self.detect_easy_apply(card)
+                # Try card detection for jobs not from filter
+                card_detected = self.detect_easy_apply(card)
+                if card_detected:
+                    easy_apply = True
+                    easy_apply_status = 'probable'
+                    easy_apply_verification_method = 'card_detection'
+                else:
+                    easy_apply = False
+                    easy_apply_status = 'false'
+                    easy_apply_verification_method = None
 
             # Derive country from location
             country = self.get_country_from_location(location or "")
@@ -814,7 +903,8 @@ class LinkedInJobScraper:
             # Detect experience level (senior, mid, junior)
             experience_level = self.detect_experience_level(title)
 
-            # Create job data
+            # Create job data with verification fields
+            current_time = datetime.now().isoformat()
             job_data = {
                 "id": job_id,
                 "title": title,
@@ -825,10 +915,13 @@ class LinkedInJobScraper:
                 "experience_level": experience_level,  # Add experience level
                 "posted_date": posted_date or "Unknown",
                 "job_url": job_url,
-                "scraped_at": datetime.now().isoformat(),
+                "scraped_at": current_time,
                 "applied": False,
                 "rejected": False,
-                "easy_apply": easy_apply,
+                "easy_apply": easy_apply,  # Keep for backward compatibility
+                "easy_apply_status": easy_apply_status,  # New: confidence level
+                "easy_apply_verified_at": current_time if easy_apply_verification_method else None,
+                "easy_apply_verification_method": easy_apply_verification_method,  # New: how it was detected
                 "is_new": job_id not in self.existing_jobs
             }
             

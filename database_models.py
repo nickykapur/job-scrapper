@@ -237,7 +237,8 @@ class JobDatabase:
             jobs_query = """
                 SELECT id, title, company, location, posted_date, job_url,
                        scraped_at, applied, rejected, is_new, easy_apply, category, notes,
-                       first_seen, last_seen_24h, excluded, country, job_type, experience_level
+                       first_seen, last_seen_24h, excluded, country, job_type, experience_level,
+                       easy_apply_status, easy_apply_verified_at, easy_apply_verification_method
                 FROM jobs
                 ORDER BY scraped_at DESC
             """
@@ -265,7 +266,10 @@ class JobDatabase:
                     "excluded": row['excluded'],
                     "country": row['country'],
                     "job_type": row['job_type'],
-                    "experience_level": row['experience_level']
+                    "experience_level": row['experience_level'],
+                    "easy_apply_status": row['easy_apply_status'],
+                    "easy_apply_verified_at": row['easy_apply_verified_at'].isoformat() if row['easy_apply_verified_at'] else None,
+                    "easy_apply_verification_method": row['easy_apply_verification_method']
                 }
                 jobs[row['id']] = job_data
             
@@ -598,14 +602,20 @@ class JobDatabase:
                     job_type = str(job_data.get('job_type', ''))[:50] if job_data.get('job_type') else None
                     experience_level = str(job_data.get('experience_level', ''))[:50] if job_data.get('experience_level') else None
 
+                    # Get verification fields if they exist
+                    easy_apply_status = str(job_data.get('easy_apply_status', 'unverified'))[:50]
+                    easy_apply_verified_at = self._parse_datetime_string(job_data.get('easy_apply_verified_at'))
+                    easy_apply_verification_method = str(job_data.get('easy_apply_verification_method', ''))[:100] if job_data.get('easy_apply_verification_method') else None
+
                     await conn.execute("""
                         UPDATE jobs SET
                             title = $2, company = $3, location = $4, posted_date = $5,
                             job_url = $6, is_new = $7, easy_apply = $8,
-                            country = $9, job_type = $10, experience_level = $11
+                            country = $9, job_type = $10, experience_level = $11,
+                            easy_apply_status = $12, easy_apply_verified_at = $13, easy_apply_verification_method = $14
                         WHERE id = $1
                     """, job_id, title, company, location, posted_date, job_data['job_url'], is_new_bool, easy_apply_bool,
-                         country, job_type, experience_level)
+                         country, job_type, experience_level, easy_apply_status, easy_apply_verified_at, easy_apply_verification_method)
                     updated_jobs += 1
                 else:
                     # Insert new job
@@ -628,13 +638,18 @@ class JobDatabase:
                     job_type = str(job_data.get('job_type', ''))[:50] if job_data.get('job_type') else None
                     experience_level = str(job_data.get('experience_level', ''))[:50] if job_data.get('experience_level') else None
 
+                    # Get verification fields if they exist
+                    easy_apply_status = str(job_data.get('easy_apply_status', 'unverified'))[:50]
+                    easy_apply_verified_at = self._parse_datetime_string(job_data.get('easy_apply_verified_at'))
+                    easy_apply_verification_method = str(job_data.get('easy_apply_verification_method', ''))[:100] if job_data.get('easy_apply_verification_method') else None
+
                     # INSERT with all fields including country, job_type, experience_level
                     easy_apply_bool = bool(job_data.get('easy_apply', False))
                     await conn.execute("""
-                        INSERT INTO jobs (id, title, company, location, posted_date, job_url, applied, is_new, easy_apply, country, job_type, experience_level)
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                        INSERT INTO jobs (id, title, company, location, posted_date, job_url, applied, is_new, easy_apply, country, job_type, experience_level, easy_apply_status, easy_apply_verified_at, easy_apply_verification_method)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
                     """, job_id, title, company, location, posted_date, job_data['job_url'], applied_bool, is_new_bool, easy_apply_bool,
-                         country, job_type, experience_level)
+                         country, job_type, experience_level, easy_apply_status, easy_apply_verified_at, easy_apply_verification_method)
                     new_jobs += 1
 
                     # Track software vs HR vs cybersecurity vs sales vs finance new jobs
