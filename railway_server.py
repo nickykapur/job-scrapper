@@ -1736,7 +1736,7 @@ async def get_all_users(current_user: Dict[str, Any] = Depends(get_current_user)
                 u.created_at,
                 u.last_login,
                 up.job_types,
-                up.countries,
+                up.preferred_countries as countries,
                 COUNT(DISTINCT uji.job_id) FILTER (WHERE uji.applied = TRUE) as total_applied,
                 COUNT(DISTINCT uji.job_id) FILTER (WHERE uji.rejected = TRUE) as total_rejected,
                 COUNT(DISTINCT uji.job_id) FILTER (WHERE uji.saved = TRUE) as total_saved,
@@ -1744,7 +1744,7 @@ async def get_all_users(current_user: Dict[str, Any] = Depends(get_current_user)
             FROM users u
             LEFT JOIN user_preferences up ON u.id = up.user_id
             LEFT JOIN user_job_interactions uji ON u.id = uji.user_id
-            GROUP BY u.id, u.username, u.email, u.full_name, u.is_active, u.is_admin, u.created_at, u.last_login, up.job_types, up.countries
+            GROUP BY u.id, u.username, u.email, u.full_name, u.is_active, u.is_admin, u.created_at, u.last_login, up.job_types, up.preferred_countries
             ORDER BY u.created_at DESC
         """)
 
@@ -1923,7 +1923,7 @@ async def get_scraping_targets():
                 u.id,
                 u.username,
                 up.job_types,
-                up.countries
+                up.preferred_countries as countries
             FROM users u
             LEFT JOIN user_preferences up ON u.id = up.user_id
             WHERE u.is_active = TRUE
