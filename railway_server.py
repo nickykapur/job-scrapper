@@ -1664,26 +1664,31 @@ async def get_user_activity():
         if not conn:
             raise HTTPException(status_code=500, detail="Could not connect to database")
 
-        # Get recent activity (last 24 hours)
+        # Get recent activity (last 24 hours) - ONLY ACTIVE USERS
         recent_activity = await conn.fetch("""
             SELECT
+                u.id,
                 u.username,
                 u.full_name,
+                u.is_active,
                 COUNT(DISTINCT uji.job_id) FILTER (WHERE uji.applied = TRUE AND uji.applied_at > NOW() - INTERVAL '24 hours') as applied_24h,
                 COUNT(DISTINCT uji.job_id) FILTER (WHERE uji.rejected = TRUE AND uji.rejected_at > NOW() - INTERVAL '24 hours') as rejected_24h,
                 COUNT(DISTINCT uji.job_id) FILTER (WHERE uji.applied = TRUE) as total_applied,
                 COUNT(DISTINCT uji.job_id) FILTER (WHERE uji.rejected = TRUE) as total_rejected
             FROM users u
             LEFT JOIN user_job_interactions uji ON u.id = uji.user_id
-            GROUP BY u.username, u.full_name
+            WHERE u.is_active = TRUE
+            GROUP BY u.id, u.username, u.full_name, u.is_active
             ORDER BY u.username
         """)
 
         users = []
         for row in recent_activity:
             users.append({
+                'id': row['id'],
                 'username': row['username'],
                 'full_name': row['full_name'],
+                'is_active': row['is_active'],
                 'applied_24h': row['applied_24h'],
                 'rejected_24h': row['rejected_24h'],
                 'total_applied': row['total_applied'],
@@ -1701,6 +1706,265 @@ async def get_user_activity():
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to get user activity: {str(e)}")
+
+@app.get("/api/admin/users")
+async def get_all_users(current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Get all users with their active status (admin only)"""
+    if not current_user.get('is_admin'):
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    if not db or not DATABASE_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    if not db.use_postgres:
+        raise HTTPException(status_code=500, detail="PostgreSQL database required")
+
+    try:
+        conn = await db.get_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Could not connect to database")
+
+        # Get all users with their stats and preferences
+        users = await conn.fetch("""
+            SELECT
+                u.id,
+                u.username,
+                u.email,
+                u.full_name,
+                u.is_active,
+                u.is_admin,
+                u.created_at,
+                u.last_login,
+                up.job_types,
+                up.countries,
+                COUNT(DISTINCT uji.job_id) FILTER (WHERE uji.applied = TRUE) as total_applied,
+                COUNT(DISTINCT uji.job_id) FILTER (WHERE uji.rejected = TRUE) as total_rejected,
+                COUNT(DISTINCT uji.job_id) FILTER (WHERE uji.saved = TRUE) as total_saved,
+                MAX(uji.updated_at) as last_interaction
+            FROM users u
+            LEFT JOIN user_preferences up ON u.id = up.user_id
+            LEFT JOIN user_job_interactions uji ON u.id = uji.user_id
+            GROUP BY u.id, u.username, u.email, u.full_name, u.is_active, u.is_admin, u.created_at, u.last_login, up.job_types, up.countries
+            ORDER BY u.created_at DESC
+        """)
+
+        await conn.close()
+
+        user_list = []
+        for row in users:
+            user_list.append({
+                'id': row['id'],
+                'username': row['username'],
+                'email': row['email'],
+                'full_name': row['full_name'],
+                'is_active': row['is_active'],
+                'is_admin': row['is_admin'],
+                'created_at': row['created_at'].isoformat() if row['created_at'] else None,
+                'last_login': row['last_login'].isoformat() if row['last_login'] else None,
+                'job_types': row['job_types'],
+                'countries': row['countries'],
+                'stats': {
+                    'total_applied': row['total_applied'],
+                    'total_rejected': row['total_rejected'],
+                    'total_saved': row['total_saved'],
+                    'last_interaction': row['last_interaction'].isoformat() if row['last_interaction'] else None
+                }
+            })
+
+        return {
+            'success': True,
+            'users': user_list,
+            'total': len(user_list)
+        }
+
+    except Exception as e:
+        print(f"❌ Failed to get users: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to get users: {str(e)}")
+
+@app.post("/api/admin/users/{user_id}/deactivate")
+async def deactivate_user(user_id: int, current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Deactivate a user (admin only)"""
+    if not current_user.get('is_admin'):
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    if not db or not DATABASE_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    if not db.use_postgres:
+        raise HTTPException(status_code=500, detail="PostgreSQL database required")
+
+    # Don't allow self-deactivation
+    if current_user.get('user_id') == user_id:
+        raise HTTPException(status_code=400, detail="Cannot deactivate your own account")
+
+    try:
+        conn = await db.get_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Could not connect to database")
+
+        # Check if user exists
+        user = await conn.fetchrow("SELECT id, username, is_active FROM users WHERE id = $1", user_id)
+        if not user:
+            await conn.close()
+            raise HTTPException(status_code=404, detail="User not found")
+
+        if not user['is_active']:
+            await conn.close()
+            return {
+                'success': True,
+                'message': 'User is already deactivated',
+                'user_id': user_id,
+                'username': user['username']
+            }
+
+        # Deactivate user
+        await conn.execute("""
+            UPDATE users
+            SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP
+            WHERE id = $1
+        """, user_id)
+
+        await conn.close()
+
+        print(f"✅ User {user['username']} (ID: {user_id}) deactivated by admin {current_user.get('username')}")
+
+        return {
+            'success': True,
+            'message': 'User deactivated successfully',
+            'user_id': user_id,
+            'username': user['username']
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Failed to deactivate user: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to deactivate user: {str(e)}")
+
+@app.post("/api/admin/users/{user_id}/activate")
+async def activate_user(user_id: int, current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Reactivate a user (admin only)"""
+    if not current_user.get('is_admin'):
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    if not db or not DATABASE_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    if not db.use_postgres:
+        raise HTTPException(status_code=500, detail="PostgreSQL database required")
+
+    try:
+        conn = await db.get_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Could not connect to database")
+
+        # Check if user exists
+        user = await conn.fetchrow("SELECT id, username, is_active FROM users WHERE id = $1", user_id)
+        if not user:
+            await conn.close()
+            raise HTTPException(status_code=404, detail="User not found")
+
+        if user['is_active']:
+            await conn.close()
+            return {
+                'success': True,
+                'message': 'User is already active',
+                'user_id': user_id,
+                'username': user['username']
+            }
+
+        # Reactivate user
+        await conn.execute("""
+            UPDATE users
+            SET is_active = TRUE, updated_at = CURRENT_TIMESTAMP
+            WHERE id = $1
+        """, user_id)
+
+        await conn.close()
+
+        print(f"✅ User {user['username']} (ID: {user_id}) reactivated by admin {current_user.get('username')}")
+
+        return {
+            'success': True,
+            'message': 'User activated successfully',
+            'user_id': user_id,
+            'username': user['username']
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Failed to activate user: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to activate user: {str(e)}")
+
+@app.get("/api/admin/scraping-targets")
+async def get_scraping_targets():
+    """Get job types and countries that should be scraped based on active users' preferences"""
+    if not db or not DATABASE_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    if not db.use_postgres:
+        raise HTTPException(status_code=500, detail="PostgreSQL database required")
+
+    try:
+        conn = await db.get_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Could not connect to database")
+
+        # Get all active users with their preferences
+        users = await conn.fetch("""
+            SELECT DISTINCT
+                u.id,
+                u.username,
+                up.job_types,
+                up.countries
+            FROM users u
+            LEFT JOIN user_preferences up ON u.id = up.user_id
+            WHERE u.is_active = TRUE
+        """)
+
+        await conn.close()
+
+        # Collect unique job types and countries from active users
+        all_job_types = set()
+        all_countries = set()
+
+        for user in users:
+            if user['job_types']:
+                for job_type in user['job_types']:
+                    all_job_types.add(job_type)
+
+            if user['countries']:
+                for country in user['countries']:
+                    all_countries.add(country)
+
+        # If no preferences set, use defaults
+        if not all_job_types:
+            all_job_types = {'software'}  # Default to software jobs
+
+        if not all_countries:
+            all_countries = {'Ireland'}  # Default to Ireland
+
+        return {
+            'success': True,
+            'active_users_count': len(users),
+            'job_types': sorted(list(all_job_types)),
+            'countries': sorted(list(all_countries)),
+            'scraping_needed': len(all_job_types) > 0 and len(all_countries) > 0,
+            'message': f'Scraping targets generated from {len(users)} active users'
+        }
+
+    except Exception as e:
+        print(f"❌ Failed to get scraping targets: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to get scraping targets: {str(e)}")
 
 @app.post("/api/admin/backfill-rejected-signatures")
 async def backfill_rejected_signatures():
@@ -2291,16 +2555,16 @@ async def get_user_rewards(current_user: Dict[str, Any] = Depends(get_current_us
         # Check and award badges
         badge_definitions = [
             # Volume badges
-            {'id': 'first_step', 'name': 'First Step', 'desc': 'Applied to first job', 'requirement': lambda stats: stats['total_applied'] >= 1, 'points': 50},
-            {'id': 'getting_started', 'name': 'Getting Started', 'desc': 'Applied to 5 jobs', 'requirement': lambda stats: stats['total_applied'] >= 5, 'points': 100},
-            {'id': 'job_hunter', 'name': 'Job Hunter', 'desc': 'Applied to 25 jobs', 'requirement': lambda stats: stats['total_applied'] >= 25, 'points': 250},
-            {'id': 'career_seeker', 'name': 'Career Seeker', 'desc': 'Applied to 50 jobs', 'requirement': lambda stats: stats['total_applied'] >= 50, 'points': 500},
-            {'id': 'application_master', 'name': 'Application Master', 'desc': 'Applied to 100 jobs', 'requirement': lambda stats: stats['total_applied'] >= 100, 'points': 1000},
+            {'id': 'first_step', 'name': 'First Step', 'desc': 'Applied to first job', 'requirement': lambda stats: stats['total_applied'] >= 1, 'points': 50, 'category': 'volume', 'threshold': 1, 'metric': 'applications', 'icon': '🎯'},
+            {'id': 'getting_started', 'name': 'Getting Started', 'desc': 'Applied to 5 jobs', 'requirement': lambda stats: stats['total_applied'] >= 5, 'points': 100, 'category': 'volume', 'threshold': 5, 'metric': 'applications', 'icon': '📝'},
+            {'id': 'job_hunter', 'name': 'Job Hunter', 'desc': 'Applied to 25 jobs', 'requirement': lambda stats: stats['total_applied'] >= 25, 'points': 250, 'category': 'volume', 'threshold': 25, 'metric': 'applications', 'icon': '🎯'},
+            {'id': 'career_seeker', 'name': 'Career Seeker', 'desc': 'Applied to 50 jobs', 'requirement': lambda stats: stats['total_applied'] >= 50, 'points': 500, 'category': 'volume', 'threshold': 50, 'metric': 'applications', 'icon': '💼'},
+            {'id': 'application_master', 'name': 'Application Master', 'desc': 'Applied to 100 jobs', 'requirement': lambda stats: stats['total_applied'] >= 100, 'points': 1000, 'category': 'volume', 'threshold': 100, 'metric': 'applications', 'icon': '⭐'},
 
             # Streak badges
-            {'id': 'daily_grinder', 'name': 'Daily Grinder', 'desc': '3 day streak', 'requirement': lambda stats: current_streak >= 3, 'points': 100},
-            {'id': 'week_warrior', 'name': 'Week Warrior', 'desc': '7 day streak', 'requirement': lambda stats: current_streak >= 7, 'points': 300},
-            {'id': 'month_marathon', 'name': 'Month Marathon', 'desc': '30 day streak', 'requirement': lambda stats: current_streak >= 30, 'points': 1500},
+            {'id': 'daily_grinder', 'name': 'Daily Grinder', 'desc': '3 day streak', 'requirement': lambda stats: current_streak >= 3, 'points': 100, 'category': 'streak', 'threshold': 3, 'metric': 'days', 'icon': '🔥'},
+            {'id': 'week_warrior', 'name': 'Week Warrior', 'desc': '7 day streak', 'requirement': lambda stats: current_streak >= 7, 'points': 300, 'category': 'streak', 'threshold': 7, 'metric': 'days', 'icon': '💪'},
+            {'id': 'month_marathon', 'name': 'Month Marathon', 'desc': '30 day streak', 'requirement': lambda stats: current_streak >= 30, 'points': 1500, 'category': 'streak', 'threshold': 30, 'metric': 'days', 'icon': '🏆'},
         ]
 
         stats_for_badges = {
@@ -2358,6 +2622,43 @@ async def get_user_rewards(current_user: Dict[str, Any] = Depends(get_current_us
             WHERE user_id = $1
         """, user_id) or 0
 
+        # Prepare all badges with progress information
+        all_badges = []
+        for badge_def in badge_definitions:
+            is_earned = badge_def['id'] in earned_badge_ids
+
+            # Calculate current progress
+            if badge_def['metric'] == 'applications':
+                current_value = total_applied
+            elif badge_def['metric'] == 'days':
+                current_value = current_streak
+            else:
+                current_value = 0
+
+            # Get earned date if badge is earned
+            earned_at = None
+            if is_earned:
+                for b in earned_badges:
+                    if b['badge_id'] == badge_def['id']:
+                        earned_at = b['earned_at'].isoformat()
+                        break
+
+            all_badges.append({
+                'id': badge_def['id'],
+                'name': badge_def['name'],
+                'description': badge_def['desc'],
+                'points': badge_def['points'],
+                'category': badge_def['category'],
+                'threshold': badge_def['threshold'],
+                'metric': badge_def['metric'],
+                'icon': badge_def['icon'],
+                'earned': is_earned,
+                'earned_at': earned_at,
+                'progress': current_value,
+                'progress_percentage': min(100, int((current_value / badge_def['threshold']) * 100)) if badge_def['threshold'] > 0 else 0,
+                'remaining': max(0, badge_def['threshold'] - current_value)
+            })
+
         await conn.close()
 
         return {
@@ -2377,6 +2678,7 @@ async def get_user_rewards(current_user: Dict[str, Any] = Depends(get_current_us
                 'earned_at': b['earned_at'].isoformat()
             } for b in earned_badges],
             'new_badges': new_badges_awarded,
+            'all_badges': all_badges,  # NEW: All badges with progress
             'stats': {
                 'total_applied': total_applied,
                 'total_saved': total_saved,

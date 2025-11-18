@@ -98,6 +98,24 @@ export const jobApi = {
     const response = await api.get('/api/insights');
     return response.data;
   },
+
+  // Admin: Get all users with their status
+  getAllUsers: async (): Promise<any> => {
+    const response = await api.get('/api/admin/users');
+    return response.data;
+  },
+
+  // Admin: Deactivate a user
+  deactivateUser: async (userId: number): Promise<any> => {
+    const response = await api.post(`/api/admin/users/${userId}/deactivate`);
+    return response.data;
+  },
+
+  // Admin: Activate a user
+  activateUser: async (userId: number): Promise<any> => {
+    const response = await api.post(`/api/admin/users/${userId}/activate`);
+    return response.data;
+  },
 };
 
 export default api;

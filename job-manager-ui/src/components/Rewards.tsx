@@ -25,8 +25,25 @@ import {
   BadgeUnlockAnimation,
   TierBadge,
 } from './RewardAnimations';
+import { AllAchievements } from './AllAchievements';
 
 const MotionCard = motion(Card);
+
+interface BadgeData {
+  id: string;
+  name: string;
+  description: string;
+  points: number;
+  category: 'volume' | 'streak';
+  threshold: number;
+  metric: 'applications' | 'days';
+  icon: string;
+  earned: boolean;
+  earned_at?: string;
+  progress: number;
+  progress_percentage: number;
+  remaining: number;
+}
 
 interface RewardsData {
   points: number;
@@ -51,6 +68,7 @@ interface RewardsData {
     icon: string;
     points: number;
   }>;
+  all_badges?: BadgeData[]; // NEW: All badges with progress
   stats: {
     total_applied: number;
     total_saved: number;
@@ -647,6 +665,79 @@ export const Rewards: React.FC = () => {
           )}
         </CardContent>
       </MotionCard>
+
+      {/* Next Achievement Indicator */}
+      {rewards.all_badges && rewards.all_badges.length > 0 && (() => {
+        // Find the closest unearned badge
+        const unearnedBadges = rewards.all_badges
+          .filter(b => !b.earned && b.remaining > 0)
+          .sort((a, b) => a.remaining - b.remaining);
+
+        const nextBadge = unearnedBadges[0];
+
+        if (nextBadge) {
+          return (
+            <MotionCard
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-blue-500/30"
+            >
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Target className="w-5 h-5 text-blue-500" />
+                  Next Achievement
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="text-4xl">{nextBadge.icon}</div>
+                    <div>
+                      <h3 className="font-bold text-lg">{nextBadge.name}</h3>
+                      <p className="text-sm text-muted-foreground">{nextBadge.description}</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Trophy className="h-4 w-4 text-yellow-500" />
+                        <span className="text-sm font-semibold text-yellow-600 dark:text-yellow-400">
+                          {nextBadge.points} points
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-3xl font-bold text-blue-500">
+                      {nextBadge.remaining}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      more {nextBadge.metric}
+                    </div>
+                    <div className="mt-2 w-32">
+                      <Progress value={nextBadge.progress_percentage} className="h-2" />
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {nextBadge.progress}/{nextBadge.threshold}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </MotionCard>
+          );
+        }
+        return null;
+      })()}
+
+      {/* All Achievements Section */}
+      {rewards.all_badges && rewards.all_badges.length > 0 && (
+        <MotionCard
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+        >
+          <CardContent className="p-6">
+            <AllAchievements badges={rewards.all_badges} />
+          </CardContent>
+        </MotionCard>
+      )}
     </div>
   );
 };

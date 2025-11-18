@@ -21,7 +21,7 @@ async def get_analytics():
     conn = await asyncpg.connect(db_url)
 
     try:
-        # Get all users with their stats
+        # Get all ACTIVE users with their stats
         users = await conn.fetch("""
             SELECT
                 u.id,
@@ -38,11 +38,12 @@ async def get_analytics():
             FROM users u
             LEFT JOIN user_preferences up ON u.id = up.user_id
             LEFT JOIN user_job_interactions uji ON u.id = uji.user_id
+            WHERE u.is_active = TRUE
             GROUP BY u.id, u.username, u.email, u.full_name, u.created_at, u.last_login, up.job_types
             ORDER BY u.created_at DESC
         """)
 
-        # Get recent activity (last 24 hours)
+        # Get recent activity (last 24 hours) - ONLY ACTIVE USERS
         recent_activity = await conn.fetch("""
             SELECT
                 u.username,
@@ -50,6 +51,7 @@ async def get_analytics():
                 COUNT(DISTINCT uji.job_id) FILTER (WHERE uji.rejected = TRUE AND uji.rejected_at > NOW() - INTERVAL '24 hours') as rejected_24h
             FROM users u
             LEFT JOIN user_job_interactions uji ON u.id = uji.user_id
+            WHERE u.is_active = TRUE
             GROUP BY u.username
             HAVING COUNT(DISTINCT uji.job_id) FILTER (WHERE uji.applied = TRUE AND uji.applied_at > NOW() - INTERVAL '24 hours') > 0
                 OR COUNT(DISTINCT uji.job_id) FILTER (WHERE uji.rejected = TRUE AND uji.rejected_at > NOW() - INTERVAL '24 hours') > 0

@@ -1,4 +1,4 @@
-name: Parallel Job Scraper (Fast)
+name: Optimized Job Scraper (Active Users Only)
 
 on:
   schedule:
@@ -8,10 +8,76 @@ on:
   workflow_dispatch:
 
 jobs:
+  # First job: Check if scraping is needed based on active users
+  check-scraping-needed:
+    runs-on: ubuntu-latest
+    outputs:
+      should_scrape: ${{ steps.check.outputs.should_scrape }}
+      active_users: ${{ steps.check.outputs.active_users }}
+      countries_json: ${{ steps.check.outputs.countries_json }}
+      job_types: ${{ steps.check.outputs.job_types }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install requests
+
+      - name: Check if scraping is needed
+        id: check
+        run: |
+          echo "Checking active users and their preferences..."
+
+          # Run the script to get scraping targets
+          python get_scraping_targets.py > targets.json || EXIT_CODE=$?
+
+          # Check exit code
+          if [ "${EXIT_CODE:-0}" -eq 2 ]; then
+            echo "No active users - skipping scraping"
+            echo "should_scrape=false" >> $GITHUB_OUTPUT
+            echo "active_users=0" >> $GITHUB_OUTPUT
+            echo "countries_json=[]" >> $GITHUB_OUTPUT
+            echo "job_types=[]" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Parse the output
+          cat targets.json
+          ACTIVE_USERS=$(cat targets.json | python3 -c "import sys, json; print(json.load(sys.stdin).get('active_users_count', 0))")
+          SHOULD_SCRAPE=$(cat targets.json | python3 -c "import sys, json; print('true' if not json.load(sys.stdin).get('skip_scraping', True) else 'false')")
+
+          echo "Active users: $ACTIVE_USERS"
+          echo "Should scrape: $SHOULD_SCRAPE"
+
+          echo "should_scrape=$SHOULD_SCRAPE" >> $GITHUB_OUTPUT
+          echo "active_users=$ACTIVE_USERS" >> $GITHUB_OUTPUT
+
+          # Extract countries and job types for logging
+          COUNTRIES=$(cat targets.json | python3 -c "import sys, json; print(', '.join([c['name'] for c in json.load(sys.stdin).get('countries', [])]))")
+          JOB_TYPES=$(cat targets.json | python3 -c "import sys, json; print(', '.join([j['type'] for j in json.load(sys.stdin).get('job_types', [])]))")
+
+          echo "countries_json=$COUNTRIES" >> $GITHUB_OUTPUT
+          echo "job_types=$JOB_TYPES" >> $GITHUB_OUTPUT
+
+          echo "Will scrape for: $JOB_TYPES in $COUNTRIES"
+        env:
+          API_BASE_URL: https://web-production-110bb.up.railway.app
+
+  # Second job: Actually scrape (only if needed)
   scrape-country:
     runs-on: ubuntu-latest
+    needs: check-scraping-needed
+    if: needs.check-scraping-needed.outputs.should_scrape == 'true'
 
-    # Run 11 countries in parallel (all job types: software, HR, cybersecurity, sales, finance)
+    # Run 11 countries in parallel (only active user preferences will be scraped)
     strategy:
       matrix:
         country:
@@ -43,9 +109,10 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run scraper for ${{ matrix.country.name }}
+      - name: Run smart scraper for ${{ matrix.country.name }}
         id: scrape
         run: |
+          # The scraper will check active user preferences internally
           python daily_single_country_scraper.py \
             --location "${{ matrix.country.location }}" \
             --country "${{ matrix.country.name }}"
@@ -67,17 +134,28 @@ jobs:
             echo "[FAILED] ${{ matrix.country.name }}: Scraping failed"
           fi
 
-  # Cleanup and Summary - runs after all countries finish
+  # Cleanup and Summary - runs after all countries finish OR if scraping was skipped
   cleanup:
     runs-on: ubuntu-latest
-    needs: scrape-country
-    if: always()  # Run even if some countries failed
+    needs: [check-scraping-needed, scrape-country]
+    if: always()  # Run even if scraping was skipped or failed
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Check if scraping was skipped
+        id: skip_check
+        run: |
+          if [ "${{ needs.check-scraping-needed.outputs.should_scrape }}" == "false" ]; then
+            echo "Scraping was skipped due to no active users"
+            echo "skipped=true" >> $GITHUB_OUTPUT
+          else
+            echo "skipped=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Enforce country job limits
+        if: steps.skip_check.outputs.skipped == 'false'
         id: cleanup
         run: |
           echo "Running cleanup..."
@@ -93,14 +171,10 @@ jobs:
           echo "jobs_deleted=$JOBS_DELETED" >> $GITHUB_OUTPUT
           echo "total_jobs=$TOTAL_JOBS" >> $GITHUB_OUTPUT
 
-      - name: Get job statistics and user activity
+      - name: Get user activity
         id: stats
         run: |
-          # Get job counts by country and type
-          STATS=$(curl -s "https://web-production-110bb.up.railway.app/api/jobs/stats")
-          echo "$STATS" | python3 -m json.tool
-
-          # Get user application activity (last 24h)
+          # Get user application activity (last 24h) - only active users
           USER_ACTIVITY=$(curl -s "https://web-production-110bb.up.railway.app/api/admin/user-activity")
           echo "$USER_ACTIVITY" | python3 -m json.tool
 
@@ -126,11 +200,6 @@ jobs:
           echo "$ACTIVITY_TEXT" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-          # Parse stats
-          echo "stats_json<<EOF" >> $GITHUB_OUTPUT
-          echo "$STATS" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
       - name: Send consolidated Slack notification
         if: always()
         env:
@@ -141,93 +210,141 @@ jobs:
             exit 0
           fi
 
-          # Build consolidated message
-          MESSAGE=$(cat <<EOF
-          {
-            "blocks": [
-              {
-                "type": "header",
-                "text": {
-                  "type": "plain_text",
-                  "text": "Job Scraping Complete"
-                }
-              },
-              {
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": "*Run Summary*\n:white_check_mark: All 11 countries processed\n:clock3: Duration: ~6 minutes"
-                }
-              },
-              {
-                "type": "section",
-                "fields": [
-                  {"type": "mrkdwn", "text": "*Total Jobs:*\n${{ steps.cleanup.outputs.total_jobs }}"},
-                  {"type": "mrkdwn", "text": "*Cleaned:*\n${{ steps.cleanup.outputs.jobs_deleted }}"}
-                ]
-              },
-              {
-                "type": "divider"
-              },
-              {
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": "*User Activity (Last 24h)*\n${{ steps.stats.outputs.user_activity }}"
-                }
-              },
-              {
-                "type": "divider"
-              },
-              {
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": "*Countries Scraped:*\n:flag-ie: Ireland | :flag-gb: UK | :flag-es: Spain | :flag-pa: Panama | :flag-cl: Chile | :flag-nl: Netherlands\n:flag-de: Germany | :flag-se: Sweden | :flag-be: Belgium | :flag-dk: Denmark | :flag-lu: Luxembourg"
-                }
-              },
-              {
-                "type": "actions",
-                "elements": [
-                  {
-                    "type": "button",
-                    "text": {
-                      "type": "plain_text",
-                      "text": "View Jobs"
-                    },
-                    "url": "https://web-production-110bb.up.railway.app"
+          # Check if scraping was skipped
+          if [ "${{ steps.skip_check.outputs.skipped }}" == "true" ]; then
+            MESSAGE=$(cat <<EOF
+            {
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "⏸️ Job Scraping Skipped"
                   }
-                ]
-              }
-            ]
-          }
-          EOF
-          )
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Reason:* No active users found\n\nScraping was skipped to save resources. Activate users to resume automatic job scraping."
+                  }
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "Manage Users"
+                      },
+                      "url": "https://web-production-110bb.up.railway.app/admin/users"
+                    }
+                  ]
+                }
+              ]
+            }
+EOF
+            )
+          else
+            # Normal success message
+            MESSAGE=$(cat <<EOF
+            {
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "✅ Job Scraping Complete"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Run Summary*\n:white_check_mark: Scraped for ${{ needs.check-scraping-needed.outputs.active_users }} active users\n:clock3: Duration: ~6 minutes"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {"type": "mrkdwn", "text": "*Total Jobs:*\n${{ steps.cleanup.outputs.total_jobs }}"},
+                    {"type": "mrkdwn", "text": "*Cleaned:*\n${{ steps.cleanup.outputs.jobs_deleted }}"}
+                  ]
+                },
+                {
+                  "type": "divider"
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*User Activity (Last 24h)*\n${{ steps.stats.outputs.user_activity }}"
+                  }
+                },
+                {
+                  "type": "divider"
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Job Types Scraped:*\n${{ needs.check-scraping-needed.outputs.job_types }}\n\n*Countries Scraped:*\n${{ needs.check-scraping-needed.outputs.countries_json }}"
+                  }
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "View Jobs"
+                      },
+                      "url": "https://web-production-110bb.up.railway.app"
+                    }
+                  ]
+                }
+              ]
+            }
+EOF
+            )
+          fi
 
           curl -X POST "$SLACK_WEBHOOK_URL" \
             -H "Content-Type: application/json" \
             -d "$MESSAGE"
 
-          echo "Consolidated notification sent to Slack"
+          echo "Notification sent to Slack"
 
       - name: Create summary
         run: |
-          # Create GitHub Actions summary (visible in workflow UI)
-          echo "### Job Scraping Complete" >> $GITHUB_STEP_SUMMARY
+          # Create GitHub Actions summary
+          echo "### Job Scraping Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "#### Results" >> $GITHUB_STEP_SUMMARY
-          echo "- **Total Jobs in Database:** ${{ steps.cleanup.outputs.total_jobs }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Jobs Removed:** ${{ steps.cleanup.outputs.jobs_deleted }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Countries Processed:** 11" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ steps.skip_check.outputs.skipped }}" == "true" ]; then
+            echo "#### ⏸️ Scraping Skipped" >> $GITHUB_STEP_SUMMARY
+            echo "- **Reason:** No active users found" >> $GITHUB_STEP_SUMMARY
+            echo "- **Active Users:** 0" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "💡 **Tip:** Activate users in the admin panel to resume scraping" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "#### ✅ Scraping Complete" >> $GITHUB_STEP_SUMMARY
+            echo "- **Active Users:** ${{ needs.check-scraping-needed.outputs.active_users }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Total Jobs:** ${{ steps.cleanup.outputs.total_jobs }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Jobs Removed:** ${{ steps.cleanup.outputs.jobs_deleted }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Job Types:** ${{ needs.check-scraping-needed.outputs.job_types }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Countries:** ${{ needs.check-scraping-needed.outputs.countries_json }}" >> $GITHUB_STEP_SUMMARY
+          fi
+
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "#### Links" >> $GITHUB_STEP_SUMMARY
           echo "- [View Dashboard](https://web-production-110bb.up.railway.app)" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Next run: Check cron schedule" >> $GITHUB_STEP_SUMMARY
+          echo "- [Manage Users](https://web-production-110bb.up.railway.app/admin/users)" >> $GITHUB_STEP_SUMMARY
 
-# Speed: 11 parallel jobs × 6 minutes = ~6-7 minutes total
-# PUBLIC repos get UNLIMITED GitHub Actions minutes - completely FREE!
-# Usage: 11 jobs × 6 min × 7 runs/day × 30 days = 13,860 minutes/month
-# Cost: $0 (FREE for public repositories)
-#
-# Notifications: 1 consolidated message per run (7/day) + 1 daily digest (1/day) = 8 notifications/day total
+# Optimizations:
+# - Checks active users BEFORE scraping (saves time if no active users)
+# - Scraper internally filters by active user preferences
+# - Skips entire workflow if no active users
+# - Shows which job types/countries were actually scraped in Slack
