@@ -34,13 +34,13 @@ def get_scraping_targets():
         countries = data.get('countries', [])
         scraping_needed = data.get('scraping_needed', False)
 
-        print(f"[INFO] Active users: {active_users_count}")
-        print(f"[INFO] Job types needed: {', '.join(job_types)}")
-        print(f"[INFO] Countries needed: {', '.join(countries)}")
+        print(f"[INFO] Active users: {active_users_count}", file=sys.stderr)
+        print(f"[INFO] Job types needed: {', '.join(job_types)}", file=sys.stderr)
+        print(f"[INFO] Countries needed: {', '.join(countries)}", file=sys.stderr)
 
         # If no active users or no scraping needed, return empty lists
         if active_users_count == 0 or not scraping_needed:
-            print("[WARNING] No active users or no scraping needed - skipping scraping")
+            print("[WARNING] No active users or no scraping needed - skipping scraping", file=sys.stderr)
             return {
                 'skip_scraping': True,
                 'reason': 'No active users',
@@ -113,7 +113,7 @@ def get_scraping_targets():
             'total_combinations': len(countries_to_scrape) * len(job_types_to_scrape)
         }
 
-        print(f"[INFO] Will scrape {result['total_combinations']} combinations (countries × job types)")
+        print(f"[INFO] Will scrape {result['total_combinations']} combinations (countries × job types)", file=sys.stderr)
 
         return result
 
@@ -148,7 +148,7 @@ def main():
 
     # Exit with code 0 if scraping needed, code 2 if should skip
     if targets.get('skip_scraping'):
-        print("[INFO] Exiting with code 2 to signal scraping should be skipped")
+        print("[INFO] Exiting with code 2 to signal scraping should be skipped", file=sys.stderr)
         sys.exit(2)
     else:
         sys.exit(0)
