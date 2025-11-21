@@ -42,13 +42,19 @@ export const FilterControls: React.FC<FilterControlsProps> = ({
               <SelectContent>
                 <SelectItem value="all">All Countries</SelectItem>
                 <SelectItem value="Belgium">Belgium</SelectItem>
+                <SelectItem value="Chile">Chile</SelectItem>
                 <SelectItem value="Denmark">Denmark</SelectItem>
+                <SelectItem value="France">France</SelectItem>
                 <SelectItem value="Germany">Germany</SelectItem>
                 <SelectItem value="Ireland">Ireland</SelectItem>
+                <SelectItem value="Italy">Italy</SelectItem>
                 <SelectItem value="Luxembourg">Luxembourg</SelectItem>
                 <SelectItem value="Netherlands">Netherlands</SelectItem>
+                <SelectItem value="Panama">Panama</SelectItem>
+                <SelectItem value="Remote">Remote</SelectItem>
                 <SelectItem value="Spain">Spain</SelectItem>
                 <SelectItem value="Sweden">Sweden</SelectItem>
+                <SelectItem value="Switzerland">Switzerland</SelectItem>
                 <SelectItem value="United Kingdom">United Kingdom</SelectItem>
               </SelectContent>
             </Select>
