@@ -282,12 +282,93 @@ class LinkedInJobScraper:
         self.save_jobs_database()
         return jobs_dict
     
-    def is_software_related_job(self, title):
+    def detect_job_language(self, title, location=""):
+        """
+        Detect if a job title is in an acceptable language for the location.
+        - English-speaking countries: Only English
+        - Spanish-speaking countries: English or Spanish
+        - Other countries: Only English
+        """
+        if not title:
+            return False
+
+        title_lower = title.lower()
+
+        # Determine if location is in a Spanish-speaking country
+        location_lower = location.lower() if location else ""
+        spanish_speaking_countries = ['spain', 'españa', 'panama', 'chile', 'santiago', 'madrid', 'barcelona']
+        is_spanish_location = any(country in location_lower for country in spanish_speaking_countries)
+
+        # Spanish-specific indicators (only check if NOT in Spanish-speaking country)
+        # These are job-related words that are clearly Spanish
+        spanish_indicators = [
+            'desarrollador', 'programador', 'ingeniero', 'ingeniería',
+            'científico', 'analista', 'arquitecto', 'datos'
+        ]
+
+        # Common words that appear in non-English job titles
+        # NOTE: Avoid common English/Spanish words like "senior", "de", "e", etc.
+        # These indicators should be UNIQUE to non-English/Spanish languages
+
+        # German-specific indicators
+        german_indicators = [
+            'und', 'für', 'mit', 'oder', 'als', 'bei', 'von', 'zu', 'im', 'am',
+            'entwickler', 'ingenieur', 'softwareentwickler'
+        ]
+
+        # French-specific indicators
+        french_indicators = [
+            'et', 'ou', 'avec', 'dans', 'sur', 'le', 'la', 'les', 'des',
+            'développeur', 'ingénieur', 'chef', 'responsable'
+        ]
+
+        # Italian-specific indicators
+        italian_indicators = [
+            'per', 'con', 'il', 'lo', 'gli', 'le', 'del', 'della',
+            'sviluppatore', 'ingegnere', 'responsabile'
+        ]
+
+        # Portuguese-specific indicators
+        portuguese_indicators = [
+            'ou', 'com', 'do', 'da', 'dos', 'das',
+            'desenvolvedor', 'engenheiro'
+        ]
+
+        # Build list of non-acceptable language indicators
+        non_acceptable_indicators = german_indicators + french_indicators + italian_indicators + portuguese_indicators
+
+        # If NOT in Spanish-speaking country, also reject Spanish
+        if not is_spanish_location:
+            non_acceptable_indicators.extend(spanish_indicators)
+
+        # Split title into words
+        words = title_lower.split()
+
+        # If we find any non-acceptable language indicators, reject
+        # Even a single strong indicator (like "desarrollador", "ingeniero") is enough
+        # For Spanish in non-Spanish countries: 10% threshold (1 word in 10)
+        # For other languages: any indicator triggers rejection
+        indicator_count = sum(1 for word in words if word in non_acceptable_indicators)
+
+        if indicator_count > 0:
+            percentage = indicator_count / len(words) if len(words) > 0 else 0
+            # Very low threshold (10%) since our indicators are very specific
+            if percentage > 0.1:
+                return False
+
+        return True
+
+    def is_software_related_job(self, title, location=""):
         """Check if a job title is relevant (software OR HR/recruitment OR cybersecurity)"""
         if not title:
             return False
 
         title_lower = title.lower()
+
+        # First check language - filter out non-English/Spanish jobs (location-aware)
+        if not self.detect_job_language(title, location):
+            print(f"Skipping non-English/Spanish job: '{title}' in {location if location else 'unknown location'}")
+            return False
 
         # Cybersecurity keywords (English and Spanish)
         cybersecurity_keywords = [
@@ -308,35 +389,50 @@ class LinkedInJobScraper:
             'development', 'coding', 'technical',
 
             # Languages
-            'python', 'java', 'javascript', 'typescript', 'c++', 'html', 'css',
+            'python', 'java', 'javascript', 'typescript', 'c++', 'html', 'css', 'rust', 'go', 'scala',
+            'kotlin', 'swift', 'php', 'ruby', 'perl', 'r programming', 'matlab',
 
             # Frameworks
             'react', 'angular', 'vue', 'node', 'nodejs', 'express', 'frontend', 'backend',
-            'full stack', 'fullstack', 'full-stack',
+            'full stack', 'fullstack', 'full-stack', 'django', 'flask', 'spring', 'fastapi',
+            'next.js', 'nextjs', 'svelte', 'ember',
 
             # Cloud platforms
-            'cloud', 'aws', 'azure', 'firebase', 'lambda', 'devops', 'infrastructure',
+            'cloud', 'aws', 'azure', 'firebase', 'lambda', 'devops', 'gcp', 'google cloud',
+            'cloudflare', 'heroku', 'digital ocean', 'kubernetes', 'k8s', 'docker', 'terraform',
 
-            # Data skills
+            # Data skills (EXPANDED)
             'data', 'analytics', 'machine learning', 'ai', 'artificial intelligence',
-            'data science', 'data engineer', 'tableau', 'visualization',
+            'data science', 'data scientist', 'data engineer', 'data engineering',
+            'data analyst', 'data analytics', 'business intelligence', 'bi analyst',
+            'tableau', 'power bi', 'looker', 'visualization', 'data visualization',
+            'big data', 'hadoop', 'spark', 'kafka', 'airflow', 'etl', 'elt',
+            'data pipeline', 'data warehouse', 'data lake', 'snowflake', 'redshift',
+            'databricks', 'dbt', 'data modeling', 'ml engineer', 'mlops',
+            'deep learning', 'neural network', 'nlp', 'natural language processing',
+            'computer vision', 'tensorflow', 'pytorch', 'scikit-learn', 'pandas',
+            'numpy', 'jupyter', 'data mining', 'predictive analytics', 'statistical analysis',
+            'quantitative analyst', 'research scientist', 'applied scientist',
 
             # Database
-            'database', 'sql', 'nosql', 'mysql', 'mongodb', 'oracle',
+            'database', 'sql', 'nosql', 'mysql', 'postgresql', 'mongodb', 'oracle',
+            'redis', 'elasticsearch', 'cassandra', 'dynamodb', 'mariadb',
 
             # Mobile development
-            'mobile', 'react native', 'ios', 'android',
+            'mobile', 'react native', 'ios', 'android', 'flutter', 'xamarin',
 
             # Leadership roles
             'technical lead', 'tech lead', 'lead developer', 'senior', 'principal',
-            'architect', 'staff engineer', 'team lead',
+            'architect', 'staff engineer', 'team lead', 'engineering manager',
 
             # Testing
-            'qa', 'quality assurance', 'test', 'testing', 'automation',
+            'qa', 'quality assurance', 'test', 'testing', 'automation', 'test engineer',
+            'sdet', 'qa engineer', 'test automation',
 
             # Other tech roles
             'web developer', 'api', 'microservices', 'integration', 'platform',
-            'system', 'application', 'solution', 'product engineer'
+            'system', 'application', 'solution', 'product engineer', 'site reliability',
+            'sre', 'reliability engineer', 'build engineer', 'release engineer'
         ]
 
         # HR/Recruitment keywords (User 2)
@@ -358,34 +454,63 @@ class LinkedInJobScraper:
             'finance', 'accounting', 'legal', 'admin assistant',
             'customer service rep', 'receptionist', 'office manager',
 
-            # Manual labor
+            # Manual labor & Construction
             'warehouse', 'logistics coordinator', 'construction', 'driver', 'delivery',
             'maintenance tech', 'cleaner', 'janitor',
+
+            # Non-software engineering roles (EXPANDED)
+            'civil engineer', 'structural engineer', 'mechanical engineer', 'electrical engineer',
+            'chemical engineer', 'industrial engineer', 'manufacturing engineer',
+            'process engineer', 'project engineer', 'field engineer', 'design engineer',
+            'hardware engineer', 'electronics engineer', 'automotive engineer',
+            'aerospace engineer', 'biomedical engineer', 'environmental engineer',
+            'geotechnical engineer', 'hydraulic engineer', 'marine engineer',
+            'mining engineer', 'nuclear engineer', 'petroleum engineer',
+            'quality engineer', 'safety engineer', 'systems engineer',
+            'telecommunications engineer', 'transportation engineer',
+
+            # Infrastructure (construction-related)
+            'infrastructure project', 'infrastructure planning', 'infrastructure construction',
+            'roads and bridges', 'public works', 'utilities engineer',
 
             # Physical security (not cybersecurity)
             'security guard', 'security officer',
         ]
 
-        # Special handling for borderline cases
-        borderline_positive = [
-            'marketing tools', 'finance automation', 'revenue', 'compiler',
-            'infrastructure', 'operations', 'integration', 'reliability',
-            'workday', 'salesforce', 'data operations'
-        ]
-
-        # Check if it contains borderline positive terms
-        for positive in borderline_positive:
-            if positive in title_lower:
-                return True
-
-        # Check for hard exclusions (but allow if it contains security analyst or engineer)
+        # Check for hard exclusions FIRST (before checking positive keywords)
+        # This prevents civil engineers, infrastructure engineers, etc. from passing through
         for exclude in exclude_keywords:
             if exclude in title_lower:
                 # Exception: Allow if cybersecurity-related
                 if any(cyber in title_lower for cyber in ['security analyst', 'security engineer', 'cybersecurity']):
                     continue
-                if 'engineer' not in title_lower and 'developer' not in title_lower:
+                # Exception: Allow if it's clearly a software/data/tech role despite containing exclusion keyword
+                if any(sw in title_lower for sw in [
+                    'software', 'developer', 'programming',
+                    'data engineer', 'data scientist', 'data analyst', 'analytics engineer',
+                    'ml engineer', 'mlops', 'ai engineer', 'machine learning',
+                    'cloud infrastructure', 'infrastructure as code', 'devops', 'sre'
+                ]):
+                    continue
+                # Otherwise, reject this job
+                return False
+
+        # Special handling for borderline cases (only check after exclusions)
+        borderline_positive = [
+            'marketing tools', 'finance automation', 'revenue', 'compiler',
+            'cloud infrastructure', 'infrastructure engineer', 'infrastructure as code',  # Technical infrastructure only
+            'operations', 'integration', 'reliability',
+            'workday', 'salesforce', 'data operations'
+        ]
+
+        # Check if it contains borderline positive terms
+        # But make sure it's not a civil/construction infrastructure role
+        for positive in borderline_positive:
+            if positive in title_lower:
+                # Double-check it's not construction-related
+                if any(construction in title_lower for construction in ['civil', 'structural', 'construction', 'roads', 'bridges']):
                     return False
+                return True
 
         # Check for cybersecurity keywords
         for keyword in cybersecurity_keywords:
@@ -537,18 +662,29 @@ class LinkedInJobScraper:
             'talento humano', 'analista de recursos humanos', 'coordinador de rrhh'
         ]
 
-        # Software keywords (English and Spanish)
+        # Software keywords (English and Spanish) - EXPANDED
         software_keywords = [
-            # English
+            # English - Core programming roles
             'software', 'developer', 'engineer', 'programming', 'programmer',
             'frontend', 'backend', 'full stack', 'devops', 'react', 'python',
             'javascript', 'node', 'java', 'web developer', 'mobile developer',
+
+            # Data science & engineering roles (EXPANDED)
+            'data scientist', 'data engineer', 'data engineering', 'data analyst',
+            'data analytics', 'machine learning', 'ml engineer', 'mlops',
+            'business intelligence', 'bi analyst', 'data science', 'big data',
+            'data pipeline', 'data warehouse', 'data lake', 'etl', 'elt',
+            'analytics engineer', 'analytics', 'quantitative analyst', 'research scientist',
+            'applied scientist', 'ai engineer', 'deep learning', 'nlp engineer',
+            'computer vision', 'data modeling', 'statistical analyst',
+
             # Spanish
             'desarrollador', 'programador', 'ingeniero de software', 'ingeniero software',
             'desarrollador web', 'desarrollador fullstack', 'desarrollador full stack',
             'desarrollador frontend', 'desarrollador backend', 'arquitecto de software',
             'arquitecto software', 'ingeniero', 'dev ', ' dev', 'qa automation',
-            'qa automatizador', 'desarrollador mobile', 'desarrollador móvil'
+            'qa automatizador', 'desarrollador mobile', 'desarrollador móvil',
+            'científico de datos', 'ingeniero de datos', 'analista de datos'
         ]
 
         # Check for cybersecurity first (most specific)
@@ -854,6 +990,11 @@ class LinkedInJobScraper:
             # Skip if we couldn't extract essential data
             if not title or not job_url:
                 print(f"Skipping job card - missing essential data. Title: '{title}', URL: '{job_url}'")
+                return None
+
+            # Filter out jobs in non-English/Spanish languages (location-aware)
+            if not self.detect_job_language(title, location):
+                print(f"Skipping non-English/Spanish job: '{title}' in {location}")
                 return None
 
             # Filter out irrelevant jobs (keep both software and HR jobs)
