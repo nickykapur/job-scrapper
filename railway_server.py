@@ -679,12 +679,12 @@ async def enforce_country_limit(max_jobs: int = 300):
 
         # Per-job-type limits for jobs older than 24 hours
         JOB_TYPE_LIMITS = {
-            "software": 500,        # Software gets highest priority
-            "cybersecurity": 100,   # Cyber is important too
-            "hr": 50,
-            "sales": 50,
-            "finance": 50,
-            "other": 50             # Fallback for unknown types
+            "software": 999999,     # UNLIMITED - Software jobs never deleted (only 24h protection applies)
+            "cybersecurity": 20,    # Limited to 20 old jobs per country
+            "hr": 20,               # Limited to 20 old jobs per country
+            "sales": 20,            # Limited to 20 old jobs per country
+            "finance": 20,          # Limited to 20 old jobs per country
+            "other": 20             # Fallback for unknown types
         }
 
         # Calculate 24h cutoff

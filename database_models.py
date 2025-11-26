@@ -674,15 +674,15 @@ class JobDatabase:
             if skipped_reposts > 0:
                 print(f"⏭️  Skipped {skipped_reposts} reposted jobs (already applied to similar positions)")
 
-            # IMPORTANT: Clean up old jobs to maintain reasonable limit per country
-            # Increased from 300 to 1000 to prevent too-aggressive cleanup
-            # Jobs user has interacted with are preserved via user_job_interactions
-            print(f"\n✂️ Cleaning up old jobs (maintaining 1000 per country)...")
-            deleted_jobs = await self._cleanup_old_jobs_postgres(conn, max_jobs_per_country=1000)
-            if deleted_jobs > 0:
-                print(f"🗑️  PostgreSQL: Deleted {deleted_jobs} old jobs total")
-            else:
-                print(f"✅ No cleanup needed - all countries within limit")
+            # CLEANUP NOW HANDLED BY: /api/jobs/enforce-country-limit
+            # Called by GitHub Actions after each scrape run (7x daily)
+            # New cleanup uses per-job-type limits with 24h protection:
+            #   - Software: UNLIMITED (999999)
+            #   - HR/Sales/Finance/Cyber: 20 per country
+            #   - ALL jobs from last 24h: ALWAYS PROTECTED
+            # Old cleanup below is DISABLED to prevent conflicts
+            print(f"\n✅ Job cleanup handled by API endpoint (per-job-type limits)")
+            deleted_jobs = 0  # Cleanup now via /api/jobs/enforce-country-limit
 
             return {
                 "new_jobs": new_jobs,

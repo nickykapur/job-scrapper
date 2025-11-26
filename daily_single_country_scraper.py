@@ -96,10 +96,11 @@ def search_single_term(term, location, country_name, existing_jobs, is_software,
         easy_apply_count = 0
 
         # First pass: Get ALL jobs (without Easy Apply filter)
+        # Changed from "24h" to "week" to get more job coverage (7 days)
         all_results = thread_scraper.search_jobs(
             keywords=term,
             location=location,
-            date_filter="24h",
+            date_filter="week",
             easy_apply_filter=False
         )
 
@@ -117,7 +118,7 @@ def search_single_term(term, location, country_name, existing_jobs, is_software,
                 easy_apply_results = thread_scraper.search_jobs(
                     keywords=term,
                     location=location,
-                    date_filter="24h",
+                    date_filter="week",
                     easy_apply_filter=True
                 )
 
@@ -191,7 +192,18 @@ def scrape_single_country(location, country_name, railway_url):
         "Frontend Developer",
         "JavaScript Developer",
         "Node.js Developer",
-        "Junior Software Engineer"
+        "Junior Software Engineer",
+        "DevOps Engineer",
+        "Cloud Engineer",
+        "Data Engineer",
+        "Machine Learning Engineer",
+        "QA Engineer",
+        "Software Developer",
+        "Web Developer",
+        "Mobile Developer",
+        "Java Developer",
+        "TypeScript Developer",
+        ".NET Developer"
     ]
 
     cybersecurity_search_terms = [
