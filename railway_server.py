@@ -660,56 +660,121 @@ async def delete_jobs_by_country(country: str):
 
 @app.post("/api/jobs/enforce-country-limit")
 async def enforce_country_limit(max_jobs: int = 300):
-    """Enforce the max jobs per country limit by removing oldest jobs"""
+    """
+    Enforce per-country, per-job-type limits with 24h protection
+    - Always keeps ALL jobs from last 24 hours (regardless of type/count)
+    - Applies per-job-type limits to older jobs
+    - Software jobs get higher limits (500 vs 50 for others)
+    """
     if not db or not DATABASE_AVAILABLE:
         raise HTTPException(status_code=500, detail="Database not available")
 
     try:
+        from datetime import datetime, timedelta
+
         # Get connection
         conn = await db.get_connection()
         if not conn:
             raise HTTPException(status_code=500, detail="Database connection failed")
 
-        # Get all jobs grouped by country
+        # Per-job-type limits for jobs older than 24 hours
+        JOB_TYPE_LIMITS = {
+            "software": 500,        # Software gets highest priority
+            "cybersecurity": 100,   # Cyber is important too
+            "hr": 50,
+            "sales": 50,
+            "finance": 50,
+            "other": 50             # Fallback for unknown types
+        }
+
+        # Calculate 24h cutoff
+        cutoff_24h = datetime.utcnow() - timedelta(hours=24)
+
+        # Get all jobs grouped by country and job type
         all_jobs = await load_jobs()
 
         jobs_by_country = {}
         deleted_count = 0
+        protected_24h_count = 0
 
-        # Group jobs by country
+        # Group jobs by country and job type
         for job_id, job_data in all_jobs.items():
             if job_id.startswith("_"):
                 continue
 
             country = job_data.get("country", "Unknown")
+            job_type = job_data.get("job_type", "other")
+            scraped_at_str = job_data.get("scraped_at", "")
+
+            # Parse scraped_at timestamp
+            try:
+                if scraped_at_str:
+                    scraped_at = datetime.fromisoformat(scraped_at_str.replace('Z', '+00:00'))
+                    if scraped_at.tzinfo is not None:
+                        scraped_at = scraped_at.replace(tzinfo=None)
+                else:
+                    scraped_at = datetime.min
+            except:
+                scraped_at = datetime.min
+
+            # Initialize country structure
             if country not in jobs_by_country:
-                jobs_by_country[country] = []
+                jobs_by_country[country] = {}
 
-            jobs_by_country[country].append({
+            if job_type not in jobs_by_country[country]:
+                jobs_by_country[country][job_type] = {
+                    "recent": [],  # Jobs from last 24h (protected)
+                    "older": []    # Jobs older than 24h (subject to limits)
+                }
+
+            job_entry = {
                 "id": job_id,
-                "scraped_at": job_data.get("scraped_at", ""),
+                "scraped_at": scraped_at,
+                "scraped_at_str": scraped_at_str,
                 "data": job_data
-            })
+            }
 
-        # For each country, keep only the most recent max_jobs
-        for country, country_jobs in jobs_by_country.items():
-            if len(country_jobs) > max_jobs:
-                # Sort by scraped_at timestamp (most recent first)
-                country_jobs.sort(key=lambda x: x["scraped_at"], reverse=True)
+            # Separate recent vs older jobs
+            if scraped_at >= cutoff_24h:
+                jobs_by_country[country][job_type]["recent"].append(job_entry)
+            else:
+                jobs_by_country[country][job_type]["older"].append(job_entry)
 
-                # Keep only the first max_jobs
-                jobs_to_keep = country_jobs[:max_jobs]
-                jobs_to_delete = country_jobs[max_jobs:]
+        # Process each country
+        for country, job_types in jobs_by_country.items():
+            print(f"\n🌍 Processing {country}:")
 
-                print(f"   ✂️ {country}: Keeping {len(jobs_to_keep)} jobs, deleting {len(jobs_to_delete)} old jobs")
+            for job_type, jobs in job_types.items():
+                recent_jobs = jobs["recent"]
+                older_jobs = jobs["older"]
 
-                # Delete old jobs
-                for job in jobs_to_delete:
-                    await conn.execute(
-                        "DELETE FROM jobs WHERE id = $1",
-                        job["id"]
-                    )
-                    deleted_count += 1
+                # Count protected 24h jobs
+                protected_24h_count += len(recent_jobs)
+
+                # Get limit for this job type
+                limit = JOB_TYPE_LIMITS.get(job_type, JOB_TYPE_LIMITS["other"])
+
+                print(f"   📊 {job_type}: {len(recent_jobs)} recent (protected), {len(older_jobs)} older")
+
+                # Apply limit to older jobs only
+                if len(older_jobs) > limit:
+                    # Sort older jobs by scraped_at (most recent first)
+                    older_jobs.sort(key=lambda x: x["scraped_at"], reverse=True)
+
+                    # Keep only the first 'limit' older jobs
+                    jobs_to_delete = older_jobs[limit:]
+
+                    print(f"      ✂️  Deleting {len(jobs_to_delete)} old {job_type} jobs (keeping {limit})")
+
+                    # Delete excess older jobs
+                    for job in jobs_to_delete:
+                        await conn.execute(
+                            "DELETE FROM jobs WHERE id = $1",
+                            job["id"]
+                        )
+                        deleted_count += 1
+                else:
+                    print(f"      ✅ {job_type}: Within limit ({len(older_jobs)}/{limit})")
 
         # Get final count
         total_jobs = await conn.fetchval("SELECT COUNT(*) FROM jobs")
@@ -718,13 +783,17 @@ async def enforce_country_limit(max_jobs: int = 300):
 
         return {
             "success": True,
-            "message": f"Enforced {max_jobs} jobs per country limit",
+            "message": f"Enforced per-job-type limits with 24h protection",
             "jobs_deleted": deleted_count,
             "total_jobs_remaining": total_jobs,
-            "countries_processed": len(jobs_by_country)
+            "protected_24h_jobs": protected_24h_count,
+            "countries_processed": len(jobs_by_country),
+            "job_type_limits": JOB_TYPE_LIMITS
         }
     except Exception as e:
         print(f"❌ Enforce limit failed: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to enforce limit: {str(e)}")
 
 @app.post("/api/migrate-schema")
