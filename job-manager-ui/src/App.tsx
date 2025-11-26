@@ -64,7 +64,7 @@ const App: React.FC = () => {
     status: 'all',
     sort: 'newest',
     jobType: 'all',
-    country: 'all',
+    country: 'Ireland',  // Default to Ireland
     quickApply: 'all',
   });
 
@@ -476,6 +476,7 @@ const App: React.FC = () => {
                 <FilterControls
                   filters={filters}
                   onFiltersChange={setFilters}
+                  jobs={jobs}
                 />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
