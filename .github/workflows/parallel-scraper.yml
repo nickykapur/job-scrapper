@@ -77,12 +77,11 @@ jobs:
     needs: check-scraping-needed
     if: needs.check-scraping-needed.outputs.should_scrape == 'true'
 
-    # Run 11 countries in parallel (only active user preferences will be scraped)
+    # Run 10 countries in parallel (only active user preferences will be scraped)
     strategy:
       matrix:
         country:
           - { location: "Dublin, County Dublin, Ireland", name: "Ireland" }
-          - { location: "London, England, United Kingdom", name: "United Kingdom" }
           - { location: "Madrid, Community of Madrid, Spain", name: "Spain" }
           - { location: "Panama City, Panama", name: "Panama" }
           - { location: "Santiago, Chile", name: "Chile" }
@@ -92,7 +91,7 @@ jobs:
           - { location: "Brussels, Belgium", name: "Belgium" }
           - { location: "Copenhagen, Denmark", name: "Denmark" }
           - { location: "Luxembourg City, Luxembourg", name: "Luxembourg" }
-      max-parallel: 11  # Run all 11 at once
+      max-parallel: 10  # Run all 10 at once
       fail-fast: false  # Continue even if one fails
 
     steps:
