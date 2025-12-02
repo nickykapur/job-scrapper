@@ -17,10 +17,14 @@ import {
   Check as AppliedIcon,
   Schedule as NewIcon,
   TrendingUp as TrendingIcon,
+  Refresh as RefreshIcon,
+  DeleteSweep as DeleteSweepIcon,
 } from '@mui/icons-material';
 import type { Job } from '../types';
 import JobTable from './JobTable';
 import { getCountryFromLocation } from '../utils/countryUtils';
+import { jobApi } from '../services/api';
+import toast from 'react-hot-toast';
 
 interface CountryJobTabsProps {
   jobs: Record<string, Job>;
@@ -46,6 +50,7 @@ const CountryJobTabs: React.FC<CountryJobTabsProps> = ({
   updatingJobs,
 }) => {
   const [selectedTab, setSelectedTab] = useState('all');
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
 
   // Country configuration - Only actively scraped countries
   const countryConfig: Record<string, { flag: string; color: string }> = {
@@ -109,6 +114,42 @@ const CountryJobTabs: React.FC<CountryJobTabsProps> = ({
 
   const handleTabChange = (_: React.SyntheticEvent, newValue: string) => {
     setSelectedTab(newValue);
+  };
+
+  const handleClearCountry = async (country: string) => {
+    if (!window.confirm(`Clear your interaction history for ${country}? This will reset all applied/rejected status, making jobs appear fresh again.`)) {
+      return;
+    }
+
+    setBulkActionLoading(true);
+    try {
+      const result = await jobApi.clearInteractions({ country });
+      toast.success(`${result.interactions_cleared} interactions cleared for ${country}. Refresh to see fresh jobs!`);
+      // Optionally reload jobs here
+      window.location.reload();
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || 'Failed to clear interactions');
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  const handleRejectAllCountry = async (country: string) => {
+    if (!window.confirm(`Reject ALL jobs from ${country}? This will mark all current ${country} jobs as rejected.`)) {
+      return;
+    }
+
+    setBulkActionLoading(true);
+    try {
+      const result = await jobApi.bulkRejectJobs({ country });
+      toast.success(`${result.jobs_rejected} jobs from ${country} rejected. Refresh to update!`);
+      // Optionally reload jobs here
+      window.location.reload();
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || 'Failed to bulk reject jobs');
+    } finally {
+      setBulkActionLoading(false);
+    }
   };
 
   const CountryStatCard: React.FC<{ data: CountryData }> = ({ data }) => (
@@ -315,6 +356,32 @@ const CountryJobTabs: React.FC<CountryJobTabsProps> = ({
 
         {/* Tab Content */}
         <Box sx={{ p: 3 }}>
+          {/* Bulk Actions for Country Tabs */}
+          {selectedTab !== 'all' && selectedTab !== 'applied' && (
+            <Box sx={{ mb: 2, display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+              <Button
+                size="small"
+                variant="outlined"
+                color="primary"
+                startIcon={<RefreshIcon />}
+                onClick={() => handleClearCountry(selectedTab)}
+                disabled={bulkActionLoading}
+              >
+                Clear History
+              </Button>
+              <Button
+                size="small"
+                variant="outlined"
+                color="error"
+                startIcon={<DeleteSweepIcon />}
+                onClick={() => handleRejectAllCountry(selectedTab)}
+                disabled={bulkActionLoading}
+              >
+                Reject All
+              </Button>
+            </Box>
+          )}
+
           {selectedTab === 'applied' ? (
             <Box>
               <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>

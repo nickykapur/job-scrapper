@@ -202,6 +202,14 @@ class JobUpdateRequest(BaseModel):
 class SyncJobsRequest(BaseModel):
     jobs_data: Dict[str, Any]
 
+class BulkRejectRequest(BaseModel):
+    company: Optional[str] = None
+    country: Optional[str] = None
+
+class ClearInteractionsRequest(BaseModel):
+    country: Optional[str] = None
+    company: Optional[str] = None
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize database on startup"""
@@ -1189,6 +1197,157 @@ async def sync_jobs(request: SyncJobsRequest):
     except Exception as e:
         print(f"❌ Database sync failed: {e}")
         raise HTTPException(status_code=500, detail=f"Database sync failed: {str(e)}")
+
+@app.post("/api/jobs/bulk-reject")
+async def bulk_reject_jobs(
+    request: BulkRejectRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user_optional)
+):
+    """
+    Bulk reject jobs by company or country for current user
+    This helps users quickly clear out jobs they're not interested in
+    """
+    if not current_user or not AUTH_AVAILABLE:
+        raise HTTPException(status_code=401, detail="Authentication required")
+
+    if not db or not DATABASE_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    if not request.company and not request.country:
+        raise HTTPException(status_code=400, detail="Must specify company or country")
+
+    try:
+        conn = await db.get_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+
+        user_id = current_user['user_id']
+
+        # Build query based on filters
+        if request.company and request.country:
+            # Both company and country
+            jobs = await conn.fetch("""
+                SELECT id FROM jobs
+                WHERE company = $1 AND country = $2
+            """, request.company, request.country)
+        elif request.company:
+            # Company only
+            jobs = await conn.fetch("""
+                SELECT id FROM jobs
+                WHERE company = $1
+            """, request.company)
+        else:
+            # Country only
+            jobs = await conn.fetch("""
+                SELECT id FROM jobs
+                WHERE country = $1
+            """, request.country)
+
+        rejected_count = 0
+        for job in jobs:
+            await conn.execute("""
+                INSERT INTO user_job_interactions (user_id, job_id, rejected, rejected_at, created_at, updated_at)
+                VALUES ($1, $2, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                ON CONFLICT (user_id, job_id) DO UPDATE SET
+                    rejected = TRUE,
+                    rejected_at = CURRENT_TIMESTAMP,
+                    updated_at = CURRENT_TIMESTAMP
+            """, user_id, job['id'])
+            rejected_count += 1
+
+        await conn.close()
+
+        filter_desc = []
+        if request.company:
+            filter_desc.append(f"company '{request.company}'")
+        if request.country:
+            filter_desc.append(f"country '{request.country}'")
+
+        return {
+            "success": True,
+            "message": f"Bulk rejected {rejected_count} jobs from {' and '.join(filter_desc)}",
+            "jobs_rejected": rejected_count
+        }
+
+    except Exception as e:
+        print(f"❌ Bulk reject failed: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Bulk reject failed: {str(e)}")
+
+@app.post("/api/jobs/clear-interactions")
+async def clear_user_job_interactions(
+    request: ClearInteractionsRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user_optional)
+):
+    """
+    Clear user's interactions (applied/rejected) for specific country or company
+    This allows users to "reset" and see jobs fresh when new scrapes come in
+    """
+    if not current_user or not AUTH_AVAILABLE:
+        raise HTTPException(status_code=401, detail="Authentication required")
+
+    if not db or not DATABASE_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    try:
+        conn = await db.get_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+
+        user_id = current_user['user_id']
+
+        # Build query to find job IDs matching the filters
+        if request.company and request.country:
+            # Both company and country
+            job_ids = await conn.fetch("""
+                SELECT id FROM jobs
+                WHERE company = $1 AND country = $2
+            """, request.company, request.country)
+        elif request.company:
+            # Company only
+            job_ids = await conn.fetch("""
+                SELECT id FROM jobs
+                WHERE company = $1
+            """, request.company)
+        elif request.country:
+            # Country only
+            job_ids = await conn.fetch("""
+                SELECT id FROM jobs
+                WHERE country = $1
+            """, request.country)
+        else:
+            raise HTTPException(status_code=400, detail="Must specify company or country")
+
+        # Delete interactions for these jobs for this user
+        cleared_count = 0
+        for job in job_ids:
+            result = await conn.execute("""
+                DELETE FROM user_job_interactions
+                WHERE user_id = $1 AND job_id = $2
+            """, user_id, job['id'])
+            cleared_count += 1
+
+        await conn.close()
+
+        filter_desc = []
+        if request.company:
+            filter_desc.append(f"company '{request.company}'")
+        if request.country:
+            filter_desc.append(f"country '{request.country}'")
+
+        return {
+            "success": True,
+            "message": f"Cleared interactions for {cleared_count} jobs from {' and '.join(filter_desc)}",
+            "interactions_cleared": cleared_count,
+            "note": "These jobs will now appear as fresh/unseen in your feed"
+        }
+
+    except Exception as e:
+        print(f"❌ Clear interactions failed: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Clear interactions failed: {str(e)}")
 
 @app.post("/api/admin/clear-user-interactions")
 async def clear_user_interactions():

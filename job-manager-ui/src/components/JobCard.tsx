@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ExternalLink, Check, X, Zap } from 'lucide-react';
+import { ExternalLink, Check, X, Zap, Building2 } from 'lucide-react';
 import type { Job } from '../types';
 import { getCountryFromLocation } from '../utils/countryUtils';
+import { jobApi } from '../services/api';
+import toast from 'react-hot-toast';
 
 interface JobCardProps {
   job: Job;
@@ -19,7 +21,26 @@ export const JobCard: React.FC<JobCardProps> = ({
   onRejectJob,
   isUpdating = false,
 }) => {
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
   const extractedCountry = job.country || getCountryFromLocation(job.location);
+
+  const handleRejectAllFromCompany = async () => {
+    if (!window.confirm(`Reject ALL jobs from ${job.company}? This will mark all current ${job.company} jobs as rejected.`)) {
+      return;
+    }
+
+    setBulkActionLoading(true);
+    try {
+      const result = await jobApi.bulkRejectJobs({ company: job.company });
+      toast.success(`${result.jobs_rejected} jobs from ${job.company} rejected!`);
+      // Reload to refresh the job list
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || 'Failed to bulk reject jobs');
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
 
   const jobTypeColors: Record<string, { bg: string; text: string }> = {
     software: { bg: 'bg-blue-500/10 dark:bg-blue-500/20', text: 'text-blue-600 dark:text-blue-400' },
@@ -109,15 +130,27 @@ export const JobCard: React.FC<JobCardProps> = ({
                 <ExternalLink className="ml-2 h-4 w-4" />
               </Button>
 
-              <Button
-                variant="ghost"
-                className="w-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 font-medium"
-                onClick={() => onRejectJob(job.id)}
-                disabled={isUpdating}
-              >
-                <X className="mr-2 h-4 w-4" />
-                Not Interested
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  className="flex-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 font-medium"
+                  onClick={() => onRejectJob(job.id)}
+                  disabled={isUpdating}
+                >
+                  <X className="mr-2 h-4 w-4" />
+                  Not Interested
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                  onClick={handleRejectAllFromCompany}
+                  disabled={isUpdating || bulkActionLoading}
+                  title={`Reject all from ${job.company}`}
+                >
+                  <Building2 className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           )}
 

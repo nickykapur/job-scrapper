@@ -116,6 +116,18 @@ export const jobApi = {
     const response = await api.post(`/api/admin/users/${userId}/activate`);
     return response.data;
   },
+
+  // Bulk reject jobs by company or country
+  bulkRejectJobs: async (options: { company?: string; country?: string }): Promise<any> => {
+    const response = await api.post('/api/jobs/bulk-reject', options);
+    return response.data;
+  },
+
+  // Clear interactions (reset) for company or country
+  clearInteractions: async (options: { company?: string; country?: string }): Promise<any> => {
+    const response = await api.post('/api/jobs/clear-interactions', options);
+    return response.data;
+  },
 };
 
 export default api;

@@ -22,15 +22,17 @@ import {
   CircularProgress,
   Alert,
 } from '@mui/material';
-import { Save, AccountCircle } from '@mui/icons-material';
+import { Save, AccountCircle, DeleteSweep, Refresh } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
+import { jobApi } from '../services/api';
 
 const SettingsPage: React.FC = () => {
   const { user, preferences, updatePreferences, refreshPreferences } = useAuth();
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -203,6 +205,38 @@ const SettingsPage: React.FC = () => {
       // Error is handled in AuthContext
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleBulkRejectCountry = async (country: string) => {
+    if (!window.confirm(`Are you sure you want to reject all jobs from ${country}? This will mark all current ${country} jobs as rejected.`)) {
+      return;
+    }
+
+    setBulkActionLoading(true);
+    try {
+      const result = await jobApi.bulkRejectJobs({ country });
+      toast.success(result.message || `Rejected ${result.jobs_rejected} jobs from ${country}`);
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || 'Failed to bulk reject jobs');
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  const handleClearCountry = async (country: string) => {
+    if (!window.confirm(`Are you sure you want to clear your interaction history for ${country}? This will reset all applied/rejected status for ${country} jobs, making them appear fresh again.`)) {
+      return;
+    }
+
+    setBulkActionLoading(true);
+    try {
+      const result = await jobApi.clearInteractions({ country });
+      toast.success(result.message || `Cleared ${result.interactions_cleared} interactions for ${country}`);
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || 'Failed to clear interactions');
+    } finally {
+      setBulkActionLoading(false);
     }
   };
 
@@ -461,6 +495,63 @@ const SettingsPage: React.FC = () => {
               label="Remote jobs only"
             />
           </FormGroup>
+        </Box>
+
+        <Divider sx={{ my: 3 }} />
+
+        {/* Bulk Actions */}
+        <Box mb={4}>
+          <Typography variant="h6" gutterBottom>
+            Bulk Actions
+          </Typography>
+          <Typography variant="body2" color="text.secondary" mb={2}>
+            Quickly manage your job feed by country
+          </Typography>
+
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            <Typography variant="body2" fontWeight="bold" gutterBottom>
+              Use these actions carefully:
+            </Typography>
+            <Typography variant="body2">
+              • <strong>Reject All:</strong> Marks all current jobs from a country as rejected
+              <br />
+              • <strong>Clear History:</strong> Resets your interactions so jobs appear fresh again
+            </Typography>
+          </Alert>
+
+          <Stack spacing={2}>
+            {formData.preferredCountries.map(country => (
+              <Paper key={country} variant="outlined" sx={{ p: 2 }}>
+                <Box display="flex" justifyContent="space-between" alignItems="center">
+                  <Typography variant="body1" fontWeight="medium">
+                    {country}
+                  </Typography>
+                  <Stack direction="row" spacing={1}>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      color="error"
+                      startIcon={<DeleteSweep />}
+                      onClick={() => handleBulkRejectCountry(country)}
+                      disabled={bulkActionLoading}
+                    >
+                      Reject All
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      color="primary"
+                      startIcon={<Refresh />}
+                      onClick={() => handleClearCountry(country)}
+                      disabled={bulkActionLoading}
+                    >
+                      Clear History
+                    </Button>
+                  </Stack>
+                </Box>
+              </Paper>
+            ))}
+          </Stack>
         </Box>
 
         {/* Save Button */}
