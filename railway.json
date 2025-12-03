@@ -5,7 +5,7 @@
     "buildCommand": "cd job-manager-ui && npm install && npm run build && cd .. && pip install -r requirements-fastapi.txt"
   },
   "deploy": {
-    "startCommand": "python fastapi_server.py",
+    "startCommand": "python railway_server.py",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
   }
