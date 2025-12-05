@@ -149,49 +149,51 @@ const App: React.FC = () => {
     // Open the URL first (synchronously) to avoid popup blockers on mobile
     window.open(jobUrl, '_blank');
 
-    try {
-      setUpdatingJobs(prev => new Set(prev).add(jobId));
-      const response = await jobApi.updateJob(jobId, true);
-      setJobs(prev => ({
-        ...prev,
-        [jobId]: { ...prev[jobId], applied: true }
-      }));
+    // OPTIMISTIC UI UPDATE - Update UI immediately for instant feedback
+    setJobs(prev => ({
+      ...prev,
+      [jobId]: { ...prev[jobId], applied: true }
+    }));
+    showNotification('Marked as applied', 'success');
 
-      // Show encouragement message if available
+    // Update backend in background (fire-and-forget with error handling)
+    try {
+      const response = await jobApi.updateJob(jobId, true);
+
+      // Show encouragement message if available (replace previous notification)
       if (response.encouragement) {
         showNotification(response.encouragement, 'success');
-      } else {
-        showNotification('Marked as applied', 'success');
       }
     } catch (error) {
-      showNotification('Failed to update job status', 'error');
-    } finally {
-      setUpdatingJobs(prev => {
-        const next = new Set(prev);
-        next.delete(jobId);
-        return next;
-      });
+      // Rollback UI change on error
+      setJobs(prev => ({
+        ...prev,
+        [jobId]: { ...prev[jobId], applied: false }
+      }));
+      showNotification('Failed to update job status - please try again', 'error');
     }
   };
 
   const handleRejectJob = async (jobId: string) => {
+    // OPTIMISTIC UI UPDATE - Update UI immediately for instant feedback
+    setJobs(prev => ({
+      ...prev,
+      [jobId]: { ...prev[jobId], rejected: true }
+    }));
+    setLocalRejectedCount(prev => prev + 1);
+    showNotification('Job rejected', 'info');
+
+    // Update backend in background (fire-and-forget with error handling)
     try {
-      setUpdatingJobs(prev => new Set(prev).add(jobId));
       await jobApi.rejectJob(jobId);
+    } catch (error) {
+      // Rollback UI change on error
       setJobs(prev => ({
         ...prev,
-        [jobId]: { ...prev[jobId], rejected: true }
+        [jobId]: { ...prev[jobId], rejected: false }
       }));
-      setLocalRejectedCount(prev => prev + 1);
-      showNotification('Job rejected', 'info');
-    } catch (error) {
-      showNotification('Failed to reject job', 'error');
-    } finally {
-      setUpdatingJobs(prev => {
-        const next = new Set(prev);
-        next.delete(jobId);
-        return next;
-      });
+      setLocalRejectedCount(prev => prev - 1);
+      showNotification('Failed to reject job - please try again', 'error');
     }
   };
 

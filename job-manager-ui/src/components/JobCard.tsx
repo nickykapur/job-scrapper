@@ -124,9 +124,8 @@ export const JobCard: React.FC<JobCardProps> = ({
                 className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold shadow-none hover:shadow-lg hover:shadow-blue-500/30 transition-all"
                 size="lg"
                 onClick={() => onApplyAndOpen(job.id, job.job_url)}
-                disabled={isUpdating}
               >
-                {isUpdating ? 'Processing...' : 'Apply Now'}
+                Apply Now
                 <ExternalLink className="ml-2 h-4 w-4" />
               </Button>
 
@@ -135,7 +134,6 @@ export const JobCard: React.FC<JobCardProps> = ({
                   variant="ghost"
                   className="flex-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 font-medium"
                   onClick={() => onRejectJob(job.id)}
-                  disabled={isUpdating}
                 >
                   <X className="mr-2 h-4 w-4" />
                   Not Interested
@@ -145,7 +143,7 @@ export const JobCard: React.FC<JobCardProps> = ({
                   size="sm"
                   className="text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                   onClick={handleRejectAllFromCompany}
-                  disabled={isUpdating || bulkActionLoading}
+                  disabled={bulkActionLoading}
                   title={`Reject all from ${job.company}`}
                 >
                   <Building2 className="h-4 w-4" />

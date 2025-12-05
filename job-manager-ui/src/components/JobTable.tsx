@@ -101,7 +101,7 @@ const JobTable: React.FC<JobTableProps> = ({
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(50);
+  const [rowsPerPage, setRowsPerPage] = useState(25); // Reduced from 50 for better performance
   const [actionStates, setActionStates] = useState<Record<string, 'idle' | 'applying' | 'rejecting' | 'success'>>({});
 
   // Convert jobs to array and filter
@@ -168,19 +168,18 @@ const JobTable: React.FC<JobTableProps> = ({
     return filteredAndSortedJobs.slice(startIndex, endIndex);
   }, [filteredAndSortedJobs, page, rowsPerPage]);
 
-  // Enhanced handlers with animation states
+  // Enhanced handlers with animation states - optimized for instant feedback
   const handleApplyAndOpen = async (jobId: string, jobUrl: string) => {
-    setActionStates(prev => ({ ...prev, [jobId]: 'applying' }));
-    await onApplyAndOpen(jobId, jobUrl);
     setActionStates(prev => ({ ...prev, [jobId]: 'success' }));
+    onApplyAndOpen(jobId, jobUrl); // Fire-and-forget (optimistic update in parent)
     setTimeout(() => {
       setActionStates(prev => ({ ...prev, [jobId]: 'idle' }));
-    }, 1000);
+    }, 800);
   };
 
   const handleReject = async (jobId: string) => {
     setActionStates(prev => ({ ...prev, [jobId]: 'rejecting' }));
-    await onRejectJob(jobId);
+    onRejectJob(jobId); // Fire-and-forget (optimistic update in parent)
     // Keep rejecting state until component unmounts
   };
 
@@ -329,21 +328,14 @@ const JobTable: React.FC<JobTableProps> = ({
                         <IconButton
                           size="small"
                           onClick={() => handleApplyAndOpen(job.id, job.job_url)}
-                          disabled={updatingJobs.has(job.id) || actionStates[job.id] === 'applying'}
                           sx={{
                             bgcolor: actionStates[job.id] === 'success' ? 'success.light' : 'success.main',
                             color: 'white',
                             '&:hover': { bgcolor: 'success.dark' },
-                            '&:disabled': {
-                              bgcolor: 'success.light',
-                              opacity: 0.7,
-                            },
                             transition: 'all 0.3s ease',
                           }}
                         >
-                          {actionStates[job.id] === 'applying' ? (
-                            <CircularProgress size={20} sx={{ color: 'white' }} />
-                          ) : actionStates[job.id] === 'success' ? (
+                          {actionStates[job.id] === 'success' ? (
                             <SuccessIcon />
                           ) : (
                             <ApplyIcon />
@@ -364,23 +356,14 @@ const JobTable: React.FC<JobTableProps> = ({
                         <IconButton
                           size="small"
                           onClick={() => handleReject(job.id)}
-                          disabled={updatingJobs.has(job.id) || actionStates[job.id] === 'rejecting'}
                           sx={{
                             bgcolor: 'error.main',
                             color: 'white',
                             '&:hover': { bgcolor: 'error.dark' },
-                            '&:disabled': {
-                              bgcolor: 'error.light',
-                              opacity: 0.7,
-                            },
                             transition: 'all 0.3s ease',
                           }}
                         >
-                          {actionStates[job.id] === 'rejecting' ? (
-                            <CircularProgress size={20} sx={{ color: 'white' }} />
-                          ) : (
-                            <RejectIcon />
-                          )}
+                          <RejectIcon />
                         </IconButton>
                       </Box>
                     </Tooltip>
