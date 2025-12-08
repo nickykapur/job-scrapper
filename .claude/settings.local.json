@@ -8,7 +8,8 @@
       "Bash(npm install:*)",
       "Bash(npm uninstall:*)",
       "Bash(pkill:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(curl -s https://web-production-110bb.up.railway.app/)"
     ],
     "deny": [],
     "ask": []
