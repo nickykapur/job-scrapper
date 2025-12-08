@@ -61,9 +61,17 @@ class LinkedInJobScraper:
             'Switzerland': []
         }
         
-    def generate_job_id(self, title, company, location):
-        """Generate a unique ID for a job based on title, company, and location"""
-        job_string = f"{title}|{company}|{location}".lower()
+    def generate_job_id(self, title, company, location=None):
+        """
+        Generate a unique ID for a job based on title and company only.
+        This groups the same job posted in multiple locations together.
+        Location is kept as parameter for backward compatibility but not used.
+        """
+        # Normalize title and company for consistent ID generation
+        normalized_title = title.strip().lower()
+        normalized_company = company.strip().lower()
+
+        job_string = f"{normalized_title}|{normalized_company}"
         return hashlib.md5(job_string.encode()).hexdigest()[:12]
         
     def load_existing_jobs(self):
@@ -529,6 +537,24 @@ class LinkedInJobScraper:
 
         return False
 
+    def clean_company_name(self, company):
+        """
+        Clean company name by removing trailing numbers and extra metadata.
+        LinkedIn sometimes appends tracking numbers like "Stripe 4342327281"
+        """
+        if not company:
+            return company
+
+        # Remove leading/trailing whitespace
+        company = company.strip()
+
+        # Pattern: Remove trailing space followed by numbers (e.g., " 4342327281")
+        # This regex matches a space followed by 4 or more consecutive digits at the end
+        import re
+        cleaned = re.sub(r'\s+\d{4,}$', '', company)
+
+        return cleaned.strip()
+
     def is_excluded_company(self, company):
         """Check if a company is in the exclusion list"""
         if not company:
@@ -894,6 +920,8 @@ class LinkedInJobScraper:
                     company_element = card.find_element(By.CSS_SELECTOR, selector)
                     company = company_element.text.strip()
                     if company and company != "N/A" and len(company) > 1:
+                        # Clean the company name to remove trailing numbers
+                        company = self.clean_company_name(company)
                         break
                 except:
                     continue
@@ -1046,16 +1074,43 @@ class LinkedInJobScraper:
 
             # Create job data with verification fields
             current_time = datetime.now().isoformat()
+
+            # Check if this job already exists
+            is_new = job_id not in self.existing_jobs
+
+            # For existing jobs, preserve first_seen and accumulate locations
+            if not is_new:
+                existing_job = self.existing_jobs[job_id]
+                first_seen = existing_job.get('first_seen', current_time)
+
+                # Accumulate locations (store as list)
+                existing_locations = existing_job.get('locations', [])
+                if isinstance(existing_locations, str):
+                    # Convert old single location to list
+                    existing_locations = [existing_locations] if existing_locations else []
+
+                # Add new location if not already in list
+                current_location = location or "Unknown Location"
+                if current_location not in existing_locations:
+                    existing_locations.append(current_location)
+                locations = existing_locations
+            else:
+                first_seen = current_time
+                locations = [location or "Unknown Location"]
+
             job_data = {
                 "id": job_id,
                 "title": title,
                 "company": company or "Unknown Company",
-                "location": location or "Unknown Location",
+                "location": location or "Unknown Location",  # Keep for backward compatibility
+                "locations": locations,  # New: array of all locations
                 "country": country,  # Add country field
                 "job_type": job_type,  # Add job type classification
                 "experience_level": experience_level,  # Add experience level
                 "posted_date": posted_date or "Unknown",
                 "job_url": job_url,
+                "first_seen": first_seen,  # New: when first encountered
+                "last_seen": current_time,  # New: when last seen
                 "scraped_at": current_time,
                 "applied": False,
                 "rejected": False,
@@ -1063,7 +1118,7 @@ class LinkedInJobScraper:
                 "easy_apply_status": easy_apply_status,  # New: confidence level
                 "easy_apply_verified_at": current_time if easy_apply_verification_method else None,
                 "easy_apply_verification_method": easy_apply_verification_method,  # New: how it was detected
-                "is_new": job_id not in self.existing_jobs
+                "is_new": is_new
             }
             
             # Preserve applied status if job already exists
