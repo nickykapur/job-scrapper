@@ -9,7 +9,9 @@
       "Bash(npm uninstall:*)",
       "Bash(pkill:*)",
       "Bash(npm run build:*)",
-      "Bash(curl -s https://web-production-110bb.up.railway.app/)"
+      "Bash(curl -s https://web-production-110bb.up.railway.app/)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []
