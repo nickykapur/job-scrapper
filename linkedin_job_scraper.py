@@ -994,6 +994,8 @@ class LinkedInJobScraper:
                             title = title_part.replace('-', ' ').title()
                             if not company:
                                 company = company_part.replace('-', ' ').title()
+                                # Clean the company name to remove trailing numbers
+                                company = self.clean_company_name(company)
                             break
                     
                     # Fallback: look for common job title patterns
