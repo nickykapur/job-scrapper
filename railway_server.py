@@ -317,7 +317,7 @@ async def get_jobs_api(current_user: Optional[Dict[str, Any]] = Depends(get_curr
             # Get this user's job interactions to filter out jobs they've already seen/interacted with
             conn = await db.get_connection()
             user_interactions = {}
-            user_signatures = set()  # Company+Title pairs user has already applied/rejected to
+            user_signatures = {}  # Company+Title pairs user has already applied/rejected to
             if conn:
                 try:
                     # Get job IDs user has interacted with
@@ -336,22 +336,28 @@ async def get_jobs_api(current_user: Optional[Dict[str, Any]] = Depends(get_curr
                         for row in interactions
                     }
 
-                    # Also get job signatures (company+title) user has applied to
+                    # Also get job signatures (company+title) user has applied to OR rejected
                     # This catches cases where job was deleted and re-scraped with new ID
+                    # Store both applied and rejected status to correctly mark reposts
                     signatures = await conn.fetch("""
-                        SELECT DISTINCT js.company, js.normalized_title
+                        SELECT DISTINCT
+                            js.company,
+                            js.normalized_title,
+                            MAX(CASE WHEN uji.applied THEN 1 ELSE 0 END)::boolean as was_applied,
+                            MAX(CASE WHEN uji.rejected THEN 1 ELSE 0 END)::boolean as was_rejected
                         FROM job_signatures js
-                        WHERE EXISTS (
-                            SELECT 1 FROM user_job_interactions uji
-                            WHERE uji.user_id = $1
-                            AND uji.job_id = js.original_job_id
-                            AND (uji.applied = TRUE OR uji.rejected = TRUE)
-                        )
+                        JOIN user_job_interactions uji ON uji.job_id = js.original_job_id
+                        WHERE uji.user_id = $1
+                        AND (uji.applied = TRUE OR uji.rejected = TRUE)
+                        GROUP BY js.company, js.normalized_title
                     """, current_user['user_id'])
 
                     for sig in signatures:
                         signature_key = f"{sig['company'].lower()}|{sig['normalized_title'].lower()}"
-                        user_signatures.add(signature_key)
+                        user_signatures[signature_key] = {
+                            'applied': sig['was_applied'],
+                            'rejected': sig['was_rejected']
+                        }
 
                     print(f"[FILTER] User {current_user['user_id']} has {len(user_interactions)} job interactions, {len(user_signatures)} job signatures")
                 except Exception as e:
@@ -378,7 +384,7 @@ async def get_jobs_api(current_user: Optional[Dict[str, Any]] = Depends(get_curr
                         job_data['rejected'] = interaction['rejected']
                         job_data['saved'] = interaction['saved']
 
-                    # Check if this is a repost of a job they already applied to
+                    # Check if this is a repost of a job they already applied to or rejected
                     company = job_data.get('company', '').strip()
                     title = job_data.get('title', '').strip()
                     is_repost = False
@@ -388,11 +394,14 @@ async def get_jobs_api(current_user: Optional[Dict[str, Any]] = Depends(get_curr
                         signature_key = f"{company.lower()}|{normalized_title.lower()}"
 
                         if signature_key in user_signatures and job_id not in user_interactions:
-                            # This is a repost - mark as applied/rejected automatically
+                            # This is a repost - mark with original applied/rejected status
                             is_repost = True
                             job_data = {**job_data}
-                            job_data['applied'] = True  # Auto-mark reposts as applied
-                            print(f"[FILTER] Auto-marking repost {job_id[:12]}... as applied - '{title}' at {company}")
+                            sig_status = user_signatures[signature_key]
+                            job_data['applied'] = sig_status['applied']
+                            job_data['rejected'] = sig_status['rejected']
+                            status_str = "applied" if sig_status['applied'] else "rejected"
+                            print(f"[FILTER] Auto-marking repost {job_id[:12]}... as {status_str} - '{title}' at {company}")
 
                     # Get job details for filtering
                     title_lower = title.lower()
@@ -533,10 +542,23 @@ async def get_jobs_api(current_user: Optional[Dict[str, Any]] = Depends(get_curr
                     merged_jobs[job_id] = job_data
                 return merged_jobs
     except Exception as e:
-        print(f"Error filtering jobs by preferences: {e}")
-        # On error, return all jobs
-
-    return all_jobs
+        print(f"❌ Error filtering jobs by preferences: {e}")
+        import traceback
+        traceback.print_exc()
+        # On error, still return unfiltered jobs with user interactions merged
+        # This ensures users at least see their applied/rejected status
+        if current_user and user_interactions:
+            merged_jobs = {}
+            for job_id, job_data in all_jobs.items():
+                if job_id in user_interactions:
+                    interaction = user_interactions[job_id]
+                    job_data = {**job_data}
+                    job_data['applied'] = interaction['applied']
+                    job_data['rejected'] = interaction['rejected']
+                    job_data['saved'] = interaction['saved']
+                merged_jobs[job_id] = job_data
+            return merged_jobs
+        return all_jobs
 
 @app.get("/api/jobs/{job_id}")
 async def get_job_by_id(job_id: str):
