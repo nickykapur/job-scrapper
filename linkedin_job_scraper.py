@@ -66,10 +66,23 @@ class LinkedInJobScraper:
         Generate a unique ID for a job based on title and company only.
         This groups the same job posted in multiple locations together.
         Location is kept as parameter for backward compatibility but not used.
+
+        Uses aggressive normalization to prevent duplicates from variations like:
+        - "Data Engineer (Azure)" vs "Data Engineer Azure"
+        - "Sales Account Manager Hybrid" vs "Sales Account Manager (Hybrid)"
         """
         # Normalize title and company for consistent ID generation
         normalized_title = title.strip().lower()
         normalized_company = company.strip().lower()
+
+        # Remove special characters (except spaces and dashes) to prevent duplicate IDs
+        # This matches the normalization in database_models.normalize_job_title()
+        normalized_title = re.sub(r'[^a-z0-9\s\-]', '', normalized_title)
+        normalized_company = re.sub(r'[^a-z0-9\s\-]', '', normalized_company)
+
+        # Collapse multiple spaces
+        normalized_title = re.sub(r'\s+', ' ', normalized_title).strip()
+        normalized_company = re.sub(r'\s+', ' ', normalized_company).strip()
 
         job_string = f"{normalized_title}|{normalized_company}"
         return hashlib.md5(job_string.encode()).hexdigest()[:12]
@@ -537,6 +550,23 @@ class LinkedInJobScraper:
 
         return False
 
+    def _is_asterisk_text(self, text):
+        """
+        Check if text is mostly asterisks (LinkedIn bot detection).
+
+        Args:
+            text (str): Text to check
+
+        Returns:
+            bool: True if text is mostly asterisks
+        """
+        if not text:
+            return False
+        # Count asterisks vs total characters
+        asterisk_ratio = text.count('*') / len(text)
+        # If more than 50% asterisks, consider it bot-detected text
+        return asterisk_ratio > 0.5
+
     def clean_company_name(self, company):
         """
         Clean company name by removing trailing numbers and extra metadata.
@@ -894,12 +924,13 @@ class LinkedInJobScraper:
             for selector in title_selectors:
                 try:
                     title_element = card.find_element(By.CSS_SELECTOR, selector)
-                    title = title_element.text.strip()
-                    if title and title != "N/A" and len(title) > 3:
+                    # Try aria-label first (bypasses bot detection)
+                    title = title_element.get_attribute("aria-label") or title_element.get_attribute("title") or title_element.text.strip()
+                    if title and title != "N/A" and len(title) > 3 and not self._is_asterisk_text(title):
                         break
                 except:
                     continue
-            
+
             # Try multiple selectors for company
             company = ""
             company_selectors = [
@@ -914,18 +945,19 @@ class LinkedInJobScraper:
                 "h4 a",
                 ".hidden-nested-link"
             ]
-            
+
             for selector in company_selectors:
                 try:
                     company_element = card.find_element(By.CSS_SELECTOR, selector)
-                    company = company_element.text.strip()
-                    if company and company != "N/A" and len(company) > 1:
+                    # Try aria-label first (bypasses bot detection)
+                    company = company_element.get_attribute("aria-label") or company_element.get_attribute("title") or company_element.text.strip()
+                    if company and company != "N/A" and len(company) > 1 and not self._is_asterisk_text(company):
                         # Clean the company name to remove trailing numbers
                         company = self.clean_company_name(company)
                         break
                 except:
                     continue
-            
+
             # Try multiple selectors for location
             location = ""
             location_selectors = [
@@ -933,12 +965,13 @@ class LinkedInJobScraper:
                 ".job-search-card__location span",
                 ".job-result-card__location"
             ]
-            
+
             for selector in location_selectors:
                 try:
                     location_element = card.find_element(By.CSS_SELECTOR, selector)
-                    location = location_element.text.strip()
-                    if location and location != "N/A":
+                    # Try aria-label first (bypasses bot detection)
+                    location = location_element.get_attribute("aria-label") or location_element.get_attribute("title") or location_element.text.strip()
+                    if location and location != "N/A" and not self._is_asterisk_text(location):
                         break
                 except:
                     continue
@@ -979,34 +1012,36 @@ class LinkedInJobScraper:
                 except:
                     continue
             
-            # If we have a URL but no title, try to extract title from URL
-            if not title and job_url:
+            # If we have a URL but no title/company, OR if we detected asterisks (bot detection), try to extract from URL
+            if job_url and (not title or not company or self._is_asterisk_text(title) or self._is_asterisk_text(company) or self._is_asterisk_text(location)):
                 try:
-                    # Extract job title from LinkedIn URL patterns
+                    # Extract job title and company from LinkedIn URL patterns
                     import urllib.parse
                     parsed_url = urllib.parse.urlparse(job_url)
                     path_parts = parsed_url.path.split('/')
-                    
+
                     # Try to extract from 'at-company' pattern first (most reliable)
                     for part in path_parts:
                         if '-at-' in part and len(part) > 10:  # Reasonable length filter
                             title_part, company_part = part.split('-at-', 1)
-                            title = title_part.replace('-', ' ').title()
-                            if not company:
+                            # Only override if current values are missing or asterisks
+                            if not title or self._is_asterisk_text(title):
+                                title = title_part.replace('-', ' ').title()
+                            if not company or self._is_asterisk_text(company):
                                 company = company_part.replace('-', ' ').title()
                                 # Clean the company name to remove trailing numbers
                                 company = self.clean_company_name(company)
                             break
                     
                     # Fallback: look for common job title patterns
-                    if not title:
+                    if not title or self._is_asterisk_text(title):
                         job_patterns = [
                             'software-engineer', 'python-developer', 'data-engineer', 'full-stack',
                             'frontend-developer', 'backend-developer', 'devops-engineer',
                             'senior-software', 'junior-software', 'lead-developer',
                             'engineering-manager', 'technical-lead', 'architect'
                         ]
-                        
+
                         for part in path_parts:
                             for pattern in job_patterns:
                                 if pattern in part.lower():
@@ -1014,12 +1049,37 @@ class LinkedInJobScraper:
                                     break
                             if title:
                                 break
+
+                    # Extract location from URL domain if needed
+                    if not location or self._is_asterisk_text(location):
+                        domain = parsed_url.netloc
+                        # Map LinkedIn country domains to locations
+                        domain_location_map = {
+                            'ie.linkedin.com': 'Ireland',
+                            'es.linkedin.com': 'Spain',
+                            'nl.linkedin.com': 'Netherlands',
+                            'de.linkedin.com': 'Germany',
+                            'se.linkedin.com': 'Sweden',
+                            'ch.linkedin.com': 'Switzerland',
+                            'dk.linkedin.com': 'Denmark',
+                            'be.linkedin.com': 'Belgium',
+                            'fr.linkedin.com': 'France',
+                            'it.linkedin.com': 'Italy'
+                        }
+                        if domain in domain_location_map:
+                            location = domain_location_map[domain]
+
                 except:
                     pass
             
             # Skip if we couldn't extract essential data
             if not title or not job_url:
                 print(f"Skipping job card - missing essential data. Title: '{title}', URL: '{job_url}'")
+                return None
+
+            # Skip if data still contains asterisks (bot detection not resolved)
+            if self._is_asterisk_text(title) or self._is_asterisk_text(company):
+                print(f"⚠️  Skipping job with asterisks (bot detection): Title: '{title}', Company: '{company}'")
                 return None
 
             # Filter out jobs in non-English/Spanish languages (location-aware)
