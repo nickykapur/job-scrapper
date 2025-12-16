@@ -5,6 +5,7 @@ requests
 beautifulsoup4
 selenium
 webdriver-manager
+python-dotenv==1.0.0
 # Authentication dependencies
 python-jose[cryptography]==3.3.0
 passlib==1.7.4
