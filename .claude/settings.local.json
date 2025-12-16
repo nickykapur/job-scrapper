@@ -11,7 +11,8 @@
       "Bash(npm run build:*)",
       "Bash(curl -s https://web-production-110bb.up.railway.app/)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []

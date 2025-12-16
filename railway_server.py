@@ -15,6 +15,10 @@ import os
 from datetime import datetime
 import asyncio
 
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv()
+
 # Import database functionality
 try:
     from database_models import JobDatabase
