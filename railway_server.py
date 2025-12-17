@@ -1026,6 +1026,23 @@ async def update_job_api(request: JobUpdateRequest, current_user: Optional[Dict[
                             """, user_id, request.job_id)
                             print(f"✅ Updated user_job_interactions for user {user_id}: applied")
 
+                            # Create job signature to prevent this job from reappearing
+                            job = await conn.fetchrow("""
+                                SELECT company, title, country FROM jobs WHERE id = $1
+                            """, request.job_id)
+
+                            if job and job['company'] and job['title']:
+                                signature_created = await db.add_job_signature(
+                                    company=job['company'],
+                                    title=job['title'],
+                                    country=job['country'] or '',
+                                    job_id=request.job_id
+                                )
+                                if signature_created:
+                                    print(f"✅ Created job signature for {job['company']} - {job['title']}")
+                                else:
+                                    print(f"⚠️ Failed to create job signature for {request.job_id}")
+
                             # Update streak tracking
                             from datetime import date
                             today = date.today()
@@ -1175,6 +1192,23 @@ async def update_job_api(request: JobUpdateRequest, current_user: Optional[Dict[
                                     updated_at = CURRENT_TIMESTAMP
                             """, user_id, request.job_id)
                             print(f"✅ Updated user_job_interactions for user {user_id}: rejected")
+
+                            # Create job signature to prevent this job from reappearing
+                            job = await conn.fetchrow("""
+                                SELECT company, title, country FROM jobs WHERE id = $1
+                            """, request.job_id)
+
+                            if job and job['company'] and job['title']:
+                                signature_created = await db.add_job_signature(
+                                    company=job['company'],
+                                    title=job['title'],
+                                    country=job['country'] or '',
+                                    job_id=request.job_id
+                                )
+                                if signature_created:
+                                    print(f"✅ Created job signature for rejected: {job['company']} - {job['title']}")
+                                else:
+                                    print(f"⚠️ Failed to create job signature for rejected {request.job_id}")
                     finally:
                         await conn.close()
 

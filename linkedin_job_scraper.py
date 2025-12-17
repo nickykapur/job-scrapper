@@ -16,6 +16,7 @@ import json
 import re
 import os
 import hashlib
+from urllib.parse import unquote
 
 
 class LinkedInJobScraper:
@@ -926,6 +927,9 @@ class LinkedInJobScraper:
                     title_element = card.find_element(By.CSS_SELECTOR, selector)
                     # Try aria-label first (bypasses bot detection)
                     title = title_element.get_attribute("aria-label") or title_element.get_attribute("title") or title_element.text.strip()
+                    # Decode URL-encoded characters (e.g., %C3%B3 -> ó, %25 -> %)
+                    if title:
+                        title = unquote(title)
                     if title and title != "N/A" and len(title) > 3 and not self._is_asterisk_text(title):
                         break
                 except:
@@ -951,6 +955,9 @@ class LinkedInJobScraper:
                     company_element = card.find_element(By.CSS_SELECTOR, selector)
                     # Try aria-label first (bypasses bot detection)
                     company = company_element.get_attribute("aria-label") or company_element.get_attribute("title") or company_element.text.strip()
+                    # Decode URL-encoded characters (e.g., %C3%B3 -> ó, %25 -> %)
+                    if company:
+                        company = unquote(company)
                     if company and company != "N/A" and len(company) > 1 and not self._is_asterisk_text(company):
                         # Clean the company name to remove trailing numbers
                         company = self.clean_company_name(company)
@@ -971,6 +978,9 @@ class LinkedInJobScraper:
                     location_element = card.find_element(By.CSS_SELECTOR, selector)
                     # Try aria-label first (bypasses bot detection)
                     location = location_element.get_attribute("aria-label") or location_element.get_attribute("title") or location_element.text.strip()
+                    # Decode URL-encoded characters (e.g., %C3%B3 -> ó, %25 -> %)
+                    if location:
+                        location = unquote(location)
                     if location and location != "N/A" and not self._is_asterisk_text(location):
                         break
                 except:
