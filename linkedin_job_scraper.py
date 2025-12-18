@@ -682,9 +682,13 @@ class LinkedInJobScraper:
             'sales representative', 'inside sales', 'outbound sales',
             'saas sales', 'b2b sales', 'customer success manager',
             'account management', 'business development manager',
+            'business development', 'sales development', 'sales engineer',
+            'sales manager', 'sales associate', 'sales specialist',
+            'key account', 'field sales', 'sales consultant',
             # Spanish
             'ejecutivo de ventas', 'gerente de cuenta', 'representante de ventas',
-            'desarrollo de negocios', 'ventas', 'ejecutivo comercial'
+            'desarrollo de negocios', 'ventas', 'ejecutivo comercial',
+            'gerente comercial', 'asesor comercial'
         ]
 
         # Finance/Accounting keywords (English and Spanish)
@@ -731,7 +735,7 @@ class LinkedInJobScraper:
             'data analytics', 'machine learning', 'ml engineer', 'mlops',
             'business intelligence', 'bi analyst', 'data science', 'big data',
             'data pipeline', 'data warehouse', 'data lake', 'etl', 'elt',
-            'analytics engineer', 'analytics', 'quantitative analyst', 'research scientist',
+            'analytics engineer', 'quantitative analyst', 'research scientist',
             'applied scientist', 'ai engineer', 'deep learning', 'nlp engineer',
             'computer vision', 'data modeling', 'statistical analyst',
 
