@@ -1066,6 +1066,95 @@ export const InterviewTracker: React.FC = () => {
                 />
               </div>
 
+              {/* Archive/Rejection Fields */}
+              {editingJob.archived && (
+                <div className="border-t pt-4 space-y-4">
+                  <h4 className="font-semibold">Archive Information</h4>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Archive Outcome</label>
+                    <select
+                      className="w-full h-10 px-3 rounded-md border border-input bg-background"
+                      value={editingJob.archiveOutcome || 'rejected'}
+                      onChange={(e) => setEditingJob({ ...editingJob, archiveOutcome: e.target.value as any })}
+                    >
+                      {ARCHIVE_OUTCOMES.map(outcome => (
+                        <option key={outcome.id} value={outcome.id}>{outcome.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {editingJob.archiveOutcome === 'rejected' && (
+                    <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4 space-y-4">
+                      <h5 className="font-semibold text-sm">Rejection Details</h5>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Rejection Stage</label>
+                        <select
+                          className="w-full h-10 px-3 rounded-md border border-input bg-background"
+                          value={editingJob.rejectionStage || 'recruiter'}
+                          onChange={(e) => setEditingJob({ ...editingJob, rejectionStage: e.target.value as any })}
+                        >
+                          <option value="application">After Application</option>
+                          <option value="recruiter">Recruiter Stage</option>
+                          <option value="technical">Technical Stage</option>
+                          <option value="final">Final Stage</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Rejection Reasons</label>
+                        <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto p-2 border rounded bg-background">
+                          {REJECTION_REASONS.map(reason => {
+                            const isSelected = editingJob.rejectionReasons?.includes(reason.id) || false;
+                            return (
+                              <label key={reason.id} className="flex items-start gap-2 cursor-pointer hover:bg-muted p-2 rounded">
+                                <input
+                                  type="checkbox"
+                                  className="mt-1"
+                                  checked={isSelected}
+                                  onChange={(e) => {
+                                    const currentReasons = editingJob.rejectionReasons || [];
+                                    const newReasons = e.target.checked
+                                      ? [...currentReasons, reason.id]
+                                      : currentReasons.filter(r => r !== reason.id);
+                                    setEditingJob({ ...editingJob, rejectionReasons: newReasons });
+                                  }}
+                                />
+                                <div className="flex-1">
+                                  <div className="text-sm font-medium">{reason.label}</div>
+                                  <div className="text-xs text-muted-foreground">{reason.description}</div>
+                                </div>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Rejection Details</label>
+                        <textarea
+                          className="w-full min-h-[80px] px-3 py-2 rounded-md border border-input bg-background"
+                          placeholder="What specifically did they say? e.g., 'Need visa sponsorship' or 'Failed system design question'"
+                          value={editingJob.rejectionDetails || ''}
+                          onChange={(e) => setEditingJob({ ...editingJob, rejectionDetails: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Archive Notes</label>
+                    <textarea
+                      className="w-full min-h-[60px] px-3 py-2 rounded-md border border-input bg-background"
+                      placeholder="Additional notes about archiving this application"
+                      value={editingJob.archiveNotes || ''}
+                      onChange={(e) => setEditingJob({ ...editingJob, archiveNotes: e.target.value })}
+                    />
+                  </div>
+                </div>
+              )}
+
               <div className="flex gap-2 justify-end pt-4 border-t">
                 <Button variant="outline" onClick={() => setEditingJob(null)}>
                   Cancel
