@@ -21,22 +21,24 @@ export const FilterControls: React.FC<FilterControlsProps> = ({
   onFiltersChange,
   jobs,
 }) => {
-  // Calculate available countries (only countries with jobs)
+  // Calculate available countries (only countries with available jobs - not applied/rejected)
   const availableCountries = useMemo(() => {
     const countrySet = new Set<string>();
     Object.entries(jobs).forEach(([key, job]) => {
-      if (!key.startsWith('_') && job.country) {
+      // Only include countries that have at least one job that's not applied or rejected
+      if (!key.startsWith('_') && job.country && !job.applied && !job.rejected) {
         countrySet.add(job.country);
       }
     });
-    // Sort countries alphabetically, but keep Ireland first
+    // Sort countries alphabetically
     const sorted = Array.from(countrySet).sort();
-    return sorted.filter(c => c !== 'Ireland').sort();
+    return sorted;
   }, [jobs]);
 
-  // Ensure Ireland is in the list if it has jobs
-  const hasIreland = availableCountries.includes('Ireland') ||
-    Object.values(jobs).some(job => job.country === 'Ireland');
+  // Check if Ireland has available jobs
+  const hasIreland = Object.entries(jobs).some(
+    ([key, job]) => !key.startsWith('_') && job.country === 'Ireland' && !job.applied && !job.rejected
+  );
 
   return (
     <Card className="mb-6">
