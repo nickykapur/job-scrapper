@@ -24,6 +24,38 @@ export const JobCard: React.FC<JobCardProps> = ({
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
   const extractedCountry = job.country || getCountryFromLocation(job.location);
 
+  // Calculate how long ago the job was scraped
+  const getScrapedAgo = () => {
+    if (!job.scraped_at) return null;
+
+    try {
+      const scrapedDate = new Date(job.scraped_at);
+      const now = new Date();
+      const diffMs = now.getTime() - scrapedDate.getTime();
+      const diffSeconds = Math.floor(diffMs / 1000);
+      const diffMinutes = Math.floor(diffSeconds / 60);
+      const diffHours = Math.floor(diffMinutes / 60);
+      const diffDays = Math.floor(diffHours / 24);
+
+      if (diffDays > 7) {
+        const weeks = Math.floor(diffDays / 7);
+        return `${weeks} week${weeks > 1 ? 's' : ''} ago`;
+      } else if (diffDays > 0) {
+        return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+      } else if (diffHours > 0) {
+        return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+      } else if (diffMinutes > 0) {
+        return `${diffMinutes} min${diffMinutes > 1 ? 's' : ''} ago`;
+      } else {
+        return 'Just now';
+      }
+    } catch (error) {
+      return null;
+    }
+  };
+
+  const scrapedAgo = getScrapedAgo();
+
   const handleRejectAllFromCompany = async () => {
     if (!window.confirm(`Reject ALL jobs from ${job.company}? This will mark all current ${job.company} jobs as rejected.`)) {
       return;
@@ -79,9 +111,16 @@ export const JobCard: React.FC<JobCardProps> = ({
           </div>
 
           <div className="flex items-center justify-between flex-wrap gap-1">
-            <p className="text-sm text-muted-foreground">
-              {job.posted_date}
-            </p>
+            <div className="flex flex-col gap-0.5">
+              <p className="text-sm text-muted-foreground">
+                {job.posted_date}
+              </p>
+              {scrapedAgo && (
+                <p className="text-xs text-muted-foreground/70">
+                  Scraped {scrapedAgo}
+                </p>
+              )}
+            </div>
             <div className="flex gap-1 items-center">
               {job.job_type && job.job_type !== 'other' && (
                 <Badge

@@ -31,6 +31,7 @@ import { Analytics } from './components/Analytics';
 import { PersonalAnalytics } from './components/PersonalAnalytics';
 import { Rewards } from './components/Rewards';
 import { UserManagement } from './components/UserManagement';
+import { InterviewTracker } from './components/InterviewTracker';
 // import JobSearch from './components/JobSearch';
 // import CountryStats from './components/CountryStats';
 import { jobApi } from './services/api';
@@ -49,10 +50,12 @@ const App: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [localRejectedCount, setLocalRejectedCount] = useState(0);
-  const [currentTab, setCurrentTab] = useState<'dashboard' | 'training' | 'system-design' | 'my-analytics' | 'analytics' | 'rewards' | 'user-management'>('dashboard');
+  const [currentTab, setCurrentTab] = useState<'dashboard' | 'training' | 'system-design' | 'my-analytics' | 'analytics' | 'rewards' | 'user-management' | 'interview-tracker'>('dashboard');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [timeAgo, setTimeAgo] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const jobsPerPage = 12;
 
   // Check if current user has admin access - strictly based on is_admin flag
   const hasAdminAccess = user?.is_admin === true;
@@ -257,6 +260,25 @@ const App: React.FC = () => {
     };
   }, [jobs]);
 
+  // Pagination logic
+  const paginatedJobs = useMemo(() => {
+    const jobEntries = Object.entries(cleanJobs);
+    const totalPages = Math.ceil(jobEntries.length / jobsPerPage);
+    const startIndex = (currentPage - 1) * jobsPerPage;
+    const endIndex = startIndex + jobsPerPage;
+
+    return {
+      jobs: Object.fromEntries(jobEntries.slice(startIndex, endIndex)),
+      totalPages,
+      totalJobs: jobEntries.length,
+    };
+  }, [cleanJobs, currentPage, jobsPerPage]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters]);
+
   const sidebarContent = (
     <div className="flex flex-col h-full">
       {/* Logo */}
@@ -301,6 +323,15 @@ const App: React.FC = () => {
         >
           <Trophy className="mr-3 h-4 w-4" />
           Rewards
+        </Button>
+
+        <Button
+          variant={currentTab === 'interview-tracker' ? 'secondary' : 'ghost'}
+          className="w-full justify-start"
+          onClick={() => { setCurrentTab('interview-tracker'); if (isMobile) setDrawerOpen(false); }}
+        >
+          <Bookmark className="mr-3 h-4 w-4" />
+          Interview Tracker
         </Button>
 
         {hasSoftwareAccess && (
@@ -429,6 +460,7 @@ const App: React.FC = () => {
                 {currentTab === 'dashboard' ? 'Jobs' :
                  currentTab === 'my-analytics' ? 'My Analytics' :
                  currentTab === 'rewards' ? 'Rewards & Achievements' :
+                 currentTab === 'interview-tracker' ? 'Interview Tracker' :
                  currentTab === 'training' ? 'DSA Training' :
                  currentTab === 'system-design' ? 'System Design' :
                  currentTab === 'user-management' ? 'User Management' : 'Analytics'}
@@ -436,7 +468,8 @@ const App: React.FC = () => {
               {currentTab === 'dashboard' && (
                 <div className="space-y-0.5">
                   <p className="text-sm text-muted-foreground">
-                    {Object.keys(cleanJobs).length} active opportunities
+                    {paginatedJobs.totalJobs} active opportunities
+                    {paginatedJobs.totalPages > 1 && ` • Page ${currentPage} of ${paginatedJobs.totalPages}`}
                   </p>
                   {timeAgo && (
                     <p className="text-xs text-muted-foreground flex items-center gap-1">
@@ -482,7 +515,7 @@ const App: React.FC = () => {
                 />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {Object.entries(cleanJobs).map(([id, job]) => (
+                  {Object.entries(paginatedJobs.jobs).map(([id, job]) => (
                     <JobCard
                       key={id}
                       job={job}
@@ -493,9 +526,55 @@ const App: React.FC = () => {
                   ))}
                 </div>
 
-                {Object.keys(cleanJobs).length === 0 && (
+                {paginatedJobs.totalJobs === 0 && (
                   <div className="text-center py-12">
                     <p className="text-muted-foreground">No jobs found matching your filters</p>
+                  </div>
+                )}
+
+                {/* Pagination Controls */}
+                {paginatedJobs.totalPages > 1 && (
+                  <div className="flex items-center justify-center gap-2 mt-8">
+                    <Button
+                      variant="outline"
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      Previous
+                    </Button>
+
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: paginatedJobs.totalPages }, (_, i) => i + 1)
+                        .filter(page => {
+                          // Show first page, last page, current page, and pages around current
+                          return page === 1 ||
+                                 page === paginatedJobs.totalPages ||
+                                 Math.abs(page - currentPage) <= 1;
+                        })
+                        .map((page, idx, arr) => (
+                          <React.Fragment key={page}>
+                            {idx > 0 && arr[idx - 1] !== page - 1 && (
+                              <span className="px-2 text-muted-foreground">...</span>
+                            )}
+                            <Button
+                              variant={currentPage === page ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => setCurrentPage(page)}
+                              className="w-10"
+                            >
+                              {page}
+                            </Button>
+                          </React.Fragment>
+                        ))}
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      onClick={() => setCurrentPage(p => Math.min(paginatedJobs.totalPages, p + 1))}
+                      disabled={currentPage === paginatedJobs.totalPages}
+                    >
+                      Next
+                    </Button>
                   </div>
                 )}
               </>
@@ -503,6 +582,7 @@ const App: React.FC = () => {
 
             {currentTab === 'my-analytics' && <PersonalAnalytics />}
             {currentTab === 'rewards' && <Rewards />}
+            {currentTab === 'interview-tracker' && <InterviewTracker />}
             {currentTab === 'training' && hasSoftwareAccess && <Training />}
             {currentTab === 'system-design' && hasSoftwareAccess && <SystemDesign />}
             {currentTab === 'analytics' && hasAdminAccess && <Analytics />}
