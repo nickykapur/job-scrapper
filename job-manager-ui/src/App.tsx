@@ -521,6 +521,7 @@ const App: React.FC = () => {
                       job={job}
                       onApplyAndOpen={handleApplyAndOpen}
                       onRejectJob={handleRejectJob}
+                      onRefreshJobs={() => loadJobs(true)}
                       isUpdating={updatingJobs.has(id)}
                     />
                   ))}

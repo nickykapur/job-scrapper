@@ -12,6 +12,7 @@ interface JobCardProps {
   job: Job;
   onApplyAndOpen: (jobId: string, jobUrl: string) => void;
   onRejectJob: (jobId: string) => void;
+  onRefreshJobs?: () => void;
   isUpdating?: boolean;
 }
 
@@ -19,6 +20,7 @@ export const JobCard: React.FC<JobCardProps> = ({
   job,
   onApplyAndOpen,
   onRejectJob,
+  onRefreshJobs,
   isUpdating = false,
 }) => {
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
@@ -65,8 +67,10 @@ export const JobCard: React.FC<JobCardProps> = ({
     try {
       const result = await jobApi.bulkRejectJobs({ company: job.company });
       toast.success(`${result.jobs_rejected} jobs from ${job.company} rejected!`);
-      // Reload to refresh the job list
-      setTimeout(() => window.location.reload(), 1000);
+      // Refresh jobs data without reloading the page
+      if (onRefreshJobs) {
+        setTimeout(() => onRefreshJobs(), 800);
+      }
     } catch (error: any) {
       toast.error(error.response?.data?.detail || 'Failed to bulk reject jobs');
     } finally {
@@ -89,19 +93,19 @@ export const JobCard: React.FC<JobCardProps> = ({
       <CardContent className="p-6 flex-grow flex flex-col">
         {/* Company Name */}
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-          {job.company}
+          {decodeURIComponent(job.company || '')}
         </p>
 
         {/* Job Title */}
         <h3 className="text-base font-bold mb-4 text-foreground line-clamp-2 leading-snug">
-          {job.title}
+          {decodeURIComponent(job.title || '')}
         </h3>
 
         {/* Job Details */}
         <div className="space-y-2 mb-6 flex-grow">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              {job.location}
+              {decodeURIComponent(job.location || '')}
             </p>
             {extractedCountry && extractedCountry !== 'Unknown' && (
               <p className="text-xs font-semibold text-primary">
