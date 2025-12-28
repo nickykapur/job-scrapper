@@ -613,9 +613,13 @@ export const InterviewTracker: React.FC = () => {
 
                 {/* Column Content */}
                 <div
-                  className={`space-y-3 min-h-[200px] p-2 rounded-lg transition-colors ${
-                    draggedJob && draggedJob.stage !== stage.id ? 'bg-muted/50 border-2 border-dashed border-primary' : ''
+                  className={`space-y-3 min-h-[200px] p-4 rounded-lg transition-colors ${
+                    draggedJob && draggedJob.stage !== stage.id ? 'bg-muted/50 border-2 border-dashed border-primary' : 'bg-muted/20'
                   }`}
+                  style={{
+                    backgroundImage: 'radial-gradient(circle, rgba(100, 100, 100, 0.15) 1px, transparent 1px)',
+                    backgroundSize: '16px 16px',
+                  }}
                   onDragOver={handleDragOver}
                   onDrop={() => handleDrop(stage.id)}
                 >

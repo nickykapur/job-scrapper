@@ -149,8 +149,14 @@ const App: React.FC = () => {
   }, [loadJobs]);
 
   const handleApplyAndOpen = async (jobId: string, jobUrl: string) => {
-    // Open the URL first (synchronously) to avoid popup blockers on mobile
-    window.open(jobUrl, '_blank');
+    // Open URL in background tab (doesn't steal focus)
+    const link = document.createElement('a');
+    link.href = jobUrl;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 
     // OPTIMISTIC UI UPDATE - Update UI immediately for instant feedback
     setJobs(prev => ({
