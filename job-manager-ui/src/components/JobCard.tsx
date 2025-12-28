@@ -58,6 +58,16 @@ export const JobCard: React.FC<JobCardProps> = ({
 
   const scrapedAgo = getScrapedAgo();
 
+  // Safe decode function to handle malformed URIs
+  const safeDecode = (str: string): string => {
+    try {
+      return decodeURIComponent(str);
+    } catch (e) {
+      // If decode fails, return original string
+      return str;
+    }
+  };
+
   const handleRejectAllFromCompany = async () => {
     if (!window.confirm(`Reject ALL jobs from ${job.company}? This will mark all current ${job.company} jobs as rejected.`)) {
       return;
@@ -93,19 +103,19 @@ export const JobCard: React.FC<JobCardProps> = ({
       <CardContent className="p-6 flex-grow flex flex-col">
         {/* Company Name */}
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-          {decodeURIComponent(job.company || '')}
+          {safeDecode(job.company || '')}
         </p>
 
         {/* Job Title */}
         <h3 className="text-base font-bold mb-4 text-foreground line-clamp-2 leading-snug">
-          {decodeURIComponent(job.title || '')}
+          {safeDecode(job.title || '')}
         </h3>
 
         {/* Job Details */}
         <div className="space-y-2 mb-6 flex-grow">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              {decodeURIComponent(job.location || '')}
+              {safeDecode(job.location || '')}
             </p>
             {extractedCountry && extractedCountry !== 'Unknown' && (
               <p className="text-xs font-semibold text-primary">

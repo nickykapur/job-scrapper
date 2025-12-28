@@ -29,7 +29,7 @@ import { Training } from './components/Training';
 import { SystemDesign } from './components/SystemDesign';
 import { Analytics } from './components/Analytics';
 import { PersonalAnalytics } from './components/PersonalAnalytics';
-import { Rewards } from './components/Rewards';
+import { RewardsRevamped as Rewards } from './components/RewardsRevamped';
 import { UserManagement } from './components/UserManagement';
 import { InterviewTracker } from './components/InterviewTracker';
 // import JobSearch from './components/JobSearch';
