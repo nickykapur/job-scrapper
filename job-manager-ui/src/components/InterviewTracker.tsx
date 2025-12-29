@@ -10,6 +10,7 @@ import {
   DollarSign, Mail, StickyNote, TrendingUp
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { jobApi } from '@/services/api';
 
 interface TrackedJob {
   id: string;
