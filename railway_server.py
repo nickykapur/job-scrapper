@@ -3463,6 +3463,17 @@ async def save_interview_tracker(
 
         # Insert new entries
         for app in applications:
+            # Helper to parse date strings to date objects
+            def parse_date(date_str):
+                if not date_str:
+                    return None
+                try:
+                    if isinstance(date_str, str):
+                        return datetime.fromisoformat(date_str.split('T')[0]).date()
+                    return date_str
+                except:
+                    return None
+
             await conn.execute("""
                 INSERT INTO interview_tracker (
                     id, user_id, company, position, location, stage,
@@ -3482,20 +3493,20 @@ async def save_interview_tracker(
                 app['position'],
                 app['location'],
                 app['stage'],
-                app.get('applicationDate') or None,
-                app.get('recruiterDate') or None,
-                app.get('technicalDate') or None,
-                app.get('finalDate') or None,
-                app.get('expectedResponseDate') or None,
+                parse_date(app.get('applicationDate')),
+                parse_date(app.get('recruiterDate')),
+                parse_date(app.get('technicalDate')),
+                parse_date(app.get('finalDate')),
+                parse_date(app.get('expectedResponseDate')),
                 app.get('salaryRange') or None,
                 app.get('recruiterContact') or None,
                 app.get('recruiterEmail') or None,
                 app.get('notes') or None,
                 app.get('stageNotes') or {},  # asyncpg handles JSONB natively
-                app.get('lastUpdated'),
+                datetime.fromisoformat(app.get('lastUpdated').replace('Z', '+00:00')) if app.get('lastUpdated') else datetime.now(),
                 app.get('archived', False),
                 app.get('archiveOutcome') or None,
-                app.get('archiveDate') or None,
+                datetime.fromisoformat(app.get('archiveDate').replace('Z', '+00:00')) if app.get('archiveDate') else None,
                 app.get('archiveNotes') or None,
                 app.get('rejectionStage') or None,
                 app.get('rejectionReasons') or [],
