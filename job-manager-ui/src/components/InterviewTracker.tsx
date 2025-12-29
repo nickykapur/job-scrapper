@@ -635,34 +635,38 @@ export const InterviewTracker: React.FC = () => {
 
       {/* Kanban Board */}
       {!showArchive && !showAnalytics && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {STAGES.map(stage => {
-            const jobs = getJobsByStage(stage.id);
-            return (
-              <div key={stage.id} className="space-y-3">
-                {/* Column Header */}
-                <div className="flex items-center gap-2">
-                  <div className={`w-3 h-3 rounded-full ${stage.color}`} />
-                  <h4 className="font-semibold text-sm uppercase tracking-wide">
-                    {stage.label}
-                  </h4>
-                  <Badge variant="secondary" className="ml-auto">
-                    {jobs.length}
-                  </Badge>
-                </div>
+        <Card className="overflow-hidden">
+          <div className="grid grid-cols-1 md:grid-cols-3 divide-x divide-border">
+            {STAGES.map((stage, index) => {
+              const jobs = getJobsByStage(stage.id);
+              return (
+                <div key={stage.id} className="flex flex-col">
+                  {/* Column Header */}
+                  <div className="flex items-center gap-2 p-4 border-b bg-muted/30">
+                    <div className={`w-3 h-3 rounded-full ${stage.color}`} />
+                    <h4 className="font-semibold text-sm uppercase tracking-wide">
+                      {stage.label}
+                    </h4>
+                    <Badge variant="secondary" className="ml-auto">
+                      {jobs.length}
+                    </Badge>
+                  </div>
 
-                {/* Column Content */}
-                <div
-                  className={`space-y-3 min-h-[200px] p-4 rounded-lg transition-colors ${
-                    draggedJob && draggedJob.stage !== stage.id ? 'bg-muted/50 border-2 border-dashed border-primary' : 'bg-muted/20'
-                  }`}
-                  style={{
-                    backgroundImage: 'radial-gradient(circle, rgba(100, 100, 100, 0.15) 1px, transparent 1px)',
-                    backgroundSize: '16px 16px',
-                  }}
-                  onDragOver={handleDragOver}
-                  onDrop={() => handleDrop(stage.id)}
-                >
+                  {/* Column Content - Fixed Height with Scroll */}
+                  <div
+                    className={`flex-1 p-4 overflow-y-auto transition-colors ${
+                      draggedJob && draggedJob.stage !== stage.id ? 'bg-muted/50 border-2 border-dashed border-primary' : 'bg-muted/20'
+                    }`}
+                    style={{
+                      backgroundImage: 'radial-gradient(circle, rgba(100, 100, 100, 0.15) 1px, transparent 1px)',
+                      backgroundSize: '16px 16px',
+                      minHeight: '600px',
+                      maxHeight: '600px',
+                    }}
+                    onDragOver={handleDragOver}
+                    onDrop={() => handleDrop(stage.id)}
+                  >
+                    <div className="space-y-3">
                   {jobs.length === 0 ? (
                     <div className="border-2 border-dashed rounded-lg p-8 text-center">
                       <p className="text-sm text-muted-foreground">
@@ -778,11 +782,13 @@ export const InterviewTracker: React.FC = () => {
                       );
                     })
                   )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        </Card>
       )}
 
       {/* Empty State */}
