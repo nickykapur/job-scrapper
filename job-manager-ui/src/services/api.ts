@@ -128,6 +128,18 @@ export const jobApi = {
     const response = await api.post('/api/jobs/clear-interactions', options);
     return response.data;
   },
+
+  // Interview Tracker: Get all tracked applications
+  getInterviewTracker: async (): Promise<any[]> => {
+    const response = await api.get('/api/interview-tracker');
+    return response.data;
+  },
+
+  // Interview Tracker: Save all tracked applications
+  saveInterviewTracker: async (applications: any[]): Promise<any> => {
+    const response = await api.post('/api/interview-tracker', applications);
+    return response.data;
+  },
 };
 
 export default api;

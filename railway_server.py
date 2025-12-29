@@ -3198,6 +3198,129 @@ async def get_job_search_insights(current_user: Dict[str, Any] = Depends(get_cur
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to get insights: {str(e)}")
 
+# ==================== Interview Tracker Endpoints ====================
+
+@app.get("/api/interview-tracker")
+async def get_interview_tracker(current_user: dict = Depends(get_current_user)):
+    """Get all interview tracker entries for the current user"""
+    if not db or not db.use_postgres:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    user_id = current_user['id']
+    conn = await db.get_connection()
+
+    try:
+        rows = await conn.fetch("""
+            SELECT * FROM interview_tracker
+            WHERE user_id = $1
+            ORDER BY last_updated DESC
+        """, user_id)
+
+        applications = []
+        for row in rows:
+            applications.append({
+                'id': row['id'],
+                'company': row['company'],
+                'position': row['position'],
+                'location': row['location'],
+                'stage': row['stage'],
+                'applicationDate': row['application_date'].isoformat() if row['application_date'] else None,
+                'recruiterDate': row['recruiter_date'].isoformat() if row['recruiter_date'] else None,
+                'technicalDate': row['technical_date'].isoformat() if row['technical_date'] else None,
+                'finalDate': row['final_date'].isoformat() if row['final_date'] else None,
+                'expectedResponseDate': row['expected_response_date'].isoformat() if row['expected_response_date'] else None,
+                'salaryRange': row['salary_range'],
+                'recruiterContact': row['recruiter_contact'],
+                'recruiterEmail': row['recruiter_email'],
+                'notes': row['notes'],
+                'stageNotes': row['stage_notes'] or {},
+                'lastUpdated': row['last_updated'].isoformat(),
+                'archived': row['archived'],
+                'archiveOutcome': row['archive_outcome'],
+                'archiveDate': row['archive_date'].isoformat() if row['archive_date'] else None,
+                'archiveNotes': row['archive_notes'],
+                'rejectionStage': row['rejection_stage'],
+                'rejectionReasons': row['rejection_reasons'] or [],
+                'rejectionDetails': row['rejection_details'],
+            })
+
+        return applications
+
+    except Exception as e:
+        print(f"❌ Error getting interview tracker: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        await conn.close()
+
+@app.post("/api/interview-tracker")
+async def save_interview_tracker(
+    applications: List[Dict[str, Any]],
+    current_user: dict = Depends(get_current_user)
+):
+    """Save or update interview tracker entries for the current user"""
+    if not db or not db.use_postgres:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    user_id = current_user['id']
+    conn = await db.get_connection()
+
+    try:
+        # Delete existing entries for this user
+        await conn.execute("""
+            DELETE FROM interview_tracker WHERE user_id = $1
+        """, user_id)
+
+        # Insert new entries
+        for app in applications:
+            await conn.execute("""
+                INSERT INTO interview_tracker (
+                    id, user_id, company, position, location, stage,
+                    application_date, recruiter_date, technical_date, final_date,
+                    expected_response_date, salary_range, recruiter_contact,
+                    recruiter_email, notes, stage_notes, last_updated,
+                    archived, archive_outcome, archive_date, archive_notes,
+                    rejection_stage, rejection_reasons, rejection_details
+                ) VALUES (
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
+                    $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24
+                )
+            """,
+                app['id'],
+                user_id,
+                app['company'],
+                app['position'],
+                app['location'],
+                app['stage'],
+                app.get('applicationDate'),
+                app.get('recruiterDate'),
+                app.get('technicalDate'),
+                app.get('finalDate'),
+                app.get('expectedResponseDate'),
+                app.get('salaryRange'),
+                app.get('recruiterContact'),
+                app.get('recruiterEmail'),
+                app.get('notes'),
+                json.dumps(app.get('stageNotes', {})),
+                app['lastUpdated'],
+                app.get('archived', False),
+                app.get('archiveOutcome'),
+                app.get('archiveDate'),
+                app.get('archiveNotes'),
+                app.get('rejectionStage'),
+                app.get('rejectionReasons', []),
+                app.get('rejectionDetails')
+            )
+
+        return {"success": True, "count": len(applications)}
+
+    except Exception as e:
+        print(f"❌ Error saving interview tracker: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        await conn.close()
+
 # Catch-all route for React Router (SPA routing)
 @app.get("/{full_path:path}")
 async def catch_all(full_path: str):

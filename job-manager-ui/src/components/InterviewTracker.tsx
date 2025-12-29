@@ -86,21 +86,54 @@ export const InterviewTracker: React.FC = () => {
     recruiterEmail: '',
   });
 
-  // Load from localStorage on mount
+  // Load from API on mount
   useEffect(() => {
-    const saved = localStorage.getItem('interview-tracker-v2');
-    if (saved) {
+    const loadTrackedJobs = async () => {
       try {
-        setTrackedJobs(JSON.parse(saved));
+        // Try to load from API first
+        const apiData = await jobApi.getInterviewTracker();
+        if (apiData && apiData.length > 0) {
+          setTrackedJobs(apiData);
+          // Also save to localStorage as cache
+          localStorage.setItem('interview-tracker-v2', JSON.stringify(apiData));
+          return;
+        }
       } catch (error) {
-        console.error('Failed to load tracked jobs:', error);
+        console.error('Failed to load from API, trying localStorage:', error);
       }
-    }
+
+      // Fallback to localStorage if API fails
+      const saved = localStorage.getItem('interview-tracker-v2');
+      if (saved) {
+        try {
+          setTrackedJobs(JSON.parse(saved));
+        } catch (error) {
+          console.error('Failed to load tracked jobs from localStorage:', error);
+        }
+      }
+    };
+
+    loadTrackedJobs();
   }, []);
 
-  // Save to localStorage whenever trackedJobs changes
+  // Save to both localStorage and API whenever trackedJobs changes
   useEffect(() => {
-    localStorage.setItem('interview-tracker-v2', JSON.stringify(trackedJobs));
+    const saveTrackedJobs = async () => {
+      // Save to localStorage immediately (fast)
+      localStorage.setItem('interview-tracker-v2', JSON.stringify(trackedJobs));
+
+      // Save to API (slower, but persistent)
+      if (trackedJobs.length === 0) return; // Don't save empty array on initial load
+
+      try {
+        await jobApi.saveInterviewTracker(trackedJobs);
+      } catch (error) {
+        console.error('Failed to save to API:', error);
+        toast.error('Failed to sync interview tracker. Data saved locally.');
+      }
+    };
+
+    saveTrackedJobs();
   }, [trackedJobs]);
 
   const handleAddJob = () => {
