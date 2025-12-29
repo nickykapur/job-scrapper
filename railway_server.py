@@ -3503,10 +3503,10 @@ async def save_interview_tracker(
                 app.get('recruiterEmail') or None,
                 app.get('notes') or None,
                 json.dumps(app.get('stageNotes') or {}),  # Convert dict to JSON string for JSONB
-                datetime.fromisoformat(app.get('lastUpdated').replace('Z', '+00:00')) if app.get('lastUpdated') else datetime.now(),
+                datetime.fromisoformat(app.get('lastUpdated').replace('Z', '').replace('+00:00', '')) if app.get('lastUpdated') else datetime.now(),
                 app.get('archived', False),
                 app.get('archiveOutcome') or None,
-                datetime.fromisoformat(app.get('archiveDate').replace('Z', '+00:00')) if app.get('archiveDate') else None,
+                datetime.fromisoformat(app.get('archiveDate').replace('Z', '').replace('+00:00', '')) if app.get('archiveDate') else None,
                 app.get('archiveNotes') or None,
                 app.get('rejectionStage') or None,
                 app.get('rejectionReasons') or [],
