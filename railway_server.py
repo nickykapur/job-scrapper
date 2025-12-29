@@ -3502,7 +3502,7 @@ async def save_interview_tracker(
                 app.get('recruiterContact') or None,
                 app.get('recruiterEmail') or None,
                 app.get('notes') or None,
-                app.get('stageNotes') or {},  # asyncpg handles JSONB natively
+                json.dumps(app.get('stageNotes') or {}),  # Convert dict to JSON string for JSONB
                 datetime.fromisoformat(app.get('lastUpdated').replace('Z', '+00:00')) if app.get('lastUpdated') else datetime.now(),
                 app.get('archived', False),
                 app.get('archiveOutcome') or None,
