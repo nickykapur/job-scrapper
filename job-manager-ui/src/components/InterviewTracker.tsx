@@ -662,6 +662,8 @@ export const InterviewTracker: React.FC = () => {
                       backgroundSize: '16px 16px',
                       minHeight: '600px',
                       maxHeight: '600px',
+                      scrollbarWidth: 'thin',
+                      scrollbarColor: 'hsl(var(--muted-foreground) / 0.3) hsl(var(--muted))',
                     }}
                     onDragOver={handleDragOver}
                     onDrop={() => handleDrop(stage.id)}
