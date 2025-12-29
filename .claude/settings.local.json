@@ -12,7 +12,9 @@
       "Bash(curl -s https://web-production-110bb.up.railway.app/)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(cat:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []
