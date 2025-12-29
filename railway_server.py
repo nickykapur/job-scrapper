@@ -2752,6 +2752,197 @@ async def get_personal_analytics(current_user: Dict[str, Any] = Depends(get_curr
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to get personal analytics: {str(e)}")
 
+@app.get("/api/admin/country-analytics")
+async def get_country_analytics(
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    days: int = 90
+):
+    """
+    Get comprehensive country-level analytics for admin dashboard
+    - Jobs posted per country over time
+    - Day of week patterns by country
+    - Top companies by country
+    - Time series trends
+    """
+    if not current_user.get('is_admin'):
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    if not db or not DATABASE_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    try:
+        conn = await db.get_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Could not connect to database")
+
+        # 1. Jobs posted per country per day (time series)
+        jobs_by_country_date = await conn.fetch("""
+            SELECT
+                DATE(scraped_at) as date,
+                COALESCE(country, 'Unknown') as country,
+                COUNT(*) as total_jobs,
+                COUNT(*) FILTER (WHERE is_new = TRUE) as new_jobs,
+                COUNT(DISTINCT company) as unique_companies
+            FROM jobs
+            WHERE scraped_at >= CURRENT_DATE - INTERVAL '$1 days'
+            GROUP BY DATE(scraped_at), country
+            ORDER BY date DESC, country
+        """.replace('$1', str(days)))
+
+        # 2. Day of week patterns by country
+        day_of_week_patterns = await conn.fetch("""
+            SELECT
+                TO_CHAR(scraped_at, 'Day') as day_name,
+                EXTRACT(DOW FROM scraped_at) as day_number,
+                COALESCE(country, 'Unknown') as country,
+                COUNT(*) as total_jobs,
+                COUNT(*) FILTER (WHERE is_new = TRUE) as new_jobs,
+                ROUND(AVG(CASE WHEN is_new THEN 1 ELSE 0 END) * 100, 2) as new_job_percentage
+            FROM jobs
+            WHERE scraped_at >= CURRENT_DATE - INTERVAL '$1 days'
+            GROUP BY day_name, day_number, country
+            ORDER BY day_number, country
+        """.replace('$1', str(days)))
+
+        # 3. Top companies by country
+        top_companies_by_country = await conn.fetch("""
+            SELECT
+                COALESCE(country, 'Unknown') as country,
+                company,
+                COUNT(*) as total_jobs,
+                COUNT(*) FILTER (WHERE is_new = TRUE) as new_jobs,
+                COUNT(*) FILTER (WHERE easy_apply = TRUE) as easy_apply_jobs,
+                MAX(scraped_at) as last_posted,
+                MIN(scraped_at) as first_posted
+            FROM jobs
+            WHERE scraped_at >= CURRENT_DATE - INTERVAL '$1 days'
+            GROUP BY country, company
+            ORDER BY country, total_jobs DESC
+        """.replace('$1', str(days)))
+
+        # 4. Country summary stats
+        country_summary = await conn.fetch("""
+            SELECT
+                COALESCE(country, 'Unknown') as country,
+                COUNT(*) as total_jobs,
+                COUNT(DISTINCT company) as unique_companies,
+                COUNT(*) FILTER (WHERE is_new = TRUE) as new_jobs,
+                COUNT(*) FILTER (WHERE easy_apply = TRUE) as easy_apply_jobs,
+                COUNT(DISTINCT DATE(scraped_at)) as active_days,
+                MIN(DATE(scraped_at)) as first_scrape,
+                MAX(DATE(scraped_at)) as last_scrape,
+                ROUND(COUNT(*)::NUMERIC / NULLIF(COUNT(DISTINCT DATE(scraped_at)), 0), 2) as avg_jobs_per_day
+            FROM jobs
+            WHERE scraped_at >= CURRENT_DATE - INTERVAL '$1 days'
+            GROUP BY country
+            ORDER BY total_jobs DESC
+        """.replace('$1', str(days)))
+
+        # 5. Hourly posting patterns (when are jobs posted - useful for scraper timing)
+        hourly_patterns = await conn.fetch("""
+            SELECT
+                EXTRACT(HOUR FROM scraped_at) as hour,
+                COALESCE(country, 'Unknown') as country,
+                COUNT(*) as total_jobs
+            FROM jobs
+            WHERE scraped_at >= CURRENT_DATE - INTERVAL '$1 days'
+            GROUP BY hour, country
+            ORDER BY hour, country
+        """.replace('$1', str(days)))
+
+        # 6. Weekly trends (last N weeks)
+        weekly_trends = await conn.fetch("""
+            SELECT
+                DATE_TRUNC('week', scraped_at) as week_start,
+                COALESCE(country, 'Unknown') as country,
+                COUNT(*) as total_jobs,
+                COUNT(*) FILTER (WHERE is_new = TRUE) as new_jobs,
+                COUNT(DISTINCT company) as unique_companies
+            FROM jobs
+            WHERE scraped_at >= CURRENT_DATE - INTERVAL '$1 days'
+            GROUP BY week_start, country
+            ORDER BY week_start DESC, country
+        """.replace('$1', str(days)))
+
+        await conn.close()
+
+        # Format response
+        return {
+            "time_range_days": days,
+            "generated_at": datetime.now().isoformat(),
+            "country_summary": [
+                {
+                    "country": row['country'],
+                    "total_jobs": row['total_jobs'],
+                    "unique_companies": row['unique_companies'],
+                    "new_jobs": row['new_jobs'],
+                    "easy_apply_jobs": row['easy_apply_jobs'],
+                    "active_days": row['active_days'],
+                    "first_scrape": row['first_scrape'].isoformat() if row['first_scrape'] else None,
+                    "last_scrape": row['last_scrape'].isoformat() if row['last_scrape'] else None,
+                    "avg_jobs_per_day": float(row['avg_jobs_per_day']) if row['avg_jobs_per_day'] else 0
+                }
+                for row in country_summary
+            ],
+            "daily_trends": [
+                {
+                    "date": row['date'].isoformat(),
+                    "country": row['country'],
+                    "total_jobs": row['total_jobs'],
+                    "new_jobs": row['new_jobs'],
+                    "unique_companies": row['unique_companies']
+                }
+                for row in jobs_by_country_date
+            ],
+            "day_of_week_patterns": [
+                {
+                    "day_name": row['day_name'].strip(),
+                    "day_number": int(row['day_number']),
+                    "country": row['country'],
+                    "total_jobs": row['total_jobs'],
+                    "new_jobs": row['new_jobs'],
+                    "new_job_percentage": float(row['new_job_percentage'])
+                }
+                for row in day_of_week_patterns
+            ],
+            "top_companies": [
+                {
+                    "country": row['country'],
+                    "company": row['company'],
+                    "total_jobs": row['total_jobs'],
+                    "new_jobs": row['new_jobs'],
+                    "easy_apply_jobs": row['easy_apply_jobs'],
+                    "last_posted": row['last_posted'].isoformat() if row['last_posted'] else None,
+                    "first_posted": row['first_posted'].isoformat() if row['first_posted'] else None
+                }
+                for row in top_companies_by_country
+            ],
+            "hourly_patterns": [
+                {
+                    "hour": int(row['hour']),
+                    "country": row['country'],
+                    "total_jobs": row['total_jobs']
+                }
+                for row in hourly_patterns
+            ],
+            "weekly_trends": [
+                {
+                    "week_start": row['week_start'].isoformat() if row['week_start'] else None,
+                    "country": row['country'],
+                    "total_jobs": row['total_jobs'],
+                    "new_jobs": row['new_jobs'],
+                    "unique_companies": row['unique_companies']
+                }
+                for row in weekly_trends
+            ]
+        }
+
+    except Exception as e:
+        print(f"❌ Error getting country analytics: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to get country analytics: {str(e)}")
+
 @app.get("/api/rewards")
 async def get_user_rewards(current_user: Dict[str, Any] = Depends(get_current_user)):
     """Get gamification rewards for the authenticated user - points, badges, streaks, level"""
@@ -3206,7 +3397,7 @@ async def get_interview_tracker(current_user: dict = Depends(get_current_user)):
     if not db or not db.use_postgres:
         raise HTTPException(status_code=503, detail="Database not available")
 
-    user_id = current_user['id']
+    user_id = current_user.get('id') or current_user.get('user_id')
     conn = await db.get_connection()
 
     try:
@@ -3261,7 +3452,7 @@ async def save_interview_tracker(
     if not db or not db.use_postgres:
         raise HTTPException(status_code=503, detail="Database not available")
 
-    user_id = current_user['id']
+    user_id = current_user.get('id') or current_user.get('user_id')
     conn = await db.get_connection()
 
     try:

@@ -29,6 +29,7 @@ import { Training } from './components/Training';
 import { SystemDesign } from './components/SystemDesign';
 import { Analytics } from './components/Analytics';
 import { PersonalAnalytics } from './components/PersonalAnalytics';
+import { CountryAnalytics } from './components/CountryAnalytics';
 import { RewardsRevamped as Rewards } from './components/RewardsRevamped';
 import { UserManagement } from './components/UserManagement';
 import { InterviewTracker } from './components/InterviewTracker';
@@ -370,7 +371,17 @@ const App: React.FC = () => {
               onClick={() => { setCurrentTab('analytics'); if (isMobile) setDrawerOpen(false); }}
             >
               <BarChart3 className="mr-3 h-4 w-4" />
-              Analytics
+              User Analytics
+              <Badge variant="secondary" className="ml-auto">Admin</Badge>
+            </Button>
+
+            <Button
+              variant={currentTab === 'country-analytics' ? 'secondary' : 'ghost'}
+              className="w-full justify-start"
+              onClick={() => { setCurrentTab('country-analytics'); if (isMobile) setDrawerOpen(false); }}
+            >
+              <Building2 className="mr-3 h-4 w-4" />
+              Country Analytics
               <Badge variant="secondary" className="ml-auto">Admin</Badge>
             </Button>
 
@@ -469,7 +480,9 @@ const App: React.FC = () => {
                  currentTab === 'interview-tracker' ? 'Interview Tracker' :
                  currentTab === 'training' ? 'DSA Training' :
                  currentTab === 'system-design' ? 'System Design' :
-                 currentTab === 'user-management' ? 'User Management' : 'Analytics'}
+                 currentTab === 'analytics' ? 'User Analytics' :
+                 currentTab === 'country-analytics' ? 'Country Analytics' :
+                 currentTab === 'user-management' ? 'User Management' : 'Dashboard'}
               </h2>
               {currentTab === 'dashboard' && (
                 <div className="space-y-0.5">
@@ -593,6 +606,7 @@ const App: React.FC = () => {
             {currentTab === 'training' && hasSoftwareAccess && <Training />}
             {currentTab === 'system-design' && hasSoftwareAccess && <SystemDesign />}
             {currentTab === 'analytics' && hasAdminAccess && <Analytics />}
+            {currentTab === 'country-analytics' && hasAdminAccess && <CountryAnalytics />}
             {currentTab === 'user-management' && hasAdminAccess && <UserManagement />}
           </div>
         </main>
