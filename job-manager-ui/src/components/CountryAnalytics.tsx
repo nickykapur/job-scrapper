@@ -5,6 +5,23 @@ import { Badge } from '@/components/ui/badge';
 import { BarChart3, TrendingUp, Calendar, Clock, Building2, Globe } from 'lucide-react';
 import { jobApi } from '@/services/api';
 import toast from 'react-hot-toast';
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  AreaChart,
+  Area,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts';
 
 interface CountryAnalyticsData {
   time_range_days: number;
@@ -71,6 +88,9 @@ interface WeeklyTrend {
 }
 
 type ViewMode = 'daily' | 'weekly' | 'companies' | 'timing';
+
+// Chart color palette
+const COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#ef4444', '#06b6d4', '#f97316'];
 
 export const CountryAnalytics: React.FC = () => {
   const [analytics, setAnalytics] = useState<CountryAnalyticsData | null>(null);
@@ -316,33 +336,101 @@ export const CountryAnalytics: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-2">Date</th>
-                      <th className="text-left py-2">Country</th>
-                      <th className="text-right py-2">Total Jobs</th>
-                      <th className="text-right py-2">New Jobs</th>
-                      <th className="text-right py-2">Companies</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {analytics.daily_trends
-                      .filter(d => selectedCountry === 'all' || d.country === selectedCountry)
-                      .slice(0, 50)
-                      .map((trend, idx) => (
-                        <tr key={idx} className="border-b hover:bg-muted/50">
-                          <td className="py-2">{new Date(trend.date).toLocaleDateString()}</td>
-                          <td className="py-2">{trend.country}</td>
-                          <td className="py-2 text-right font-semibold">{trend.total_jobs}</td>
-                          <td className="py-2 text-right">{trend.new_jobs}</td>
-                          <td className="py-2 text-right">{trend.unique_companies}</td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-              </div>
+              {(() => {
+                // Prepare data for area chart - group by date
+                const chartData = analytics.daily_trends
+                  .filter(d => selectedCountry === 'all' || d.country === selectedCountry)
+                  .slice(0, 30)
+                  .reverse()
+                  .reduce((acc, trend) => {
+                    const existing = acc.find(item => item.date === trend.date);
+                    if (existing) {
+                      existing.jobs += trend.total_jobs;
+                      existing.new_jobs += trend.new_jobs;
+                    } else {
+                      acc.push({
+                        date: new Date(trend.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                        jobs: trend.total_jobs,
+                        new_jobs: trend.new_jobs,
+                      });
+                    }
+                    return acc;
+                  }, [] as Array<{ date: string; jobs: number; new_jobs: number }>);
+
+                return (
+                  <div className="space-y-4">
+                    <ResponsiveContainer width="100%" height={400}>
+                      <AreaChart data={chartData}>
+                        <defs>
+                          <linearGradient id="colorJobs" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                          </linearGradient>
+                          <linearGradient id="colorNewJobs" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <XAxis
+                          dataKey="date"
+                          className="text-xs"
+                          angle={-45}
+                          textAnchor="end"
+                          height={80}
+                        />
+                        <YAxis className="text-xs" />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: 'hsl(var(--card))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '6px'
+                          }}
+                        />
+                        <Legend />
+                        <Area
+                          type="monotone"
+                          dataKey="jobs"
+                          stroke="#3b82f6"
+                          fillOpacity={1}
+                          fill="url(#colorJobs)"
+                          name="Total Jobs"
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="new_jobs"
+                          stroke="#10b981"
+                          fillOpacity={1}
+                          fill="url(#colorNewJobs)"
+                          name="New Jobs"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+
+                    {/* Summary Stats */}
+                    <div className="grid grid-cols-3 gap-4 pt-4 border-t">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-blue-500">
+                          {chartData.reduce((sum, d) => sum + d.jobs, 0).toLocaleString()}
+                        </div>
+                        <div className="text-xs text-muted-foreground">Total Jobs (Last 30 days)</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-green-500">
+                          {chartData.reduce((sum, d) => sum + d.new_jobs, 0).toLocaleString()}
+                        </div>
+                        <div className="text-xs text-muted-foreground">New Jobs</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-purple-500">
+                          {(chartData.reduce((sum, d) => sum + d.jobs, 0) / chartData.length).toFixed(1)}
+                        </div>
+                        <div className="text-xs text-muted-foreground">Avg Jobs/Day</div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
         )}
@@ -357,29 +445,24 @@ export const CountryAnalytics: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {aggregatedDayOfWeek.map((day) => {
-                  const maxJobs = Math.max(...aggregatedDayOfWeek.map(d => d.total_jobs));
-                  const percentage = (day.total_jobs / maxJobs) * 100;
+              <ResponsiveContainer width="100%" height={350}>
+                <BarChart data={aggregatedDayOfWeek}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis dataKey="day" className="text-xs" />
+                  <YAxis className="text-xs" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '6px'
+                    }}
+                  />
+                  <Legend />
+                  <Bar dataKey="total_jobs" fill="#3b82f6" name="Total Jobs" radius={[8, 8, 0, 0]} />
+                  <Bar dataKey="new_jobs" fill="#10b981" name="New Jobs" radius={[8, 8, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
 
-                  return (
-                    <div key={day.day} className="space-y-1">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium">{day.day}</span>
-                        <span className="text-muted-foreground">
-                          {day.total_jobs} jobs ({day.new_jobs} new)
-                        </span>
-                      </div>
-                      <div className="w-full bg-muted rounded-full h-3">
-                        <div
-                          className="bg-primary rounded-full h-3 transition-all"
-                          style={{ width: `${percentage}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
               <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
                 <h4 className="font-semibold mb-2">Insights</h4>
                 <ul className="text-sm text-muted-foreground space-y-1">
@@ -404,44 +487,57 @@ export const CountryAnalytics: React.FC = () => {
         {/* Top Companies */}
         {viewMode === 'companies' && (
           <>
-            {Object.entries(companiesByCountry).map(([country, companies]) => (
-            <Card key={country}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Building2 className="h-5 w-5" />
-                  Top Companies in {country}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-2">Company</th>
-                        <th className="text-right py-2">Total Jobs</th>
-                        <th className="text-right py-2">New Jobs</th>
-                        <th className="text-right py-2">Easy Apply</th>
-                        <th className="text-right py-2">Last Posted</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {companies.map((company, idx) => (
-                        <tr key={idx} className="border-b hover:bg-muted/50">
-                          <td className="py-2 font-medium">{company.company}</td>
-                          <td className="py-2 text-right">{company.total_jobs}</td>
-                          <td className="py-2 text-right">{company.new_jobs}</td>
-                          <td className="py-2 text-right">{company.easy_apply_jobs}</td>
-                          <td className="py-2 text-right text-xs text-muted-foreground">
-                            {company.last_posted ? new Date(company.last_posted).toLocaleDateString() : 'N/A'}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-            ))}
+            {Object.entries(companiesByCountry).map(([country, companies]) => {
+              const chartData = companies.slice(0, 10).map(c => ({
+                name: c.company.length > 25 ? c.company.substring(0, 25) + '...' : c.company,
+                jobs: c.total_jobs,
+                easy_apply: c.easy_apply_jobs
+              }));
+
+              return (
+                <Card key={country}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Building2 className="h-5 w-5" />
+                      Top Companies in {country}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={400}>
+                      <BarChart data={chartData} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <XAxis type="number" className="text-xs" />
+                        <YAxis type="category" dataKey="name" className="text-xs" width={150} />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: 'hsl(var(--card))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '6px'
+                          }}
+                        />
+                        <Legend />
+                        <Bar dataKey="jobs" fill="#8b5cf6" name="Total Jobs" radius={[0, 4, 4, 0]} />
+                        <Bar dataKey="easy_apply" fill="#10b981" name="Easy Apply" radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+
+                    {/* Top company stats */}
+                    <div className="mt-4 grid grid-cols-2 gap-4 pt-4 border-t">
+                      <div>
+                        <div className="text-sm text-muted-foreground">Most Active Company</div>
+                        <div className="font-semibold">{companies[0]?.company}</div>
+                        <div className="text-xs text-muted-foreground">{companies[0]?.total_jobs} jobs posted</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Total Companies</div>
+                        <div className="font-semibold">{companies.length}</div>
+                        <div className="text-xs text-muted-foreground">posting jobs in {country}</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </>
         )}
 
@@ -455,47 +551,66 @@ export const CountryAnalytics: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                {aggregatedHourly.map((hour) => {
-                  const maxJobs = Math.max(...aggregatedHourly.map(h => h.total_jobs));
-                  const percentage = maxJobs > 0 ? (hour.total_jobs / maxJobs) * 100 : 0;
+              {(() => {
+                const chartData = aggregatedHourly.map(h => ({
+                  hour: `${h.hour.toString().padStart(2, '0')}:00`,
+                  jobs: h.total_jobs
+                }));
 
-                  return (
-                    <div key={hour.hour} className="space-y-1">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium w-16">
-                          {hour.hour.toString().padStart(2, '0')}:00
-                        </span>
-                        <span className="text-muted-foreground">
-                          {hour.total_jobs} jobs
-                        </span>
-                      </div>
-                      <div className="w-full bg-muted rounded-full h-2">
-                        <div
-                          className="bg-green-500 rounded-full h-2 transition-all"
-                          style={{ width: `${percentage}%` }}
+                return (
+                  <>
+                    <ResponsiveContainer width="100%" height={350}>
+                      <AreaChart data={chartData}>
+                        <defs>
+                          <linearGradient id="colorHourly" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+                            <stop offset="95%" stopColor="#10b981" stopOpacity={0.1}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <XAxis
+                          dataKey="hour"
+                          className="text-xs"
+                          interval={2}
                         />
-                      </div>
+                        <YAxis className="text-xs" />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: 'hsl(var(--card))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '6px'
+                          }}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="jobs"
+                          stroke="#10b981"
+                          fillOpacity={1}
+                          fill="url(#colorHourly)"
+                          name="Jobs Posted"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+
+                    <div className="mt-6 p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
+                      <h4 className="font-semibold mb-2">Scraping Recommendations</h4>
+                      <ul className="text-sm text-muted-foreground space-y-1">
+                        {(() => {
+                          const sorted = [...aggregatedHourly].sort((a, b) => b.total_jobs - a.total_jobs);
+                          const peakHours = sorted.slice(0, 3);
+                          return (
+                            <>
+                              <li>Peak posting hours: {peakHours.map(h => `${h.hour}:00 UTC`).join(', ')}</li>
+                              <li>Run scraper during these hours for maximum job discovery</li>
+                              <li>Consider scheduling GitHub Actions cron jobs around peak times</li>
+                            </>
+                          );
+                        })()}
+                      </ul>
                     </div>
-                  );
-                })}
-              </div>
-              <div className="mt-6 p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
-                <h4 className="font-semibold mb-2">Scraping Recommendations</h4>
-                <ul className="text-sm text-muted-foreground space-y-1">
-                  {(() => {
-                    const sorted = [...aggregatedHourly].sort((a, b) => b.total_jobs - a.total_jobs);
-                    const peakHours = sorted.slice(0, 3);
-                    return (
-                      <>
-                        <li>Peak posting hours: {peakHours.map(h => `${h.hour}:00`).join(', ')}</li>
-                        <li>Run scraper during these hours for maximum job discovery</li>
-                        <li>Consider scheduling GitHub Actions cron jobs around peak times</li>
-                      </>
-                    );
-                  })()}
-                </ul>
-              </div>
+                  </>
+                );
+              })()}
             </CardContent>
           </Card>
         )}
