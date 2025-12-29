@@ -127,9 +127,15 @@ export const InterviewTracker: React.FC = () => {
 
       try {
         await jobApi.saveInterviewTracker(trackedJobs);
-      } catch (error) {
-        console.error('Failed to save to API:', error);
-        toast.error('Failed to sync interview tracker. Data saved locally.');
+        console.log('✅ Interview tracker synced to backend');
+      } catch (error: any) {
+        // Only show error if it's not a 404 (endpoint not deployed yet)
+        if (error?.response?.status === 404) {
+          console.warn('⚠️ Interview tracker API not deployed yet. Data saved locally.');
+        } else {
+          console.error('Failed to save to API:', error?.response?.data || error);
+          toast.error('Failed to sync interview tracker. Data saved locally.');
+        }
       }
     };
 
