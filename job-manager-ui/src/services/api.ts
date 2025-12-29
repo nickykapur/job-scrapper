@@ -140,6 +140,12 @@ export const jobApi = {
     const response = await api.post('/api/interview-tracker', applications);
     return response.data;
   },
+
+  // Admin: Get country-level analytics
+  getCountryAnalytics: async (days: number = 90): Promise<any> => {
+    const response = await api.get(`/api/admin/country-analytics?days=${days}`);
+    return response.data;
+  },
 };
 
 export default api;
