@@ -60,8 +60,9 @@ def upload_jobs_to_railway(railway_url, jobs_data):
             new_cybersecurity = result.get('new_cybersecurity', 0)
             new_sales = result.get('new_sales', 0)
             new_finance = result.get('new_finance', 0)
+            new_marketing = result.get('new_marketing', 0)
             updated_jobs = result.get('updated_jobs', 0)
-            print(f"   [OK] New: {new_jobs} ({new_software} software, {new_hr} HR, {new_cybersecurity} cybersecurity, {new_sales} sales, {new_finance} finance), Updated: {updated_jobs}")
+            print(f"   [OK] New: {new_jobs} ({new_software} software, {new_hr} HR, {new_cybersecurity} cybersecurity, {new_sales} sales, {new_finance} finance, {new_marketing} marketing), Updated: {updated_jobs}")
             return {
                 'success': True,
                 'new_jobs': new_jobs,
@@ -70,16 +71,17 @@ def upload_jobs_to_railway(railway_url, jobs_data):
                 'new_cybersecurity': new_cybersecurity,
                 'new_sales': new_sales,
                 'new_finance': new_finance,
+                'new_marketing': new_marketing,
                 'updated_jobs': updated_jobs
             }
         else:
             print(f"   [ERROR] Upload failed: {response.status_code}")
-            return {'success': False, 'new_jobs': 0, 'new_software': 0, 'new_hr': 0, 'new_cybersecurity': 0, 'new_sales': 0, 'new_finance': 0, 'updated_jobs': 0}
+            return {'success': False, 'new_jobs': 0, 'new_software': 0, 'new_hr': 0, 'new_cybersecurity': 0, 'new_sales': 0, 'new_finance': 0, 'new_marketing': 0, 'updated_jobs': 0}
     except Exception as e:
         print(f"   [ERROR] Upload error: {e}")
-        return {'success': False, 'new_jobs': 0, 'new_software': 0, 'new_hr': 0, 'new_cybersecurity': 0, 'new_sales': 0, 'new_finance': 0, 'updated_jobs': 0}
+        return {'success': False, 'new_jobs': 0, 'new_software': 0, 'new_hr': 0, 'new_cybersecurity': 0, 'new_sales': 0, 'new_finance': 0, 'new_marketing': 0, 'updated_jobs': 0}
 
-def search_single_term(term, location, country_name, existing_jobs, is_software, is_cybersecurity, is_sales, is_finance, thread_id):
+def search_single_term(term, location, country_name, existing_jobs, is_software, is_cybersecurity, is_sales, is_finance, is_marketing, thread_id):
     """
     Search for jobs with a single term (runs in parallel)
     Returns: dict with jobs found and metadata
@@ -147,6 +149,7 @@ def search_single_term(term, location, country_name, existing_jobs, is_software,
             'is_cybersecurity': is_cybersecurity,
             'is_sales': is_sales,
             'is_finance': is_finance,
+            'is_marketing': is_marketing,
             'success': True,
             'thread_id': thread_id
         }
@@ -160,6 +163,7 @@ def search_single_term(term, location, country_name, existing_jobs, is_software,
             'is_cybersecurity': is_cybersecurity,
             'is_sales': is_sales,
             'is_finance': is_finance,
+            'is_marketing': is_marketing,
             'success': False,
             'error': str(e),
             'thread_id': thread_id
@@ -271,7 +275,51 @@ def scrape_single_country(location, country_name, railway_url):
         "Investment Accounting"
     ]
 
-    search_terms = software_search_terms + hr_search_terms + cybersecurity_search_terms + sales_search_terms + finance_search_terms
+    # Marketing / Digital Marketing search terms
+    marketing_search_terms = [
+        # Digital Marketing
+        "Digital Marketing",
+        "Digital Marketing Manager",
+        "Digital Marketing Executive",
+        "Digital Marketing Specialist",
+        "Digital Marketing Coordinator",
+        # PPC & Paid Media
+        "PPC Executive",
+        "PPC Manager",
+        "Paid Media Manager",
+        "Paid Social Manager",
+        "Performance Marketing",
+        # Social Media
+        "Social Media Manager",
+        "Social Media Executive",
+        "Social Media Marketing",
+        "Community Manager",
+        # SEO & Content
+        "SEO Specialist",
+        "SEO Executive",
+        "SEO Manager",
+        "Content Marketing Manager",
+        "Content Marketing Specialist",
+        # CRM & Email
+        "CRM Manager",
+        "CRM Executive",
+        "Email Marketing Manager",
+        "Marketing Automation",
+        # General Marketing
+        "Marketing Manager",
+        "Marketing Executive",
+        "Marketing Coordinator",
+        "Marketing Specialist",
+        "Brand Manager",
+        "Growth Marketing",
+        # Communications
+        "Communications Manager",
+        "Communications Executive",
+        "Marketing Communications",
+        "PR Executive"
+    ]
+
+    search_terms = software_search_terms + hr_search_terms + cybersecurity_search_terms + sales_search_terms + finance_search_terms + marketing_search_terms
 
     # Initialize shared data structures (thread-safe)
     all_new_jobs = {}
@@ -280,6 +328,7 @@ def scrape_single_country(location, country_name, railway_url):
     cybersecurity_jobs = {}
     sales_jobs = {}
     finance_jobs = {}
+    marketing_jobs = {}
     successful_searches = 0
     lock = threading.Lock()  # For thread-safe dictionary updates
 
@@ -294,6 +343,7 @@ def scrape_single_country(location, country_name, railway_url):
         is_cybersecurity = term in cybersecurity_search_terms
         is_sales = term in sales_search_terms
         is_finance = term in finance_search_terms
+        is_marketing = term in marketing_search_terms
 
         search_tasks.append({
             'term': term,
@@ -304,6 +354,7 @@ def scrape_single_country(location, country_name, railway_url):
             'is_cybersecurity': is_cybersecurity,
             'is_sales': is_sales,
             'is_finance': is_finance,
+            'is_marketing': is_marketing,
             'thread_id': idx + 1
         })
 
@@ -321,6 +372,7 @@ def scrape_single_country(location, country_name, railway_url):
                 task['is_cybersecurity'],
                 task['is_sales'],
                 task['is_finance'],
+                task['is_marketing'],
                 task['thread_id']
             ): task for task in search_tasks
         }
@@ -341,19 +393,27 @@ def scrape_single_country(location, country_name, railway_url):
                     with lock:
                         for job_id, job_data in result['jobs'].items():
                             if job_id not in all_new_jobs:
-                                all_new_jobs[job_id] = job_data
-
-                                # Track by job type
+                                # Set job_type on the job data for database categorization
                                 if result['is_software']:
+                                    job_data['job_type'] = 'software'
                                     software_jobs[job_id] = job_data
                                 elif result['is_cybersecurity']:
+                                    job_data['job_type'] = 'cybersecurity'
                                     cybersecurity_jobs[job_id] = job_data
                                 elif result['is_sales']:
+                                    job_data['job_type'] = 'sales'
                                     sales_jobs[job_id] = job_data
                                 elif result['is_finance']:
+                                    job_data['job_type'] = 'finance'
                                     finance_jobs[job_id] = job_data
+                                elif result['is_marketing']:
+                                    job_data['job_type'] = 'marketing'
+                                    marketing_jobs[job_id] = job_data
                                 else:
+                                    job_data['job_type'] = 'hr'
                                     hr_jobs[job_id] = job_data
+
+                                all_new_jobs[job_id] = job_data
                             else:
                                 # Update easy_apply flag if set
                                 if job_data.get('easy_apply'):
@@ -374,7 +434,7 @@ def scrape_single_country(location, country_name, railway_url):
 
     print(f"\n[SUMMARY] {country_name}:")
     print(f"   • Searches: {successful_searches}/{len(search_terms)}")
-    print(f"   • New jobs found: {len(all_new_jobs)} (Software: {len(software_jobs)}, HR: {len(hr_jobs)}, Cybersecurity: {len(cybersecurity_jobs)}, Sales: {len(sales_jobs)}, Finance: {len(finance_jobs)})")
+    print(f"   • New jobs found: {len(all_new_jobs)} (Software: {len(software_jobs)}, HR: {len(hr_jobs)}, Cybersecurity: {len(cybersecurity_jobs)}, Sales: {len(sales_jobs)}, Finance: {len(finance_jobs)}, Marketing: {len(marketing_jobs)})")
 
     # Upload to Railway and get actual new job counts
     actual_new_software = 0
@@ -382,6 +442,7 @@ def scrape_single_country(location, country_name, railway_url):
     actual_new_cybersecurity = 0
     actual_new_sales = 0
     actual_new_finance = 0
+    actual_new_marketing = 0
     actual_new_total = 0
 
     if all_new_jobs:
@@ -395,8 +456,9 @@ def scrape_single_country(location, country_name, railway_url):
             actual_new_cybersecurity = upload_result['new_cybersecurity']
             actual_new_sales = upload_result.get('new_sales', 0)
             actual_new_finance = upload_result.get('new_finance', 0)
+            actual_new_marketing = upload_result.get('new_marketing', 0)
             print(f"   ✅ Upload successful!")
-            print(f"   📊 Actually added to DB: {actual_new_total} new ({actual_new_software} software, {actual_new_hr} HR, {actual_new_cybersecurity} cybersecurity, {actual_new_sales} sales, {actual_new_finance} finance)")
+            print(f"   📊 Actually added to DB: {actual_new_total} new ({actual_new_software} software, {actual_new_hr} HR, {actual_new_cybersecurity} cybersecurity, {actual_new_sales} sales, {actual_new_finance} finance, {actual_new_marketing} marketing)")
         else:
             print(f"   ❌ Upload failed!")
             return False
@@ -404,7 +466,7 @@ def scrape_single_country(location, country_name, railway_url):
         print(f"\n[SKIP] No new jobs to upload")
 
     # Output for GitHub Actions summary
-    print(f"\n::notice title={country_name} Complete::{actual_new_total} new jobs added ({actual_new_software} software, {actual_new_hr} HR, {actual_new_cybersecurity} cybersecurity, {actual_new_sales} sales, {actual_new_finance} finance)")
+    print(f"\n::notice title={country_name} Complete::{actual_new_total} new jobs added ({actual_new_software} software, {actual_new_hr} HR, {actual_new_cybersecurity} cybersecurity, {actual_new_sales} sales, {actual_new_finance} finance, {actual_new_marketing} marketing)")
 
     # Set output for GitHub Actions - use ACTUAL new counts, not scraped counts
     if os.getenv('GITHUB_OUTPUT'):
@@ -415,6 +477,7 @@ def scrape_single_country(location, country_name, railway_url):
             f.write(f"cybersecurity_jobs={actual_new_cybersecurity}\n")
             f.write(f"sales_jobs={actual_new_sales}\n")
             f.write(f"finance_jobs={actual_new_finance}\n")
+            f.write(f"marketing_jobs={actual_new_marketing}\n")
             f.write(f"country={country_name}\n")
 
     print(f"\n✅ {country_name} scraping complete!")

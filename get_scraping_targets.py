@@ -69,6 +69,10 @@ def get_scraping_targets():
             'finance': {
                 'search_terms': ['Financial Analyst', 'Accountant', 'Finance Manager'],
                 'enabled': 'finance' in job_types
+            },
+            'marketing': {
+                'search_terms': ['Digital Marketing Manager', 'Marketing Executive', 'Social Media Manager', 'SEO Specialist', 'Content Marketing'],
+                'enabled': 'marketing' in job_types or 'digital_marketing' in job_types
             }
         }
 
