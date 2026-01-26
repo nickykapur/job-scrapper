@@ -464,6 +464,20 @@ async def get_jobs_api(current_user: Optional[Dict[str, Any]] = Depends(get_curr
                                     if any(kw in title_desc for kw in finance_keywords):
                                         type_match = True
                                         break
+                                elif pref_type == 'marketing' or pref_type == 'digital_marketing' or pref_type == 'content' or pref_type == 'communications' or pref_type == 'crm' or pref_type == 'analytics':
+                                    marketing_keywords = [
+                                        'digital marketing', 'marketing manager', 'marketing executive', 'marketing coordinator', 'marketing specialist',
+                                        'social media manager', 'social media executive', 'social media marketing', 'community manager',
+                                        'seo specialist', 'seo executive', 'seo manager', 'search engine optimization',
+                                        'ppc', 'paid media', 'paid social', 'google ads', 'meta ads', 'performance marketing',
+                                        'content marketing', 'content manager', 'content strategist', 'copywriter',
+                                        'crm manager', 'crm executive', 'email marketing', 'marketing automation', 'hubspot', 'salesforce marketing',
+                                        'brand manager', 'brand marketing', 'growth marketing', 'campaign manager',
+                                        'communications manager', 'communications executive', 'marketing communications', 'pr executive', 'public relations'
+                                    ]
+                                    if any(kw in title_desc for kw in marketing_keywords):
+                                        type_match = True
+                                        break
                             if not type_match:
                                 continue
 
@@ -718,6 +732,7 @@ async def enforce_country_limit(max_jobs: int = 300):
             "hr": 20,               # Limited to 20 old jobs per country
             "sales": 20,            # Limited to 20 old jobs per country
             "finance": 20,          # Limited to 20 old jobs per country
+            "marketing": 50,        # Limited to 50 old jobs per country (higher limit for marketing users)
             "other": 20             # Fallback for unknown types
         }
 
