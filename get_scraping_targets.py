@@ -101,7 +101,7 @@ def get_scraping_targets():
             'Denmark': 'Copenhagen, Capital Region of Denmark, Denmark',
             'Luxembourg': 'Luxembourg City, Luxembourg',
             'Switzerland': 'Basel, Switzerland',
-            'United States': 'United States'
+            'United States': 'New York, United States'
         }
 
         # Build countries list to scrape

@@ -87,7 +87,11 @@ jobs:
           - { location: "Luxembourg City, Luxembourg", name: "Luxembourg" }
           - { location: "Berlin, Germany", name: "Germany" }
           - { location: "Basel, Switzerland", name: "Switzerland" }
-          - { location: "United States", name: "United States" }
+          - { location: "New York, New York, United States", name: "United States" }
+          - { location: "Chicago, Illinois, United States", name: "United States" }
+          - { location: "Los Angeles, California, United States", name: "United States" }
+          - { location: "Houston, Texas, United States", name: "United States" }
+          - { location: "Detroit, Michigan, United States", name: "United States" }
           # DISABLED - No active users in these countries:
           # - { location: "Amsterdam, North Holland, Netherlands", name: "Netherlands" }
           # - { location: "Stockholm, Sweden", name: "Sweden" }
@@ -95,7 +99,7 @@ jobs:
           # - { location: "Copenhagen, Denmark", name: "Denmark" }
           # REMOVED - Jobs from Chile are no longer needed:
           # - { location: "Santiago, Chile", name: "Chile" }
-      max-parallel: 7  # Run all 7 at once
+      max-parallel: 11  # Run all 11 at once (6 Europe + 5 US cities)
       fail-fast: false  # Continue even if one fails
 
     steps:
