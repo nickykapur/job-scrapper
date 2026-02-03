@@ -73,6 +73,18 @@ def get_scraping_targets():
             'marketing': {
                 'search_terms': ['Digital Marketing Manager', 'Marketing Executive', 'Social Media Manager', 'SEO Specialist', 'Content Marketing'],
                 'enabled': 'marketing' in job_types or 'digital_marketing' in job_types
+            },
+            'biotech': {
+                'search_terms': ['Research Scientist', 'Scientist', 'Research Associate', 'Cell Culture Scientist', 'Molecular Biologist', 'Gene Therapy', 'CRISPR', 'Biotechnology', 'Lab Scientist', 'R&D Scientist'],
+                'enabled': 'biotech' in job_types or 'life_sciences' in job_types
+            },
+            'engineering': {
+                'search_terms': ['Mechanical Engineer', 'Manufacturing Engineer', 'Industrial Engineer', 'Process Engineer', 'Aerospace Engineer', 'Design Engineer', 'Production Engineer', 'Quality Engineer'],
+                'enabled': 'engineering' in job_types or 'manufacturing' in job_types or 'mechanical' in job_types
+            },
+            'events': {
+                'search_terms': ['Event Manager', 'Event Coordinator', 'Event Executive', 'Conference Manager', 'Wedding Planner', 'Hospitality Manager', 'Meeting Planner', 'Event Planner'],
+                'enabled': 'events' in job_types or 'hospitality' in job_types or 'event_management' in job_types
             }
         }
 
@@ -87,7 +99,9 @@ def get_scraping_targets():
             'Sweden': 'Stockholm, Stockholm County, Sweden',
             'Belgium': 'Brussels, Belgium',
             'Denmark': 'Copenhagen, Capital Region of Denmark, Denmark',
-            'Luxembourg': 'Luxembourg City, Luxembourg'
+            'Luxembourg': 'Luxembourg City, Luxembourg',
+            'Switzerland': 'Basel, Switzerland',
+            'United States': 'United States'
         }
 
         # Build countries list to scrape

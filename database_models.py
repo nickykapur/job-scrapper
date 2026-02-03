@@ -563,6 +563,9 @@ class JobDatabase:
             new_sales = 0
             new_finance = 0
             new_marketing = 0
+            new_biotech = 0
+            new_engineering = 0
+            new_events = 0
             skipped_reposts = 0
 
             for job_id, job_data in jobs_data.items():
@@ -653,7 +656,7 @@ class JobDatabase:
                          country, job_type, experience_level, easy_apply_status, easy_apply_verified_at, easy_apply_verification_method)
                     new_jobs += 1
 
-                    # Track software vs HR vs cybersecurity vs sales vs finance vs marketing new jobs
+                    # Track software vs HR vs cybersecurity vs sales vs finance vs marketing vs biotech new jobs
                     if job_type == 'software':
                         new_software += 1
                     elif job_type == 'hr':
@@ -666,6 +669,12 @@ class JobDatabase:
                         new_finance += 1
                     elif job_type == 'marketing':
                         new_marketing += 1
+                    elif job_type == 'biotech':
+                        new_biotech += 1
+                    elif job_type == 'engineering':
+                        new_engineering += 1
+                    elif job_type == 'events':
+                        new_events += 1
             
             # Log scraping session
             await conn.execute("""
@@ -673,7 +682,7 @@ class JobDatabase:
                 VALUES ($1, $2, $3, $4)
             """, len(jobs_data), new_jobs, updated_jobs, f"Synced from local scraper")
 
-            print(f"✅ PostgreSQL: {new_jobs} new jobs ({new_software} software, {new_hr} HR, {new_cybersecurity} cybersecurity, {new_sales} sales, {new_finance} finance, {new_marketing} marketing), {updated_jobs} updated jobs")
+            print(f"✅ PostgreSQL: {new_jobs} new jobs ({new_software} software, {new_hr} HR, {new_cybersecurity} cybersecurity, {new_sales} sales, {new_finance} finance, {new_marketing} marketing, {new_biotech} biotech, {new_engineering} engineering, {new_events} events), {updated_jobs} updated jobs")
             if skipped_reposts > 0:
                 print(f"⏭️  Skipped {skipped_reposts} reposted jobs (already applied to similar positions)")
 
@@ -695,6 +704,9 @@ class JobDatabase:
                 "new_sales": new_sales,
                 "new_finance": new_finance,
                 "new_marketing": new_marketing,
+                "new_biotech": new_biotech,
+                "new_engineering": new_engineering,
+                "new_events": new_events,
                 "updated_jobs": updated_jobs,
                 "deleted_jobs": deleted_jobs,
                 "skipped_reposts": skipped_reposts

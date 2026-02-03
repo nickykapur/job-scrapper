@@ -434,14 +434,14 @@ async def get_jobs_api(current_user: Optional[Dict[str, Any]] = Depends(get_curr
                                         'devops', 'sre', 'cloud engineer', 'data engineer', 'ml engineer', 'ai engineer',
                                         'software architect', 'tech lead'
                                     ]
-                                    # Exclude HR/non-software jobs
-                                    if any(exclude in title_lower for exclude in ['hr ', ' hr', 'human resources', 'recruitment', 'talent acquisition']):
+                                    # Exclude HR/non-software jobs (English and Spanish)
+                                    if any(exclude in title_lower for exclude in ['hr ', ' hr', 'human resources', 'recruitment', 'talent acquisition', 'rrhh', 'recursos humanos', 'reclutamiento', 'selección de personal', 'talento humano']):
                                         break
                                     if any(kw in title_desc for kw in sw_keywords):
                                         type_match = True
                                         break
                                 elif pref_type == 'hr':
-                                    hr_keywords = [' hr ', 'human resources', 'recruiter', 'recruitment', 'recruiting', 'talent acquisition', 'talent', 'people operations', 'people', 'hr officer', 'hr coordinator', 'hr generalist', 'hr manager', 'hr business partner', 'hr specialist', 'people partner', 'talent sourcer', 'hr assistant']
+                                    hr_keywords = [' hr ', 'human resources', 'recruiter', 'recruitment', 'recruiting', 'talent acquisition', 'talent', 'people operations', 'people', 'hr officer', 'hr coordinator', 'hr generalist', 'hr manager', 'hr business partner', 'hr specialist', 'people partner', 'talent sourcer', 'hr assistant', 'rrhh', 'recursos humanos', 'reclutador', 'reclutamiento', 'selección', 'talento humano', 'analista de recursos humanos', 'coordinador de rrhh']
                                     # Also check for HR at start/end of title
                                     if title.startswith('hr ') or title.endswith(' hr') or ' hr ' in title:
                                         type_match = True
@@ -1266,6 +1266,10 @@ async def sync_jobs(request: SyncJobsRequest):
             "new_cybersecurity": result.get("new_cybersecurity", 0),
             "new_sales": result.get("new_sales", 0),
             "new_finance": result.get("new_finance", 0),
+            "new_marketing": result.get("new_marketing", 0),
+            "new_biotech": result.get("new_biotech", 0),
+            "new_engineering": result.get("new_engineering", 0),
+            "new_events": result.get("new_events", 0),
             "updated_jobs": result.get("updated_jobs", 0),
             "skipped_reposts": result.get("skipped_reposts", 0)
         }
