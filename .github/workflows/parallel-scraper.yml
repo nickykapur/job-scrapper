@@ -85,15 +85,17 @@ jobs:
           - { location: "Madrid, Community of Madrid, Spain", name: "Spain" }
           - { location: "Panama City, Panama", name: "Panama" }
           - { location: "Luxembourg City, Luxembourg", name: "Luxembourg" }
+          - { location: "Berlin, Germany", name: "Germany" }
+          - { location: "Basel, Switzerland", name: "Switzerland" }
+          - { location: "United States", name: "United States" }
           # DISABLED - No active users in these countries:
           # - { location: "Amsterdam, North Holland, Netherlands", name: "Netherlands" }
-          # - { location: "Berlin, Germany", name: "Germany" }
           # - { location: "Stockholm, Sweden", name: "Sweden" }
           # - { location: "Brussels, Belgium", name: "Belgium" }
           # - { location: "Copenhagen, Denmark", name: "Denmark" }
           # REMOVED - Jobs from Chile are no longer needed:
           # - { location: "Santiago, Chile", name: "Chile" }
-      max-parallel: 4  # Run all 4 at once
+      max-parallel: 7  # Run all 7 at once
       fail-fast: false  # Continue even if one fails
 
     steps:

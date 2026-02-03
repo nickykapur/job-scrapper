@@ -61,8 +61,11 @@ def upload_jobs_to_railway(railway_url, jobs_data):
             new_sales = result.get('new_sales', 0)
             new_finance = result.get('new_finance', 0)
             new_marketing = result.get('new_marketing', 0)
+            new_biotech = result.get('new_biotech', 0)
+            new_engineering = result.get('new_engineering', 0)
+            new_events = result.get('new_events', 0)
             updated_jobs = result.get('updated_jobs', 0)
-            print(f"   [OK] New: {new_jobs} ({new_software} software, {new_hr} HR, {new_cybersecurity} cybersecurity, {new_sales} sales, {new_finance} finance, {new_marketing} marketing), Updated: {updated_jobs}")
+            print(f"   [OK] New: {new_jobs} ({new_software} software, {new_hr} HR, {new_cybersecurity} cybersecurity, {new_sales} sales, {new_finance} finance, {new_marketing} marketing, {new_biotech} biotech, {new_engineering} engineering, {new_events} events), Updated: {updated_jobs}")
             return {
                 'success': True,
                 'new_jobs': new_jobs,
@@ -72,16 +75,19 @@ def upload_jobs_to_railway(railway_url, jobs_data):
                 'new_sales': new_sales,
                 'new_finance': new_finance,
                 'new_marketing': new_marketing,
+                'new_biotech': new_biotech,
+                'new_engineering': new_engineering,
+                'new_events': new_events,
                 'updated_jobs': updated_jobs
             }
         else:
             print(f"   [ERROR] Upload failed: {response.status_code}")
-            return {'success': False, 'new_jobs': 0, 'new_software': 0, 'new_hr': 0, 'new_cybersecurity': 0, 'new_sales': 0, 'new_finance': 0, 'new_marketing': 0, 'updated_jobs': 0}
+            return {'success': False, 'new_jobs': 0, 'new_software': 0, 'new_hr': 0, 'new_cybersecurity': 0, 'new_sales': 0, 'new_finance': 0, 'new_marketing': 0, 'new_biotech': 0, 'new_engineering': 0, 'new_events': 0, 'updated_jobs': 0}
     except Exception as e:
         print(f"   [ERROR] Upload error: {e}")
-        return {'success': False, 'new_jobs': 0, 'new_software': 0, 'new_hr': 0, 'new_cybersecurity': 0, 'new_sales': 0, 'new_finance': 0, 'new_marketing': 0, 'updated_jobs': 0}
+        return {'success': False, 'new_jobs': 0, 'new_software': 0, 'new_hr': 0, 'new_cybersecurity': 0, 'new_sales': 0, 'new_finance': 0, 'new_marketing': 0, 'new_biotech': 0, 'new_engineering': 0, 'new_events': 0, 'updated_jobs': 0}
 
-def search_single_term(term, location, country_name, existing_jobs, is_software, is_cybersecurity, is_sales, is_finance, is_marketing, thread_id):
+def search_single_term(term, location, country_name, existing_jobs, is_software, is_cybersecurity, is_sales, is_finance, is_marketing, is_biotech, is_engineering, is_events, thread_id):
     """
     Search for jobs with a single term (runs in parallel)
     Returns: dict with jobs found and metadata
@@ -150,6 +156,9 @@ def search_single_term(term, location, country_name, existing_jobs, is_software,
             'is_sales': is_sales,
             'is_finance': is_finance,
             'is_marketing': is_marketing,
+            'is_biotech': is_biotech,
+            'is_engineering': is_engineering,
+            'is_events': is_events,
             'success': True,
             'thread_id': thread_id
         }
@@ -164,6 +173,9 @@ def search_single_term(term, location, country_name, existing_jobs, is_software,
             'is_sales': is_sales,
             'is_finance': is_finance,
             'is_marketing': is_marketing,
+            'is_biotech': is_biotech,
+            'is_engineering': is_engineering,
+            'is_events': is_events,
             'success': False,
             'error': str(e),
             'thread_id': thread_id
@@ -319,7 +331,130 @@ def scrape_single_country(location, country_name, railway_url):
         "PR Executive"
     ]
 
-    search_terms = software_search_terms + hr_search_terms + cybersecurity_search_terms + sales_search_terms + finance_search_terms + marketing_search_terms
+    # Biotech / Life Sciences search terms (for Melis - Molecular Biology)
+    biotech_search_terms = [
+        # Research Scientist roles
+        "Research Scientist",
+        "Scientist",
+        "Research Associate",
+        "Junior Scientist",
+        "Associate Scientist",
+        "R&D Scientist",
+        "Lab Scientist",
+        # Molecular Biology specific
+        "Molecular Biologist",
+        "Cell Biologist",
+        "Cell Culture Scientist",
+        # Gene Editing & Gene Therapy
+        "Gene Therapy Scientist",
+        "CRISPR Scientist",
+        "Gene Editing",
+        # Biotech specific
+        "Biotechnology",
+        "Biotech Scientist",
+        "Biologics",
+        "Biopharmaceutical",
+        # Viral Vectors
+        "Viral Vector",
+        "AAV Scientist",
+        "Vector Production",
+        # Process Development
+        "Process Development Scientist",
+        "Upstream Process",
+        "Downstream Process",
+        # Lab Technician roles
+        "Lab Technician",
+        "Research Technician",
+        "Laboratory Technician",
+        # German terms
+        "Wissenschaftler",
+        "Laborant",
+        "Biotechnologe",
+        "Molekularbiologe"
+    ]
+
+    # Engineering / Manufacturing search terms (for Maria - Mechanical/Manufacturing Engineering)
+    engineering_search_terms = [
+        # Mechanical Engineering
+        "Mechanical Engineer",
+        "Junior Mechanical Engineer",
+        "Mechanical Design Engineer",
+        "Mechanical Engineer Entry Level",
+        # Manufacturing Engineering
+        "Manufacturing Engineer",
+        "Junior Manufacturing Engineer",
+        "Production Engineer",
+        "Process Engineer",
+        "Manufacturing Process Engineer",
+        # Industrial Engineering
+        "Industrial Engineer",
+        "Junior Industrial Engineer",
+        "Operations Engineer",
+        "Continuous Improvement Engineer",
+        "Lean Engineer",
+        # Aerospace Engineering
+        "Aerospace Engineer",
+        "Junior Aerospace Engineer",
+        "Propulsion Engineer",
+        # Design & CAD
+        "Design Engineer",
+        "CAD Engineer",
+        "Product Design Engineer",
+        "R&D Engineer",
+        # Quality & Testing
+        "Quality Engineer",
+        "Test Engineer",
+        "Reliability Engineer",
+        # Data & Simulation
+        "Simulation Engineer",
+        "Data Analyst Manufacturing",
+        "Process Optimization",
+        # Entry level
+        "Entry Level Engineer",
+        "Associate Engineer",
+        "Engineering Trainee"
+    ]
+
+    # Events / Hospitality search terms (for Blanca - Event Management)
+    events_search_terms = [
+        # Event Management
+        "Event Manager",
+        "Event Coordinator",
+        "Event Executive",
+        "Event Planner",
+        "Events Manager",
+        "Events Coordinator",
+        "Junior Event Manager",
+        "Event Assistant",
+        # Conference & Meetings
+        "Conference Manager",
+        "Conference Coordinator",
+        "Meeting Planner",
+        "Meeting Coordinator",
+        "Corporate Events",
+        "Corporate Event Manager",
+        # Hospitality
+        "Hospitality Manager",
+        "Hospitality Coordinator",
+        "Venue Manager",
+        "Venue Coordinator",
+        "Banquet Manager",
+        "Catering Manager",
+        # Weddings & Social
+        "Wedding Planner",
+        "Wedding Coordinator",
+        "Social Events Manager",
+        # Tourism
+        "Tourism Manager",
+        "Business Tourism",
+        "MICE Coordinator",
+        # Entry level
+        "Event Intern",
+        "Events Assistant",
+        "Hospitality Assistant"
+    ]
+
+    search_terms = software_search_terms + hr_search_terms + cybersecurity_search_terms + sales_search_terms + finance_search_terms + marketing_search_terms + biotech_search_terms + engineering_search_terms + events_search_terms
 
     # Initialize shared data structures (thread-safe)
     all_new_jobs = {}
@@ -329,6 +464,9 @@ def scrape_single_country(location, country_name, railway_url):
     sales_jobs = {}
     finance_jobs = {}
     marketing_jobs = {}
+    biotech_jobs = {}
+    engineering_jobs = {}
+    events_jobs = {}
     successful_searches = 0
     lock = threading.Lock()  # For thread-safe dictionary updates
 
@@ -344,6 +482,9 @@ def scrape_single_country(location, country_name, railway_url):
         is_sales = term in sales_search_terms
         is_finance = term in finance_search_terms
         is_marketing = term in marketing_search_terms
+        is_biotech = term in biotech_search_terms
+        is_engineering = term in engineering_search_terms
+        is_events = term in events_search_terms
 
         search_tasks.append({
             'term': term,
@@ -355,6 +496,9 @@ def scrape_single_country(location, country_name, railway_url):
             'is_sales': is_sales,
             'is_finance': is_finance,
             'is_marketing': is_marketing,
+            'is_biotech': is_biotech,
+            'is_engineering': is_engineering,
+            'is_events': is_events,
             'thread_id': idx + 1
         })
 
@@ -373,6 +517,9 @@ def scrape_single_country(location, country_name, railway_url):
                 task['is_sales'],
                 task['is_finance'],
                 task['is_marketing'],
+                task['is_biotech'],
+                task['is_engineering'],
+                task['is_events'],
                 task['thread_id']
             ): task for task in search_tasks
         }
@@ -409,6 +556,15 @@ def scrape_single_country(location, country_name, railway_url):
                                 elif result['is_marketing']:
                                     job_data['job_type'] = 'marketing'
                                     marketing_jobs[job_id] = job_data
+                                elif result.get('is_biotech'):
+                                    job_data['job_type'] = 'biotech'
+                                    biotech_jobs[job_id] = job_data
+                                elif result.get('is_engineering'):
+                                    job_data['job_type'] = 'engineering'
+                                    engineering_jobs[job_id] = job_data
+                                elif result.get('is_events'):
+                                    job_data['job_type'] = 'events'
+                                    events_jobs[job_id] = job_data
                                 else:
                                     job_data['job_type'] = 'hr'
                                     hr_jobs[job_id] = job_data
@@ -434,7 +590,7 @@ def scrape_single_country(location, country_name, railway_url):
 
     print(f"\n[SUMMARY] {country_name}:")
     print(f"   • Searches: {successful_searches}/{len(search_terms)}")
-    print(f"   • New jobs found: {len(all_new_jobs)} (Software: {len(software_jobs)}, HR: {len(hr_jobs)}, Cybersecurity: {len(cybersecurity_jobs)}, Sales: {len(sales_jobs)}, Finance: {len(finance_jobs)}, Marketing: {len(marketing_jobs)})")
+    print(f"   • New jobs found: {len(all_new_jobs)} (Software: {len(software_jobs)}, HR: {len(hr_jobs)}, Cybersecurity: {len(cybersecurity_jobs)}, Sales: {len(sales_jobs)}, Finance: {len(finance_jobs)}, Marketing: {len(marketing_jobs)}, Biotech: {len(biotech_jobs)}, Engineering: {len(engineering_jobs)}, Events: {len(events_jobs)})")
 
     # Upload to Railway and get actual new job counts
     actual_new_software = 0
@@ -443,6 +599,9 @@ def scrape_single_country(location, country_name, railway_url):
     actual_new_sales = 0
     actual_new_finance = 0
     actual_new_marketing = 0
+    actual_new_biotech = 0
+    actual_new_engineering = 0
+    actual_new_events = 0
     actual_new_total = 0
 
     if all_new_jobs:
@@ -457,8 +616,11 @@ def scrape_single_country(location, country_name, railway_url):
             actual_new_sales = upload_result.get('new_sales', 0)
             actual_new_finance = upload_result.get('new_finance', 0)
             actual_new_marketing = upload_result.get('new_marketing', 0)
+            actual_new_biotech = upload_result.get('new_biotech', 0)
+            actual_new_engineering = upload_result.get('new_engineering', 0)
+            actual_new_events = upload_result.get('new_events', 0)
             print(f"   ✅ Upload successful!")
-            print(f"   📊 Actually added to DB: {actual_new_total} new ({actual_new_software} software, {actual_new_hr} HR, {actual_new_cybersecurity} cybersecurity, {actual_new_sales} sales, {actual_new_finance} finance, {actual_new_marketing} marketing)")
+            print(f"   📊 Actually added to DB: {actual_new_total} new ({actual_new_software} software, {actual_new_hr} HR, {actual_new_cybersecurity} cybersecurity, {actual_new_sales} sales, {actual_new_finance} finance, {actual_new_marketing} marketing, {actual_new_biotech} biotech, {actual_new_engineering} engineering, {actual_new_events} events)")
         else:
             print(f"   ❌ Upload failed!")
             return False
@@ -466,7 +628,7 @@ def scrape_single_country(location, country_name, railway_url):
         print(f"\n[SKIP] No new jobs to upload")
 
     # Output for GitHub Actions summary
-    print(f"\n::notice title={country_name} Complete::{actual_new_total} new jobs added ({actual_new_software} software, {actual_new_hr} HR, {actual_new_cybersecurity} cybersecurity, {actual_new_sales} sales, {actual_new_finance} finance, {actual_new_marketing} marketing)")
+    print(f"\n::notice title={country_name} Complete::{actual_new_total} new jobs added ({actual_new_software} software, {actual_new_hr} HR, {actual_new_cybersecurity} cybersecurity, {actual_new_sales} sales, {actual_new_finance} finance, {actual_new_marketing} marketing, {actual_new_biotech} biotech, {actual_new_engineering} engineering, {actual_new_events} events)")
 
     # Set output for GitHub Actions - use ACTUAL new counts, not scraped counts
     if os.getenv('GITHUB_OUTPUT'):
@@ -478,6 +640,9 @@ def scrape_single_country(location, country_name, railway_url):
             f.write(f"sales_jobs={actual_new_sales}\n")
             f.write(f"finance_jobs={actual_new_finance}\n")
             f.write(f"marketing_jobs={actual_new_marketing}\n")
+            f.write(f"biotech_jobs={actual_new_biotech}\n")
+            f.write(f"engineering_jobs={actual_new_engineering}\n")
+            f.write(f"events_jobs={actual_new_events}\n")
             f.write(f"country={country_name}\n")
 
     print(f"\n✅ {country_name} scraping complete!")
