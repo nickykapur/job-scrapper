@@ -18,6 +18,43 @@ from linkedin_job_scraper import LinkedInJobScraper
 MAX_CONCURRENT_SEARCHES = 4  # Safe for GitHub Actions (2 cores, 7GB RAM)
 BATCH_DELAY_SECONDS = 2      # Delay between batches to avoid LinkedIn rate limits
 
+# Title keywords for job type validation
+# Only jobs with these keywords in title will be kept for each job type
+TITLE_KEYWORDS = {
+    'software': ['software', 'developer', 'engineer', 'frontend', 'backend', 'full stack', 'fullstack',
+                 'python', 'java', 'react', 'node', 'devops', 'cloud', 'data engineer', 'web developer',
+                 'mobile developer', 'ios', 'android', 'qa', 'sdet', 'programming', 'coder'],
+    'hr': ['hr', 'human resources', 'recruiter', 'recruiting', 'talent', 'people operations',
+           'people partner', 'hiring', 'staffing', 'workforce'],
+    'cybersecurity': ['security', 'cyber', 'soc', 'infosec', 'information security', 'penetration',
+                      'vulnerability', 'threat', 'incident response', 'ciso'],
+    'sales': ['sales', 'account executive', 'account manager', 'business development', 'bdr', 'sdr',
+              'revenue', 'quota', 'territory', 'inside sales', 'outside sales'],
+    'finance': ['finance', 'financial', 'accountant', 'accounting', 'fp&a', 'controller', 'treasury',
+                'audit', 'tax', 'bookkeeper', 'cfo', 'fund', 'investment'],
+    'marketing': ['marketing', 'brand', 'content', 'seo', 'sem', 'ppc', 'social media', 'digital marketing',
+                  'growth', 'demand generation', 'campaign', 'communications', 'pr ', 'public relations'],
+    'biotech': ['scientist', 'research', 'biology', 'biotech', 'biotechnology', 'lab', 'laboratory',
+                'crispr', 'cell', 'molecular', 'gene', 'pharma', 'clinical', 'r&d', 'biolog'],
+    'engineering': ['engineer', 'engineering', 'mechanical', 'manufacturing', 'industrial', 'aerospace',
+                    'process engineer', 'design engineer', 'quality engineer', 'production', 'plant',
+                    'cad', 'simulation', 'test engineer'],
+    'events': ['event', 'conference', 'meeting planner', 'hospitality', 'venue', 'banquet', 'catering',
+               'wedding', 'mice', 'tourism', 'convention', 'exhibition', 'trade show', 'coordinator event']
+}
+
+def is_relevant_job(title, job_type):
+    """Check if job title contains relevant keywords for the job type"""
+    if not title or not job_type:
+        return True  # Allow if we can't validate
+
+    keywords = TITLE_KEYWORDS.get(job_type, [])
+    if not keywords:
+        return True  # No keywords defined, allow all
+
+    title_lower = title.lower()
+    return any(kw in title_lower for kw in keywords)
+
 def load_existing_jobs_from_railway(railway_url):
     """Load existing jobs from Railway database via API"""
     try:
@@ -540,35 +577,47 @@ def scrape_single_country(location, country_name, railway_url):
                     with lock:
                         for job_id, job_data in result['jobs'].items():
                             if job_id not in all_new_jobs:
-                                # Set job_type on the job data for database categorization
-                                if result['is_software']:
-                                    job_data['job_type'] = 'software'
-                                    software_jobs[job_id] = job_data
-                                elif result['is_cybersecurity']:
-                                    job_data['job_type'] = 'cybersecurity'
-                                    cybersecurity_jobs[job_id] = job_data
-                                elif result['is_sales']:
-                                    job_data['job_type'] = 'sales'
-                                    sales_jobs[job_id] = job_data
-                                elif result['is_finance']:
-                                    job_data['job_type'] = 'finance'
-                                    finance_jobs[job_id] = job_data
-                                elif result['is_marketing']:
-                                    job_data['job_type'] = 'marketing'
-                                    marketing_jobs[job_id] = job_data
-                                elif result.get('is_biotech'):
-                                    job_data['job_type'] = 'biotech'
-                                    biotech_jobs[job_id] = job_data
-                                elif result.get('is_engineering'):
-                                    job_data['job_type'] = 'engineering'
-                                    engineering_jobs[job_id] = job_data
-                                elif result.get('is_events'):
-                                    job_data['job_type'] = 'events'
-                                    events_jobs[job_id] = job_data
-                                else:
-                                    job_data['job_type'] = 'hr'
-                                    hr_jobs[job_id] = job_data
+                                # Determine job_type based on search category
+                                job_title = job_data.get('title', '')
+                                job_type = None
+                                job_dict = None
 
+                                if result['is_software']:
+                                    job_type = 'software'
+                                    job_dict = software_jobs
+                                elif result['is_cybersecurity']:
+                                    job_type = 'cybersecurity'
+                                    job_dict = cybersecurity_jobs
+                                elif result['is_sales']:
+                                    job_type = 'sales'
+                                    job_dict = sales_jobs
+                                elif result['is_finance']:
+                                    job_type = 'finance'
+                                    job_dict = finance_jobs
+                                elif result['is_marketing']:
+                                    job_type = 'marketing'
+                                    job_dict = marketing_jobs
+                                elif result.get('is_biotech'):
+                                    job_type = 'biotech'
+                                    job_dict = biotech_jobs
+                                elif result.get('is_engineering'):
+                                    job_type = 'engineering'
+                                    job_dict = engineering_jobs
+                                elif result.get('is_events'):
+                                    job_type = 'events'
+                                    job_dict = events_jobs
+                                else:
+                                    job_type = 'hr'
+                                    job_dict = hr_jobs
+
+                                # Validate job title matches job type (filter irrelevant LinkedIn results)
+                                if not is_relevant_job(job_title, job_type):
+                                    # Skip jobs that don't match the job type keywords
+                                    continue
+
+                                # Set job_type and add to appropriate dictionary
+                                job_data['job_type'] = job_type
+                                job_dict[job_id] = job_data
                                 all_new_jobs[job_id] = job_data
                             else:
                                 # Update easy_apply flag if set
