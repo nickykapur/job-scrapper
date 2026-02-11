@@ -71,7 +71,7 @@ class JobDatabase:
 
         return normalized.strip()
 
-    async def check_if_repost(self, company: str, title: str, country: str, days_window: int = 30) -> Tuple[bool, Optional[str]]:
+    async def check_if_repost(self, company: str, title: str, country: str, days_window: int = 30, conn=None) -> Tuple[bool, Optional[str]]:
         """
         Check if a job is likely a repost of a job the user has already applied to.
 
@@ -80,6 +80,7 @@ class JobDatabase:
             title: Job title
             country: Country where job is located
             days_window: Number of days to look back for similar jobs (default 30)
+            conn: Optional existing database connection to reuse
 
         Returns:
             Tuple of (is_repost: bool, original_job_id: Optional[str])
@@ -91,9 +92,11 @@ class JobDatabase:
         if not normalized_title:
             return False, None
 
-        conn = await self.get_connection()
-        if not conn:
-            return False, None
+        own_conn = conn is None
+        if own_conn:
+            conn = await self.get_connection()
+            if not conn:
+                return False, None
 
         try:
             # Check if we have a matching signature in the last X days
@@ -120,7 +123,8 @@ class JobDatabase:
             print(f"⚠️  Error checking for repost: {e}")
             return False, None
         finally:
-            await conn.close()
+            if own_conn:
+                await conn.close()
 
     async def add_job_signature(self, company: str, title: str, country: str, job_id: str) -> bool:
         """
@@ -581,7 +585,7 @@ class JobDatabase:
                     company = str(job_data['company'])[:300] if job_data.get('company') else 'Unknown'
                     country = str(job_data.get('country', ''))[:100] if job_data.get('country') else None
 
-                    is_repost, original_job_id = await self.check_if_repost(company, title, country, days_window=30)
+                    is_repost, original_job_id = await self.check_if_repost(company, title, country, days_window=30, conn=conn)
 
                     if is_repost:
                         print(f"⏭️  Skipping repost: '{title}' at {company} (you applied to a similar job)")
