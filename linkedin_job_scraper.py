@@ -467,14 +467,85 @@ class LinkedInJobScraper:
             'human resources', 'employee relations', 'hr manager'
         ]
 
+        # Sales keywords
+        sales_keywords = [
+            'account manager', 'account executive', 'bdr', 'sdr',
+            'business development representative', 'sales development representative',
+            'sales representative', 'inside sales', 'outbound sales',
+            'saas sales', 'b2b sales', 'customer success manager',
+            'account management', 'business development manager',
+            'business development', 'sales development', 'sales engineer',
+            'sales manager', 'sales associate', 'sales specialist',
+            'key account', 'field sales', 'sales consultant'
+        ]
+
+        # Finance keywords
+        finance_keywords = [
+            'fp&a analyst', 'fp&a', 'financial planning and analysis',
+            'financial analyst', 'fund accounting', 'fund accountant',
+            'fund administrator', 'investment accounting', 'portfolio accounting',
+            'credit analyst', 'financial reporting', 'management accountant',
+            'accountant', 'accounting analyst', 'finance associate',
+            'finance analyst', 'treasury analyst', 'corporate finance'
+        ]
+
+        # Marketing/Digital Marketing keywords
+        marketing_keywords = [
+            'digital marketing', 'marketing manager', 'marketing executive',
+            'marketing coordinator', 'marketing specialist', 'social media manager',
+            'social media', 'seo', 'content marketing', 'content manager',
+            'brand manager', 'ppc', 'performance marketing', 'email marketing',
+            'growth marketing', 'campaign manager', 'paid media', 'paid social',
+            'crm manager', 'marketing automation', 'copywriter'
+        ]
+
+        # Biotech/Life Sciences keywords
+        biotech_keywords = [
+            'research scientist', 'scientist', 'research associate',
+            'cell culture', 'molecular biologist', 'gene therapy', 'crispr',
+            'biotechnology', 'lab scientist', 'r&d scientist', 'biologist',
+            'biochemist', 'microbiologist', 'lab technician', 'laboratory'
+        ]
+
+        # Engineering (non-software) keywords
+        engineering_keywords = [
+            'mechanical engineer', 'manufacturing engineer', 'industrial engineer',
+            'process engineer', 'aerospace engineer', 'design engineer',
+            'production engineer', 'quality engineer', 'electrical engineer',
+            'chemical engineer', 'project engineer', 'field engineer'
+        ]
+
+        # Events & Hospitality keywords
+        events_keywords = [
+            'event manager', 'event coordinator', 'event executive',
+            'event planner', 'event specialist', 'event organiser', 'event organizer',
+            'events manager', 'events coordinator', 'events executive',
+            'events specialist', 'events planner', 'events organiser', 'events organizer',
+            'events assistant', 'event assistant', 'event intern',
+            'conference manager', 'conference coordinator', 'conference organiser',
+            'conference organizer', 'conference planner',
+            'meeting planner', 'meeting coordinator', 'meetings and events',
+            'corporate events', 'corporate event', 'live events',
+            'wedding planner', 'wedding coordinator',
+            'hospitality manager', 'hospitality coordinator', 'hospitality assistant',
+            'venue manager', 'venue coordinator',
+            'banquet manager', 'banquet coordinator',
+            'catering manager', 'catering coordinator',
+            'social events', 'event production', 'event operations',
+            'festival', 'exhibition coordinator', 'exhibition manager',
+            'trade show', 'sponsorship coordinator', 'sponsorship manager',
+            'mice', 'mice coordinator', 'mice manager',
+            'protocol officer', 'protocol manager',
+            'event marketing', 'event logistics',
+            'hospitality', 'hotel events', 'tourism manager',
+            'events trainee', 'events officer', 'event officer'
+        ]
+
         # Strict exclusions - jobs that are clearly not relevant
         exclude_keywords = [
-            # Sales/Marketing (unless technical)
-            'account manager', 'sales rep', 'marketing coordinator', 'business development rep',
-
-            # Administrative (non-HR)
-            'finance', 'accounting', 'legal', 'admin assistant',
-            'customer service rep', 'receptionist', 'office manager',
+            # Administrative
+            'legal', 'admin assistant',
+            'customer service rep', 'receptionist',
 
             # Manual labor & Construction
             'warehouse', 'logistics coordinator', 'construction', 'driver', 'delivery',
@@ -514,6 +585,9 @@ class LinkedInJobScraper:
                     'cloud infrastructure', 'infrastructure as code', 'devops', 'sre'
                 ]):
                     continue
+                # Exception: Allow if it's an events/hospitality role
+                if any(ev in title_lower for ev in ['event', 'events', 'conference', 'hospitality', 'venue', 'catering', 'banquet']):
+                    continue
                 # Otherwise, reject this job
                 return False
 
@@ -546,6 +620,36 @@ class LinkedInJobScraper:
 
         # Check for HR keywords
         for keyword in hr_keywords:
+            if keyword in title_lower:
+                return True
+
+        # Check for sales keywords
+        for keyword in sales_keywords:
+            if keyword in title_lower:
+                return True
+
+        # Check for finance keywords
+        for keyword in finance_keywords:
+            if keyword in title_lower:
+                return True
+
+        # Check for marketing keywords
+        for keyword in marketing_keywords:
+            if keyword in title_lower:
+                return True
+
+        # Check for biotech keywords
+        for keyword in biotech_keywords:
+            if keyword in title_lower:
+                return True
+
+        # Check for engineering keywords
+        for keyword in engineering_keywords:
+            if keyword in title_lower:
+                return True
+
+        # Check for events/hospitality keywords
+        for keyword in events_keywords:
             if keyword in title_lower:
                 return True
 
@@ -772,6 +876,75 @@ class LinkedInJobScraper:
         for keyword in software_keywords:
             if keyword in text:
                 return 'software'
+
+        # Marketing keywords
+        marketing_keywords = [
+            'digital marketing', 'marketing manager', 'marketing executive',
+            'marketing coordinator', 'marketing specialist', 'social media manager',
+            'social media', 'seo', 'content marketing', 'content manager',
+            'brand manager', 'ppc', 'performance marketing', 'email marketing',
+            'growth marketing', 'campaign manager', 'paid media', 'copywriter'
+        ]
+
+        # Check for marketing
+        for keyword in marketing_keywords:
+            if keyword in text:
+                return 'marketing'
+
+        # Biotech/Life Sciences keywords
+        biotech_keywords = [
+            'research scientist', 'scientist', 'research associate',
+            'cell culture', 'molecular biologist', 'gene therapy', 'crispr',
+            'biotechnology', 'lab scientist', 'r&d scientist', 'biologist',
+            'biochemist', 'microbiologist', 'lab technician', 'laboratory'
+        ]
+
+        # Check for biotech
+        for keyword in biotech_keywords:
+            if keyword in text:
+                return 'biotech'
+
+        # Engineering (non-software) keywords
+        engineering_keywords = [
+            'mechanical engineer', 'manufacturing engineer', 'industrial engineer',
+            'process engineer', 'aerospace engineer', 'design engineer',
+            'production engineer', 'quality engineer', 'electrical engineer',
+            'chemical engineer', 'project engineer', 'field engineer'
+        ]
+
+        # Check for engineering
+        for keyword in engineering_keywords:
+            if keyword in text:
+                return 'engineering'
+
+        # Events & Hospitality keywords
+        events_keywords = [
+            'event manager', 'event coordinator', 'event executive',
+            'event planner', 'event specialist', 'event organiser', 'event organizer',
+            'events manager', 'events coordinator', 'events executive',
+            'events specialist', 'events planner', 'events organiser', 'events organizer',
+            'events assistant', 'event assistant',
+            'conference manager', 'conference coordinator', 'conference planner',
+            'meeting planner', 'meeting coordinator', 'meetings and events',
+            'corporate events', 'corporate event', 'live events',
+            'wedding planner', 'wedding coordinator',
+            'hospitality manager', 'hospitality coordinator', 'hospitality assistant',
+            'venue manager', 'venue coordinator',
+            'banquet manager', 'banquet coordinator',
+            'catering manager', 'catering coordinator',
+            'event production', 'event operations',
+            'exhibition coordinator', 'exhibition manager',
+            'sponsorship coordinator', 'sponsorship manager',
+            'mice', 'protocol officer', 'protocol manager',
+            'event marketing', 'event logistics',
+            'hospitality', 'hotel events', 'tourism manager',
+            'events trainee', 'events officer', 'event officer'
+        ]
+
+        # Check for events
+        for keyword in events_keywords:
+            if keyword in text:
+                return 'events'
 
         # Default
         return 'other'
