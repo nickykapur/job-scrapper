@@ -2277,23 +2277,25 @@ async def get_scraping_targets():
         if not conn:
             raise HTTPException(status_code=500, detail="Could not connect to database")
 
-        # Get all active users with their preferences
+        # Get all active users with their preferences including custom keywords
         users = await conn.fetch("""
             SELECT DISTINCT
                 u.id,
                 u.username,
                 up.job_types,
-                up.preferred_countries as countries
+                up.preferred_countries as countries,
+                up.keywords
             FROM users u
             LEFT JOIN user_preferences up ON u.id = up.user_id
             WHERE u.is_active = TRUE
         """)
 
-        await conn.close()
+        await db._release(conn)
 
-        # Collect unique job types and countries from active users
+        # Aggregate job types, countries, and custom keywords across all active users
         all_job_types = set()
         all_countries = set()
+        custom_keywords_by_type = {}  # {job_type: set of keywords}
 
         for user in users:
             if user['job_types']:
@@ -2304,17 +2306,33 @@ async def get_scraping_targets():
                 for country in user['countries']:
                     all_countries.add(country)
 
-        # If no preferences set, use defaults
-        if not all_job_types:
-            all_job_types = {'software'}  # Default to software jobs
+            # Attach user keywords to each of their job types
+            if user['keywords'] and user['job_types']:
+                for job_type in user['job_types']:
+                    if job_type not in custom_keywords_by_type:
+                        custom_keywords_by_type[job_type] = set()
+                    for kw in user['keywords']:
+                        custom_keywords_by_type[job_type].add(kw)
 
+        if not all_job_types:
+            all_job_types = {'software'}
         if not all_countries:
-            all_countries = {'Ireland'}  # Default to Ireland
+            all_countries = {'Ireland'}
+
+        # Build job_type_configs — consumed by the scraper to add custom keywords on top of defaults
+        job_type_configs = [
+            {
+                'type': jt,
+                'custom_keywords': sorted(list(custom_keywords_by_type.get(jt, [])))
+            }
+            for jt in sorted(all_job_types)
+        ]
 
         return {
             'success': True,
             'active_users_count': len(users),
-            'job_types': sorted(list(all_job_types)),
+            'job_types': sorted(list(all_job_types)),       # kept for backward compat
+            'job_type_configs': job_type_configs,            # new: includes custom keywords
             'countries': sorted(list(all_countries)),
             'scraping_needed': len(all_job_types) > 0 and len(all_countries) > 0,
             'message': f'Scraping targets generated from {len(users)} active users'

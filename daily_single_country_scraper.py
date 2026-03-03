@@ -57,9 +57,14 @@ def is_relevant_job(title, job_type):
     return any(kw in title_lower for kw in keywords)
 
 def get_active_job_types(railway_url):
-    """Fetch which job types have active users from the API.
-    Returns a set of job type strings, e.g. {'software', 'hr', 'biotech'}.
-    Falls back to all types if the API call fails so scraping never silently stops."""
+    """Fetch active job types + any user-defined custom keywords from the API.
+
+    Returns Dict[job_type, List[custom_keywords]], e.g.:
+        {'software': ['Data Scientist'], 'hr': [], 'biotech': ['Virologist']}
+
+    Custom keywords come from user preferences set in the admin frontend.
+    Falls back to all types with no custom keywords if the API is unreachable.
+    """
     try:
         if not railway_url.startswith('http'):
             railway_url = f'https://{railway_url}'
@@ -67,17 +72,23 @@ def get_active_job_types(railway_url):
         response = requests.get(f"{railway_url}/api/admin/scraping-targets", timeout=15)
         if response.status_code == 200:
             data = response.json()
-            active = {jt['type'] for jt in data.get('job_types', [])}
-            if active:
-                print(f"[API] Active job types: {', '.join(sorted(active))}")
-                return active
+            result = {}
+            for config in data.get('job_type_configs', []):
+                jt = config['type']
+                result[jt] = config.get('custom_keywords', [])
+            if result:
+                print(f"[API] Active job types: {', '.join(sorted(result.keys()))}")
+                for jt, keywords in result.items():
+                    if keywords:
+                        print(f"[API]   {jt}: +{len(keywords)} custom keywords from users")
+                return result
     except Exception as e:
         print(f"[WARN] Could not fetch active job types: {e}")
 
-    # Default: scrape everything so no jobs are missed on API failure
-    all_types = {'software', 'hr', 'cybersecurity', 'sales', 'finance', 'marketing', 'biotech', 'engineering', 'events'}
-    print(f"[WARN] Falling back to all job types: {', '.join(sorted(all_types))}")
-    return all_types
+    # Fallback: scrape all types, no custom keywords
+    all_types = ['software', 'hr', 'cybersecurity', 'sales', 'finance', 'marketing', 'biotech', 'engineering', 'events']
+    print(f"[WARN] Falling back to all job types")
+    return {t: [] for t in all_types}
 
 def load_existing_jobs_from_railway(railway_url):
     """Load existing jobs from Railway database via API"""
@@ -148,7 +159,7 @@ def upload_jobs_to_railway(railway_url, jobs_data):
         print(f"   [ERROR] Upload error: {e}")
         return {'success': False, 'new_jobs': 0, 'new_software': 0, 'new_hr': 0, 'new_cybersecurity': 0, 'new_sales': 0, 'new_finance': 0, 'new_marketing': 0, 'new_biotech': 0, 'new_engineering': 0, 'new_events': 0, 'updated_jobs': 0}
 
-def search_single_term(term, location, country_name, existing_jobs, is_software, is_cybersecurity, is_sales, is_finance, is_marketing, is_biotech, is_engineering, is_events, thread_id):
+def search_single_term(term, location, country_name, existing_jobs, job_type, thread_id):
     """
     Search for jobs with a single term (runs in parallel)
     Returns: dict with jobs found and metadata
@@ -212,14 +223,7 @@ def search_single_term(term, location, country_name, existing_jobs, is_software,
         return {
             'term': term,
             'jobs': results,
-            'is_software': is_software,
-            'is_cybersecurity': is_cybersecurity,
-            'is_sales': is_sales,
-            'is_finance': is_finance,
-            'is_marketing': is_marketing,
-            'is_biotech': is_biotech,
-            'is_engineering': is_engineering,
-            'is_events': is_events,
+            'job_type': job_type,
             'success': True,
             'thread_id': thread_id
         }
@@ -229,14 +233,7 @@ def search_single_term(term, location, country_name, existing_jobs, is_software,
         return {
             'term': term,
             'jobs': {},
-            'is_software': is_software,
-            'is_cybersecurity': is_cybersecurity,
-            'is_sales': is_sales,
-            'is_finance': is_finance,
-            'is_marketing': is_marketing,
-            'is_biotech': is_biotech,
-            'is_engineering': is_engineering,
-            'is_events': is_events,
+            'job_type': job_type,
             'success': False,
             'error': str(e),
             'thread_id': thread_id
@@ -516,67 +513,55 @@ def scrape_single_country(location, country_name, railway_url):
         "Hospitality Assistant"
     ]
 
-    # Only include search terms for job types that have active users
-    search_terms = []
-    if 'software'      in active_job_types: search_terms += software_search_terms
-    if 'hr'            in active_job_types: search_terms += hr_search_terms
-    if 'cybersecurity' in active_job_types: search_terms += cybersecurity_search_terms
-    if 'sales'         in active_job_types: search_terms += sales_search_terms
-    if 'finance'       in active_job_types: search_terms += finance_search_terms
-    if 'marketing'     in active_job_types: search_terms += marketing_search_terms
-    if 'biotech'       in active_job_types: search_terms += biotech_search_terms
-    if 'engineering'   in active_job_types: search_terms += engineering_search_terms
-    if 'events'        in active_job_types: search_terms += events_search_terms
+    # Default search terms per job type (hardcoded fallback/base)
+    default_terms = {
+        'software':      software_search_terms,
+        'hr':            hr_search_terms,
+        'cybersecurity': cybersecurity_search_terms,
+        'sales':         sales_search_terms,
+        'finance':       finance_search_terms,
+        'marketing':     marketing_search_terms,
+        'biotech':       biotech_search_terms,
+        'engineering':   engineering_search_terms,
+        'events':        events_search_terms,
+    }
+
+    # Build term_to_job_type mapping:
+    # - For each active job type, use default terms + any custom keywords set via admin frontend
+    # - New job types (not in default_terms) use only their custom keywords
+    term_to_job_type = {}
+    for job_type, custom_keywords in active_job_types.items():
+        base = default_terms.get(job_type, [])
+        all_terms = list(dict.fromkeys(base + custom_keywords))  # dedupe, preserve order
+        for term in all_terms:
+            if term not in term_to_job_type:  # first job type wins on overlap
+                term_to_job_type[term] = job_type
 
     # Initialize shared data structures (thread-safe)
     all_new_jobs = {}
-    software_jobs = {}
-    hr_jobs = {}
-    cybersecurity_jobs = {}
-    sales_jobs = {}
-    finance_jobs = {}
-    marketing_jobs = {}
-    biotech_jobs = {}
-    engineering_jobs = {}
-    events_jobs = {}
+    jobs_by_type = {}   # {job_type: {job_id: job_data}} — supports any job type dynamically
     successful_searches = 0
     lock = threading.Lock()  # For thread-safe dictionary updates
 
     print(f"\n[LOCATION] Searching in {location}")
     print(f"[PARALLEL] Using {MAX_CONCURRENT_SEARCHES} concurrent workers")
-    print(f"[TERMS] Processing {len(search_terms)} search terms...")
+    print(f"[TERMS] Processing {len(term_to_job_type)} search terms across {len(active_job_types)} job types...")
 
-    # Prepare search tasks
-    search_tasks = []
-    for idx, term in enumerate(search_terms):
-        is_software = term in software_search_terms
-        is_cybersecurity = term in cybersecurity_search_terms
-        is_sales = term in sales_search_terms
-        is_finance = term in finance_search_terms
-        is_marketing = term in marketing_search_terms
-        is_biotech = term in biotech_search_terms
-        is_engineering = term in engineering_search_terms
-        is_events = term in events_search_terms
-
-        search_tasks.append({
+    # Prepare search tasks — one per search term
+    search_tasks = [
+        {
             'term': term,
             'location': location,
             'country_name': country_name,
             'existing_jobs': existing_jobs,
-            'is_software': is_software,
-            'is_cybersecurity': is_cybersecurity,
-            'is_sales': is_sales,
-            'is_finance': is_finance,
-            'is_marketing': is_marketing,
-            'is_biotech': is_biotech,
-            'is_engineering': is_engineering,
-            'is_events': is_events,
+            'job_type': job_type,
             'thread_id': idx + 1
-        })
+        }
+        for idx, (term, job_type) in enumerate(term_to_job_type.items())
+    ]
 
     # Execute searches in parallel with ThreadPoolExecutor
     with ThreadPoolExecutor(max_workers=MAX_CONCURRENT_SEARCHES) as executor:
-        # Submit all tasks
         future_to_task = {
             executor.submit(
                 search_single_term,
@@ -584,14 +569,7 @@ def scrape_single_country(location, country_name, railway_url):
                 task['location'],
                 task['country_name'],
                 task['existing_jobs'],
-                task['is_software'],
-                task['is_cybersecurity'],
-                task['is_sales'],
-                task['is_finance'],
-                task['is_marketing'],
-                task['is_biotech'],
-                task['is_engineering'],
-                task['is_events'],
+                task['job_type'],
                 task['thread_id']
             ): task for task in search_tasks
         }
@@ -612,47 +590,15 @@ def scrape_single_country(location, country_name, railway_url):
                     with lock:
                         for job_id, job_data in result['jobs'].items():
                             if job_id not in all_new_jobs:
-                                # Determine job_type based on search category
+                                job_type = result['job_type']
                                 job_title = job_data.get('title', '')
-                                job_type = None
-                                job_dict = None
 
-                                if result['is_software']:
-                                    job_type = 'software'
-                                    job_dict = software_jobs
-                                elif result['is_cybersecurity']:
-                                    job_type = 'cybersecurity'
-                                    job_dict = cybersecurity_jobs
-                                elif result['is_sales']:
-                                    job_type = 'sales'
-                                    job_dict = sales_jobs
-                                elif result['is_finance']:
-                                    job_type = 'finance'
-                                    job_dict = finance_jobs
-                                elif result['is_marketing']:
-                                    job_type = 'marketing'
-                                    job_dict = marketing_jobs
-                                elif result.get('is_biotech'):
-                                    job_type = 'biotech'
-                                    job_dict = biotech_jobs
-                                elif result.get('is_engineering'):
-                                    job_type = 'engineering'
-                                    job_dict = engineering_jobs
-                                elif result.get('is_events'):
-                                    job_type = 'events'
-                                    job_dict = events_jobs
-                                else:
-                                    job_type = 'hr'
-                                    job_dict = hr_jobs
-
-                                # Validate job title matches job type (filter irrelevant LinkedIn results)
+                                # Validate title matches job type (filters irrelevant LinkedIn results)
                                 if not is_relevant_job(job_title, job_type):
-                                    # Skip jobs that don't match the job type keywords
                                     continue
 
-                                # Set job_type and add to appropriate dictionary
                                 job_data['job_type'] = job_type
-                                job_dict[job_id] = job_data
+                                jobs_by_type.setdefault(job_type, {})[job_id] = job_data
                                 all_new_jobs[job_id] = job_data
                             else:
                                 # Update easy_apply flag if set
@@ -670,22 +616,13 @@ def scrape_single_country(location, country_name, railway_url):
             if completed % MAX_CONCURRENT_SEARCHES == 0:
                 time.sleep(BATCH_DELAY_SECONDS)
 
-    print(f"   [COMPLETE] All {len(search_terms)} searches finished!")
+    print(f"   [COMPLETE] All {len(term_to_job_type)} searches finished!")
 
+    by_type_summary = ", ".join(f"{jt}: {len(jobs)}" for jt, jobs in jobs_by_type.items())
     print(f"\n[SUMMARY] {country_name}:")
-    print(f"   • Searches: {successful_searches}/{len(search_terms)}")
-    print(f"   • New jobs found: {len(all_new_jobs)} (Software: {len(software_jobs)}, HR: {len(hr_jobs)}, Cybersecurity: {len(cybersecurity_jobs)}, Sales: {len(sales_jobs)}, Finance: {len(finance_jobs)}, Marketing: {len(marketing_jobs)}, Biotech: {len(biotech_jobs)}, Engineering: {len(engineering_jobs)}, Events: {len(events_jobs)})")
+    print(f"   • Searches: {successful_searches}/{len(term_to_job_type)}")
+    print(f"   • New jobs found: {len(all_new_jobs)} ({by_type_summary})")
 
-    # Upload to Railway and get actual new job counts
-    actual_new_software = 0
-    actual_new_hr = 0
-    actual_new_cybersecurity = 0
-    actual_new_sales = 0
-    actual_new_finance = 0
-    actual_new_marketing = 0
-    actual_new_biotech = 0
-    actual_new_engineering = 0
-    actual_new_events = 0
     actual_new_total = 0
 
     if all_new_jobs:
@@ -694,40 +631,21 @@ def scrape_single_country(location, country_name, railway_url):
 
         if upload_result['success']:
             actual_new_total = upload_result['new_jobs']
-            actual_new_software = upload_result['new_software']
-            actual_new_hr = upload_result['new_hr']
-            actual_new_cybersecurity = upload_result['new_cybersecurity']
-            actual_new_sales = upload_result.get('new_sales', 0)
-            actual_new_finance = upload_result.get('new_finance', 0)
-            actual_new_marketing = upload_result.get('new_marketing', 0)
-            actual_new_biotech = upload_result.get('new_biotech', 0)
-            actual_new_engineering = upload_result.get('new_engineering', 0)
-            actual_new_events = upload_result.get('new_events', 0)
-            print(f"   ✅ Upload successful!")
-            print(f"   📊 Actually added to DB: {actual_new_total} new ({actual_new_software} software, {actual_new_hr} HR, {actual_new_cybersecurity} cybersecurity, {actual_new_sales} sales, {actual_new_finance} finance, {actual_new_marketing} marketing, {actual_new_biotech} biotech, {actual_new_engineering} engineering, {actual_new_events} events)")
+            print(f"   ✅ Upload successful! {actual_new_total} new jobs added to DB")
         else:
             print(f"   ❌ Upload failed!")
             return False
     else:
         print(f"\n[SKIP] No new jobs to upload")
 
-    # Output for GitHub Actions summary
-    print(f"\n::notice title={country_name} Complete::{actual_new_total} new jobs added ({actual_new_software} software, {actual_new_hr} HR, {actual_new_cybersecurity} cybersecurity, {actual_new_sales} sales, {actual_new_finance} finance, {actual_new_marketing} marketing, {actual_new_biotech} biotech, {actual_new_engineering} engineering, {actual_new_events} events)")
-
-    # Set output for GitHub Actions - use ACTUAL new counts, not scraped counts
+    # Set output for GitHub Actions
     if os.getenv('GITHUB_OUTPUT'):
         with open(os.getenv('GITHUB_OUTPUT'), 'a') as f:
             f.write(f"jobs_found={actual_new_total}\n")
-            f.write(f"software_jobs={actual_new_software}\n")
-            f.write(f"hr_jobs={actual_new_hr}\n")
-            f.write(f"cybersecurity_jobs={actual_new_cybersecurity}\n")
-            f.write(f"sales_jobs={actual_new_sales}\n")
-            f.write(f"finance_jobs={actual_new_finance}\n")
-            f.write(f"marketing_jobs={actual_new_marketing}\n")
-            f.write(f"biotech_jobs={actual_new_biotech}\n")
-            f.write(f"engineering_jobs={actual_new_engineering}\n")
-            f.write(f"events_jobs={actual_new_events}\n")
             f.write(f"country={country_name}\n")
+            # Write per-type counts dynamically so new job types show up automatically
+            for jt, jobs in jobs_by_type.items():
+                f.write(f"{jt}_jobs={len(jobs)}\n")
 
     print(f"\n✅ {country_name} scraping complete!")
     return True
