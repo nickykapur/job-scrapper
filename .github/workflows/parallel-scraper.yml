@@ -127,6 +127,7 @@ jobs:
             --country "${{ matrix.country.name }}"
         env:
           RAILWAY_URL: https://web-production-110bb.up.railway.app
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
       - name: Log results
         if: always()

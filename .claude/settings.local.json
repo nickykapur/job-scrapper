@@ -14,7 +14,9 @@
       "Bash(cat:*)",
       "Bash(curl:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(grep -r \"admin\\\\|nicky\\\\|nick\\\\|software\" /mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/create_*.py 2>/dev/null | grep -i \"username\\\\|admin\")",
+      "WebFetch(domain:api.github.com)"
     ],
     "deny": [],
     "ask": []

@@ -11,8 +11,25 @@ import sys
 import requests
 import time
 import threading
+import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from linkedin_job_scraper import LinkedInJobScraper
+
+# ── Logging ───────────────────────────────────────────────────────────────────
+logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+logger = logging.getLogger("scraper")
+
+# ── Sentry (optional — only active when SENTRY_DSN is set in GitHub Actions) ──
+import sentry_sdk
+_sentry_dsn = os.environ.get("SENTRY_DSN")
+if _sentry_dsn:
+    sentry_sdk.init(
+        dsn=_sentry_dsn,
+        environment="github-actions",
+        traces_sample_rate=0.0,   # No tracing needed in scraper
+        send_default_pii=False,
+    )
+    logger.info("Sentry enabled for scraper")
 
 # Configuration for parallelization
 MAX_CONCURRENT_SEARCHES = 8  # GitHub Actions has enough headroom for 8 parallel browsers
@@ -249,9 +266,12 @@ def search_single_term(term, location, country_name, existing_jobs, job_type, th
 def scrape_single_country(location, country_name, railway_url):
     """Scrape jobs for a single country"""
 
-    print(f"\n{'='*80}")
-    print(f"🌍 Scraping {country_name} - {location}")
-    print(f"{'='*80}\n")
+    logger.info("=== Scraping %s (%s) ===", country_name, location)
+
+    # Tag this Sentry session with country so errors are grouped by country
+    if _sentry_dsn:
+        sentry_sdk.set_tag("country", country_name)
+        sentry_sdk.set_tag("location", location)
 
     # Load existing jobs and active job types from Railway
     existing_jobs = load_existing_jobs_from_railway(railway_url)
@@ -610,33 +630,39 @@ def scrape_single_country(location, country_name, railway_url):
 
             # Progress indicator
             if completed % 10 == 0:
-                print(f"   [PROGRESS] {completed}/{len(search_terms)} searches completed...")
+                print(f"   [PROGRESS] {completed}/{len(term_to_job_type)} searches completed...")
 
             # Small delay between batches to avoid overwhelming LinkedIn
             if completed % MAX_CONCURRENT_SEARCHES == 0:
                 time.sleep(BATCH_DELAY_SECONDS)
 
-    print(f"   [COMPLETE] All {len(term_to_job_type)} searches finished!")
+    logger.info("[COMPLETE] All %d searches finished for %s", len(term_to_job_type), country_name)
 
     by_type_summary = ", ".join(f"{jt}: {len(jobs)}" for jt, jobs in jobs_by_type.items())
-    print(f"\n[SUMMARY] {country_name}:")
-    print(f"   • Searches: {successful_searches}/{len(term_to_job_type)}")
-    print(f"   • New jobs found: {len(all_new_jobs)} ({by_type_summary})")
+    logger.info("[SUMMARY] %s: %d/%d searches OK, %d new jobs (%s)",
+                country_name, successful_searches, len(term_to_job_type),
+                len(all_new_jobs), by_type_summary or "none")
 
     actual_new_total = 0
 
     if all_new_jobs:
-        print(f"\n[UPLOAD] Uploading {len(all_new_jobs)} jobs to Railway...")
+        logger.info("[UPLOAD] Uploading %d jobs to Railway...", len(all_new_jobs))
         upload_result = upload_jobs_to_railway(railway_url, all_new_jobs)
 
         if upload_result['success']:
             actual_new_total = upload_result['new_jobs']
-            print(f"   ✅ Upload successful! {actual_new_total} new jobs added to DB")
+            logger.info("[UPLOAD] Success: %d new jobs added to DB for %s", actual_new_total, country_name)
+            if _sentry_dsn:
+                sentry_sdk.add_breadcrumb(
+                    message=f"{country_name}: {actual_new_total} new jobs uploaded",
+                    data={"country": country_name, "new_jobs": actual_new_total, **{f"{jt}_jobs": len(jobs) for jt, jobs in jobs_by_type.items()}},
+                    level="info",
+                )
         else:
-            print(f"   ❌ Upload failed!")
+            logger.error("[UPLOAD] Failed to upload jobs for %s", country_name)
             return False
     else:
-        print(f"\n[SKIP] No new jobs to upload")
+        logger.info("[SKIP] No new jobs to upload for %s", country_name)
 
     # Set output for GitHub Actions
     if os.getenv('GITHUB_OUTPUT'):
@@ -647,7 +673,7 @@ def scrape_single_country(location, country_name, railway_url):
             for jt, jobs in jobs_by_type.items():
                 f.write(f"{jt}_jobs={len(jobs)}\n")
 
-    print(f"\n✅ {country_name} scraping complete!")
+    logger.info("=== %s scraping complete ===", country_name)
     return True
 
 
@@ -665,5 +691,17 @@ if __name__ == "__main__":
         print("❌ Error: RAILWAY_URL not provided")
         sys.exit(1)
 
-    success = scrape_single_country(args.location, args.country, railway_url)
+    try:
+        success = scrape_single_country(args.location, args.country, railway_url)
+    except Exception as e:
+        logger.error("Scraper crashed for %s: %s", args.country, e, exc_info=True)
+        if _sentry_dsn:
+            sentry_sdk.capture_exception(e)
+        sys.exit(1)
+
+    if not success:
+        logger.error("Scraping failed for %s (no exception, returned False)", args.country)
+        if _sentry_dsn:
+            sentry_sdk.capture_message(f"Scraping returned False for {args.country}", level="error")
+
     sys.exit(0 if success else 1)

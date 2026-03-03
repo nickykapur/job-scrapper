@@ -44,8 +44,8 @@ if _sentry_dsn:
         integrations=[
             FastApiIntegration(),
             AsyncioIntegration(),
-            # Forward Python logger.warning/error calls to Sentry automatically
-            LoggingIntegration(level=logging.WARNING, event_level=logging.ERROR),
+            # Forward Python logger.info+ to Sentry logs; errors create Issues
+            LoggingIntegration(level=logging.INFO, event_level=logging.ERROR),
         ],
         # Unlocks sentry_sdk.logger.info/warning/error() API
         enable_logs=True,
@@ -1046,7 +1046,9 @@ async def update_job_api(request: JobUpdateRequest, current_user: Optional[Dict[
     encouragement_message = None
 
     try:
-        print(f"🔄 DEBUG: Updating job {request.job_id} - applied: {request.applied}, rejected: {request.rejected}")
+        logger.info("Job status update: job=%s applied=%s rejected=%s user=%s",
+                    request.job_id, request.applied, request.rejected,
+                    current_user.get('username') if current_user else 'anonymous')
 
         # Update the global jobs table (for backward compatibility)
         success = await db.update_job_status(
@@ -1076,7 +1078,7 @@ async def update_job_api(request: JobUpdateRequest, current_user: Optional[Dict[
                                     applied_at = CURRENT_TIMESTAMP,
                                     updated_at = CURRENT_TIMESTAMP
                             """, user_id, request.job_id)
-                            print(f"✅ Updated user_job_interactions for user {user_id}: applied")
+                            logger.info("User %s applied to job %s", user_id, request.job_id)
 
                             # Create job signature to prevent this job from reappearing
                             job = await conn.fetchrow("""
@@ -1090,10 +1092,8 @@ async def update_job_api(request: JobUpdateRequest, current_user: Optional[Dict[
                                     country=job['country'] or '',
                                     job_id=request.job_id
                                 )
-                                if signature_created:
-                                    print(f"✅ Created job signature for {job['company']} - {job['title']}")
-                                else:
-                                    print(f"⚠️ Failed to create job signature for {request.job_id}")
+                                if not signature_created:
+                                    logger.warning("Failed to create job signature for job %s", request.job_id)
 
                             # Update streak tracking
                             from datetime import date
@@ -1138,7 +1138,7 @@ async def update_job_api(request: JobUpdateRequest, current_user: Optional[Dict[
                                         updated_at = CURRENT_TIMESTAMP
                                     WHERE user_id = $1
                                 """, user_id, new_streak, new_longest, today)
-                                print(f"✅ Updated streak for user {user_id}: {new_streak} days")
+                                logger.info("Streak updated for user %s: %d days", user_id, new_streak)
 
                             # Generate encouragement messages for milestones
                             # Get job details (country/location)
@@ -1243,7 +1243,7 @@ async def update_job_api(request: JobUpdateRequest, current_user: Optional[Dict[
                                     rejected_at = CURRENT_TIMESTAMP,
                                     updated_at = CURRENT_TIMESTAMP
                             """, user_id, request.job_id)
-                            print(f"✅ Updated user_job_interactions for user {user_id}: rejected")
+                            logger.info("User %s rejected job %s", user_id, request.job_id)
 
                             # Create job signature to prevent this job from reappearing
                             job = await conn.fetchrow("""
@@ -1257,24 +1257,21 @@ async def update_job_api(request: JobUpdateRequest, current_user: Optional[Dict[
                                     country=job['country'] or '',
                                     job_id=request.job_id
                                 )
-                                if signature_created:
-                                    print(f"✅ Created job signature for rejected: {job['company']} - {job['title']}")
-                                else:
-                                    print(f"⚠️ Failed to create job signature for rejected {request.job_id}")
+                                if not signature_created:
+                                    logger.warning("Failed to create job signature for rejected job %s", request.job_id)
                     finally:
-                        await conn.close()
+                        await db._release(conn)
 
         if success:
-            print(f"✅ DEBUG: Job {request.job_id} updated successfully in database")
             response = {"success": True, "message": f"Job {request.job_id} updated"}
             if encouragement_message:
                 response["encouragement"] = encouragement_message
             return response
         else:
-            print(f"❌ DEBUG: Job {request.job_id} not found in database")
+            logger.warning("Job %s not found in database during update", request.job_id)
             raise HTTPException(status_code=404, detail="Job not found")
     except Exception as e:
-        print(f"❌ DEBUG: Database update failed for job {request.job_id}: {e}")
+        logger.error("Database update failed for job %s: %s", request.job_id, e)
         raise HTTPException(status_code=500, detail=f"Database update failed: {str(e)}")
 
 @app.post("/update_job")
@@ -2188,7 +2185,7 @@ async def deactivate_user(user_id: int, current_user: Dict[str, Any] = Depends(g
 
         await db._release(conn)
 
-        print(f"✅ User {user['username']} (ID: {user_id}) deactivated by admin {current_user.get('username')}")
+        logger.info("User %s (ID: %d) deactivated by admin %s", user['username'], user_id, current_user.get('username'))
 
         return {
             'success': True,
@@ -2200,7 +2197,7 @@ async def deactivate_user(user_id: int, current_user: Dict[str, Any] = Depends(g
     except HTTPException:
         raise
     except Exception as e:
-        print(f"❌ Failed to deactivate user: {e}")
+        logger.error("Failed to deactivate user %d: %s", user_id, e)
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to deactivate user: {str(e)}")
@@ -2246,7 +2243,7 @@ async def activate_user(user_id: int, current_user: Dict[str, Any] = Depends(get
 
         await db._release(conn)
 
-        print(f"✅ User {user['username']} (ID: {user_id}) reactivated by admin {current_user.get('username')}")
+        logger.info("User %s (ID: %d) reactivated by admin %s", user['username'], user_id, current_user.get('username'))
 
         return {
             'success': True,
@@ -2258,7 +2255,7 @@ async def activate_user(user_id: int, current_user: Dict[str, Any] = Depends(get
     except HTTPException:
         raise
     except Exception as e:
-        print(f"❌ Failed to activate user: {e}")
+        logger.error("Failed to activate user %d: %s", user_id, e)
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to activate user: {str(e)}")
