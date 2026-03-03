@@ -22,7 +22,7 @@ import {
   CircularProgress,
   Alert,
 } from '@mui/material';
-import { Save, AccountCircle, DeleteSweep, Refresh } from '@mui/icons-material';
+import { Save, AccountCircle, DeleteSweep, Refresh, Lock, Person } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { jobApi } from '../services/api';
@@ -33,6 +33,14 @@ const SettingsPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
+
+  // Profile edit state
+  const [profileData, setProfileData] = useState({ full_name: '', email: '' });
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  // Password change state
+  const [passwordData, setPasswordData] = useState({ old_password: '', new_password: '', confirm_password: '' });
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -55,9 +63,9 @@ const SettingsPage: React.FC = () => {
   const [companyInput, setCompanyInput] = useState('');
 
   // Available options
-  const JOB_TYPES = ['software', 'hr', 'marketing', 'design', 'data', 'sales'];
+  const JOB_TYPES = ['software', 'hr', 'cybersecurity', 'sales', 'finance', 'marketing', 'data', 'design', 'biotech', 'engineering', 'events'];
   const EXPERIENCE_LEVELS = ['entry', 'junior', 'mid', 'senior', 'executive'];
-  const COUNTRIES = ['Ireland', 'Spain', 'Panama', 'Chile', 'Netherlands', 'Germany', 'Sweden', 'Belgium', 'Denmark', 'Luxembourg', 'Remote'];
+  const COUNTRIES = ['Ireland', 'Spain', 'Panama', 'Luxembourg', 'Germany', 'Switzerland', 'United States', 'Remote'];
 
   useEffect(() => {
     const loadPreferences = async () => {
@@ -73,6 +81,50 @@ const SettingsPage: React.FC = () => {
 
     loadPreferences();
   }, [refreshPreferences]);
+
+  useEffect(() => {
+    if (user) {
+      setProfileData({
+        full_name: user.full_name || '',
+        email: user.email || '',
+      });
+    }
+  }, [user]);
+
+  const handleSaveProfile = async () => {
+    setIsSavingProfile(true);
+    try {
+      await jobApi.updateProfile({
+        full_name: profileData.full_name || undefined,
+        email: profileData.email || undefined,
+      });
+      toast.success('Profile updated successfully');
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || 'Failed to update profile');
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (passwordData.new_password !== passwordData.confirm_password) {
+      toast.error('New passwords do not match');
+      return;
+    }
+    setIsChangingPassword(true);
+    try {
+      await jobApi.changePassword({
+        old_password: passwordData.old_password,
+        new_password: passwordData.new_password,
+      });
+      toast.success('Password changed successfully');
+      setPasswordData({ old_password: '', new_password: '', confirm_password: '' });
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || 'Failed to change password');
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
 
   useEffect(() => {
     if (preferences) {
@@ -270,6 +322,94 @@ const SettingsPage: React.FC = () => {
         <Alert severity="info" sx={{ mb: 4 }}>
           Logged in as <strong>{user?.username}</strong> ({user?.email})
         </Alert>
+
+        {/* Profile Section */}
+        <Box mb={4}>
+          <Box display="flex" alignItems="center" gap={1} mb={2}>
+            <Person color="primary" />
+            <Typography variant="h6">Profile Information</Typography>
+          </Box>
+          <Box display="flex" flexDirection="column" gap={2} maxWidth={480}>
+            <TextField
+              fullWidth
+              size="small"
+              label="Full Name"
+              value={profileData.full_name}
+              onChange={e => setProfileData(p => ({ ...p, full_name: e.target.value }))}
+            />
+            <TextField
+              fullWidth
+              size="small"
+              label="Email"
+              type="email"
+              value={profileData.email}
+              onChange={e => setProfileData(p => ({ ...p, email: e.target.value }))}
+            />
+            <Button
+              variant="outlined"
+              startIcon={isSavingProfile ? <CircularProgress size={16} /> : <Save />}
+              onClick={handleSaveProfile}
+              disabled={isSavingProfile}
+              sx={{ alignSelf: 'flex-start' }}
+            >
+              {isSavingProfile ? 'Saving...' : 'Save Profile'}
+            </Button>
+          </Box>
+        </Box>
+
+        <Divider sx={{ my: 3 }} />
+
+        {/* Change Password Section */}
+        <Box mb={4}>
+          <Box display="flex" alignItems="center" gap={1} mb={2}>
+            <Lock color="primary" />
+            <Typography variant="h6">Change Password</Typography>
+          </Box>
+          <Box display="flex" flexDirection="column" gap={2} maxWidth={480}>
+            <TextField
+              fullWidth
+              size="small"
+              label="Current Password"
+              type="password"
+              value={passwordData.old_password}
+              onChange={e => setPasswordData(p => ({ ...p, old_password: e.target.value }))}
+            />
+            <TextField
+              fullWidth
+              size="small"
+              label="New Password"
+              type="password"
+              value={passwordData.new_password}
+              onChange={e => setPasswordData(p => ({ ...p, new_password: e.target.value }))}
+            />
+            <TextField
+              fullWidth
+              size="small"
+              label="Confirm New Password"
+              type="password"
+              value={passwordData.confirm_password}
+              onChange={e => setPasswordData(p => ({ ...p, confirm_password: e.target.value }))}
+              error={passwordData.confirm_password !== '' && passwordData.new_password !== passwordData.confirm_password}
+              helperText={
+                passwordData.confirm_password !== '' && passwordData.new_password !== passwordData.confirm_password
+                  ? 'Passwords do not match'
+                  : ''
+              }
+            />
+            <Button
+              variant="outlined"
+              color="warning"
+              startIcon={isChangingPassword ? <CircularProgress size={16} /> : <Lock />}
+              onClick={handleChangePassword}
+              disabled={isChangingPassword || !passwordData.old_password || !passwordData.new_password}
+              sx={{ alignSelf: 'flex-start' }}
+            >
+              {isChangingPassword ? 'Changing...' : 'Change Password'}
+            </Button>
+          </Box>
+        </Box>
+
+        <Divider sx={{ my: 3 }} />
 
         {/* Job Types */}
         <Box mb={4}>

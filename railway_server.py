@@ -2108,7 +2108,7 @@ async def get_all_users(current_user: Dict[str, Any] = Depends(get_current_user)
             ORDER BY u.created_at DESC
         """)
 
-        await conn.close()
+        await db._release(conn)
 
         user_list = []
         for row in users:
@@ -2167,11 +2167,11 @@ async def deactivate_user(user_id: int, current_user: Dict[str, Any] = Depends(g
         # Check if user exists
         user = await conn.fetchrow("SELECT id, username, is_active FROM users WHERE id = $1", user_id)
         if not user:
-            await conn.close()
+            await db._release(conn)
             raise HTTPException(status_code=404, detail="User not found")
 
         if not user['is_active']:
-            await conn.close()
+            await db._release(conn)
             return {
                 'success': True,
                 'message': 'User is already deactivated',
@@ -2186,7 +2186,7 @@ async def deactivate_user(user_id: int, current_user: Dict[str, Any] = Depends(g
             WHERE id = $1
         """, user_id)
 
-        await conn.close()
+        await db._release(conn)
 
         print(f"✅ User {user['username']} (ID: {user_id}) deactivated by admin {current_user.get('username')}")
 
@@ -2225,11 +2225,11 @@ async def activate_user(user_id: int, current_user: Dict[str, Any] = Depends(get
         # Check if user exists
         user = await conn.fetchrow("SELECT id, username, is_active FROM users WHERE id = $1", user_id)
         if not user:
-            await conn.close()
+            await db._release(conn)
             raise HTTPException(status_code=404, detail="User not found")
 
         if user['is_active']:
-            await conn.close()
+            await db._release(conn)
             return {
                 'success': True,
                 'message': 'User is already active',
@@ -2244,7 +2244,7 @@ async def activate_user(user_id: int, current_user: Dict[str, Any] = Depends(get
             WHERE id = $1
         """, user_id)
 
-        await conn.close()
+        await db._release(conn)
 
         print(f"✅ User {user['username']} (ID: {user_id}) reactivated by admin {current_user.get('username')}")
 
@@ -2262,6 +2262,78 @@ async def activate_user(user_id: int, current_user: Dict[str, Any] = Depends(get
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to activate user: {str(e)}")
+
+class AdminCreateUserRequest(BaseModel):
+    username: str
+    email: str
+    password: str
+    full_name: Optional[str] = None
+    is_admin: bool = False
+    job_types: Optional[List[str]] = None
+    keywords: Optional[List[str]] = None
+    preferred_countries: Optional[List[str]] = None
+
+@app.post("/api/admin/users")
+async def admin_create_user(
+    request: AdminCreateUserRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Create a new user (admin only)"""
+    if not current_user.get('is_admin'):
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    from user_database import UserDatabase
+    from auth_utils import validate_password_strength, validate_email, validate_username
+
+    valid, error = validate_username(request.username)
+    if not valid:
+        raise HTTPException(status_code=400, detail=error)
+
+    valid, error = validate_email(request.email)
+    if not valid:
+        raise HTTPException(status_code=400, detail=error)
+
+    valid, error = validate_password_strength(request.password)
+    if not valid:
+        raise HTTPException(status_code=400, detail=error)
+
+    user_db = UserDatabase()
+    user = await user_db.create_user(
+        username=request.username,
+        email=request.email,
+        password=request.password,
+        full_name=request.full_name,
+        is_admin=request.is_admin
+    )
+
+    if not user:
+        raise HTTPException(status_code=400, detail="Username or email already exists")
+
+    # Set preferences if provided
+    preferences = {}
+    if request.job_types:
+        preferences['job_types'] = request.job_types
+    if request.keywords:
+        preferences['keywords'] = request.keywords
+    if request.preferred_countries:
+        preferences['preferred_countries'] = request.preferred_countries
+
+    if preferences:
+        await user_db.update_user_preferences(user['id'], preferences)
+
+    logger.info(f"Admin {current_user.get('username')} created new user: {request.username}")
+
+    return {
+        'success': True,
+        'message': f"User '{request.username}' created successfully",
+        'user': {
+            'id': user['id'],
+            'username': user['username'],
+            'email': user['email'],
+            'full_name': user.get('full_name'),
+            'is_admin': user['is_admin']
+        }
+    }
 
 @app.get("/api/admin/scraping-targets")
 async def get_scraping_targets():

@@ -186,11 +186,37 @@ async def update_profile(
     - Can update full_name and email
     - Requires valid JWT token
     """
-    # TODO: Implement profile update in user_database.py
-    # For now, return success message
+    if not request.full_name and not request.email:
+        return {"success": True, "message": "Nothing to update"}
+
+    # Validate email if provided
+    if request.email:
+        valid, error = validate_email(str(request.email))
+        if not valid:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
+
+    user = await user_db.update_profile(
+        user_id=current_user['user_id'],
+        full_name=request.full_name,
+        email=str(request.email) if request.email else None
+    )
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already in use or update failed"
+        )
+
     return {
         "success": True,
-        "message": "Profile update endpoint - implementation pending"
+        "message": "Profile updated successfully",
+        "user": {
+            "user_id": user['id'],
+            "username": user['username'],
+            "email": user['email'],
+            "full_name": user.get('full_name'),
+            "is_admin": user['is_admin']
+        }
     }
 
 
@@ -344,6 +370,68 @@ async def get_user_stats(current_user: Dict[str, Any] = Depends(get_current_user
 # ADMIN ENDPOINTS
 # ============================================================================
 
+class AdminCreateUserRequest(BaseModel):
+    username: str = Field(..., min_length=3, max_length=50)
+    email: EmailStr
+    password: str = Field(..., min_length=8)
+    full_name: Optional[str] = None
+    is_admin: bool = False
+    job_types: Optional[List[str]] = None
+    keywords: Optional[List[str]] = None
+    preferred_countries: Optional[List[str]] = None
+
+@router.post("/admin/users", status_code=status.HTTP_201_CREATED)
+async def admin_create_user(
+    request: AdminCreateUserRequest,
+    admin: Dict[str, Any] = Depends(get_current_admin_user)
+):
+    """Create a new user (admin only)"""
+    valid, error = validate_username(request.username)
+    if not valid:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
+
+    valid, error = validate_email(request.email)
+    if not valid:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
+
+    valid, error = validate_password_strength(request.password)
+    if not valid:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
+
+    user = await user_db.create_user(
+        username=request.username,
+        email=request.email,
+        password=request.password,
+        full_name=request.full_name,
+        is_admin=request.is_admin
+    )
+
+    if not user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username or email already exists")
+
+    preferences = {}
+    if request.job_types:
+        preferences['job_types'] = request.job_types
+    if request.keywords:
+        preferences['keywords'] = request.keywords
+    if request.preferred_countries:
+        preferences['preferred_countries'] = request.preferred_countries
+
+    if preferences:
+        await user_db.update_user_preferences(user['id'], preferences)
+
+    return {
+        "success": True,
+        "message": f"User '{request.username}' created successfully",
+        "user": {
+            "user_id": user['id'],
+            "username": user['username'],
+            "email": user['email'],
+            "full_name": user.get('full_name'),
+            "is_admin": user['is_admin']
+        }
+    }
+
 @router.get("/admin/users")
 async def list_all_users(admin: Dict[str, Any] = Depends(get_current_admin_user)):
     """
@@ -351,11 +439,9 @@ async def list_all_users(admin: Dict[str, Any] = Depends(get_current_admin_user)
 
     - Only accessible to admin users
     - Returns list of all users
+    - Note: the main admin endpoint is GET /api/admin/users in railway_server.py
     """
-    # TODO: Implement list_all_users in user_database.py
-    return {
-        "message": "Admin user list endpoint - implementation pending"
-    }
+    return {"message": "Use GET /api/admin/users for the full user list with stats"}
 
 
 @router.delete("/admin/users/{user_id}")
@@ -364,15 +450,27 @@ async def delete_user(
     admin: Dict[str, Any] = Depends(get_current_admin_user)
 ):
     """
-    Delete a user (admin only)
-
-    - Only accessible to admin users
-    - Soft delete (sets is_active = FALSE)
+    Deactivate a user (admin only) - soft delete
     """
-    # TODO: Implement delete_user in user_database.py
-    return {
-        "message": f"Delete user {user_id} endpoint - implementation pending"
-    }
+    if admin.get('user_id') == user_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot deactivate your own account")
+
+    conn = await user_db.get_connection()
+    if not conn:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database unavailable")
+
+    try:
+        user = await conn.fetchrow("SELECT id, username FROM users WHERE id = $1", user_id)
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+        await conn.execute(
+            "UPDATE users SET is_active = FALSE, updated_at = NOW() WHERE id = $1",
+            user_id
+        )
+        return {"success": True, "message": f"User '{user['username']}' deactivated"}
+    finally:
+        await conn.close()
 
 
 # Export router

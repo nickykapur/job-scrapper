@@ -229,6 +229,58 @@ class UserDatabase:
         finally:
             await conn.close()
 
+    async def update_profile(self, user_id: int, full_name: Optional[str] = None, email: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        """Update user profile (full_name and/or email)"""
+        conn = await self.get_connection()
+        if not conn:
+            return None
+
+        try:
+            update_fields = []
+            values = []
+            param_count = 1
+
+            if full_name is not None:
+                update_fields.append(f"full_name = ${param_count}")
+                values.append(full_name)
+                param_count += 1
+
+            if email is not None:
+                update_fields.append(f"email = ${param_count}")
+                values.append(email)
+                param_count += 1
+
+            if not update_fields:
+                # Nothing to update — return current user
+                user = await conn.fetchrow(
+                    "SELECT id, username, email, full_name, is_admin FROM users WHERE id = $1",
+                    user_id
+                )
+                return dict(user) if user else None
+
+            update_fields.append(f"updated_at = ${param_count}")
+            values.append(datetime.utcnow())
+            param_count += 1
+            values.append(user_id)
+
+            query = f"""
+                UPDATE users
+                SET {', '.join(update_fields)}
+                WHERE id = ${param_count}
+                RETURNING id, username, email, full_name, is_admin
+            """
+
+            user = await conn.fetchrow(query, *values)
+            return dict(user) if user else None
+
+        except asyncpg.UniqueViolationError:
+            return None
+        except Exception as e:
+            print(f"❌ Error updating profile: {e}")
+            return None
+        finally:
+            await conn.close()
+
     async def change_password(self, user_id: int, old_password: str, new_password: str) -> bool:
         """Change user password"""
         conn = await self.get_connection()

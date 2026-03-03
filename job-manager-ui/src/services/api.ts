@@ -146,6 +146,33 @@ export const jobApi = {
     const response = await api.get(`/api/admin/country-analytics?days=${days}`);
     return response.data;
   },
+
+  // Admin: Create a new user
+  createUser: async (userData: {
+    username: string;
+    email: string;
+    password: string;
+    full_name?: string;
+    is_admin?: boolean;
+    job_types?: string[];
+    keywords?: string[];
+    preferred_countries?: string[];
+  }): Promise<any> => {
+    const response = await api.post('/api/admin/users', userData);
+    return response.data;
+  },
+
+  // Profile: Update current user's profile
+  updateProfile: async (data: { full_name?: string; email?: string }): Promise<any> => {
+    const response = await api.put('/api/auth/profile', data);
+    return response.data;
+  },
+
+  // Profile: Change password
+  changePassword: async (data: { old_password: string; new_password: string }): Promise<any> => {
+    const response = await api.post('/api/auth/change-password', data);
+    return response.data;
+  },
 };
 
 export default api;

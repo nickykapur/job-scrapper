@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Users, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Users, CheckCircle, XCircle, Clock, AlertCircle, Plus, X } from 'lucide-react';
 import { jobApi } from '../services/api';
 
 interface UserData {
@@ -24,11 +25,40 @@ interface UserData {
   };
 }
 
+const ALL_JOB_TYPES = ['software', 'hr', 'cybersecurity', 'sales', 'finance', 'marketing', 'data', 'design', 'biotech', 'engineering', 'events'];
+const ALL_COUNTRIES = ['Ireland', 'Spain', 'Panama', 'Luxembourg', 'Germany', 'Switzerland', 'United States'];
+
+interface CreateUserForm {
+  username: string;
+  email: string;
+  password: string;
+  full_name: string;
+  is_admin: boolean;
+  job_types: string[];
+  keywords: string[];
+  preferred_countries: string[];
+}
+
 export const UserManagement: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [users, setUsers] = useState<UserData[]>([]);
   const [processingUserId, setProcessingUserId] = useState<number | null>(null);
+
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [keywordInput, setKeywordInput] = useState('');
+  const [createForm, setCreateForm] = useState<CreateUserForm>({
+    username: '',
+    email: '',
+    password: '',
+    full_name: '',
+    is_admin: false,
+    job_types: [],
+    keywords: [],
+    preferred_countries: [],
+  });
 
   useEffect(() => {
     loadUsers();
@@ -69,6 +99,58 @@ export const UserManagement: React.FC = () => {
     } finally {
       setProcessingUserId(null);
     }
+  };
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreating(true);
+    setCreateError(null);
+    try {
+      await jobApi.createUser({
+        username: createForm.username,
+        email: createForm.email,
+        password: createForm.password,
+        full_name: createForm.full_name || undefined,
+        is_admin: createForm.is_admin,
+        job_types: createForm.job_types.length ? createForm.job_types : undefined,
+        keywords: createForm.keywords.length ? createForm.keywords : undefined,
+        preferred_countries: createForm.preferred_countries.length ? createForm.preferred_countries : undefined,
+      });
+      setShowCreateForm(false);
+      setCreateForm({ username: '', email: '', password: '', full_name: '', is_admin: false, job_types: [], keywords: [], preferred_countries: [] });
+      setKeywordInput('');
+      await loadUsers();
+    } catch (err: any) {
+      setCreateError(err.response?.data?.detail || 'Failed to create user');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const toggleJobType = (type: string) => {
+    setCreateForm(prev => ({
+      ...prev,
+      job_types: prev.job_types.includes(type)
+        ? prev.job_types.filter(t => t !== type)
+        : [...prev.job_types, type],
+    }));
+  };
+
+  const toggleCountry = (country: string) => {
+    setCreateForm(prev => ({
+      ...prev,
+      preferred_countries: prev.preferred_countries.includes(country)
+        ? prev.preferred_countries.filter(c => c !== country)
+        : [...prev.preferred_countries, country],
+    }));
+  };
+
+  const addKeyword = () => {
+    const kw = keywordInput.trim();
+    if (kw && !createForm.keywords.includes(kw)) {
+      setCreateForm(prev => ({ ...prev, keywords: [...prev.keywords, kw] }));
+    }
+    setKeywordInput('');
   };
 
   const formatDate = (dateString: string | null) => {
@@ -114,15 +196,167 @@ export const UserManagement: React.FC = () => {
   return (
     <div className="container mx-auto p-6 max-w-7xl">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold flex items-center gap-2 mb-2">
-          <Users className="h-8 w-8" />
-          User Management
-        </h1>
-        <p className="text-muted-foreground">
-          Manage user accounts and their active status
-        </p>
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-2 mb-2">
+            <Users className="h-8 w-8" />
+            User Management
+          </h1>
+          <p className="text-muted-foreground">
+            Manage user accounts and their active status
+          </p>
+        </div>
+        <Button onClick={() => { setShowCreateForm(!showCreateForm); setCreateError(null); }} className="flex items-center gap-2">
+          {showCreateForm ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+          {showCreateForm ? 'Cancel' : 'Create User'}
+        </Button>
       </div>
+
+      {/* Create User Form */}
+      {showCreateForm && (
+        <Card className="mb-6 border-primary/50">
+          <CardHeader>
+            <CardTitle className="text-lg">Create New User</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleCreateUser} className="space-y-4">
+              {createError && (
+                <div className="p-3 rounded bg-red-500/10 border border-red-500/30 text-red-600 text-sm">
+                  {createError}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Username *</label>
+                  <Input
+                    required
+                    placeholder="username"
+                    value={createForm.username}
+                    onChange={e => setCreateForm(p => ({ ...p, username: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Full Name</label>
+                  <Input
+                    placeholder="Full Name"
+                    value={createForm.full_name}
+                    onChange={e => setCreateForm(p => ({ ...p, full_name: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Email *</label>
+                  <Input
+                    required
+                    type="email"
+                    placeholder="email@example.com"
+                    value={createForm.email}
+                    onChange={e => setCreateForm(p => ({ ...p, email: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Password *</label>
+                  <Input
+                    required
+                    type="password"
+                    placeholder="Min 8 characters"
+                    value={createForm.password}
+                    onChange={e => setCreateForm(p => ({ ...p, password: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              {/* Job Types */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Job Types</label>
+                <div className="flex flex-wrap gap-2">
+                  {ALL_JOB_TYPES.map(type => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => toggleJobType(type)}
+                      className={`px-3 py-1 rounded-full text-xs border transition-colors ${
+                        createForm.job_types.includes(type)
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'border-muted-foreground/30 hover:border-primary/50'
+                      }`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Countries */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Preferred Countries</label>
+                <div className="flex flex-wrap gap-2">
+                  {ALL_COUNTRIES.map(country => (
+                    <button
+                      key={country}
+                      type="button"
+                      onClick={() => toggleCountry(country)}
+                      className={`px-3 py-1 rounded-full text-xs border transition-colors ${
+                        createForm.preferred_countries.includes(country)
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'border-muted-foreground/30 hover:border-primary/50'
+                      }`}
+                    >
+                      {country}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Keywords */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Custom Search Keywords</label>
+                <div className="flex gap-2 mb-2">
+                  <Input
+                    placeholder="e.g., Python Developer"
+                    value={keywordInput}
+                    onChange={e => setKeywordInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addKeyword(); } }}
+                  />
+                  <Button type="button" variant="outline" onClick={addKeyword}>Add</Button>
+                </div>
+                {createForm.keywords.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {createForm.keywords.map(kw => (
+                      <span key={kw} className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-muted border">
+                        {kw}
+                        <button type="button" onClick={() => setCreateForm(p => ({ ...p, keywords: p.keywords.filter(k => k !== kw) }))}>
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="is_admin"
+                  checked={createForm.is_admin}
+                  onChange={e => setCreateForm(p => ({ ...p, is_admin: e.target.checked }))}
+                  className="rounded"
+                />
+                <label htmlFor="is_admin" className="text-sm">Grant admin privileges</label>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button type="submit" disabled={creating}>
+                  {creating ? 'Creating...' : 'Create User'}
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setShowCreateForm(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
