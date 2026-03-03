@@ -47,8 +47,6 @@ if _sentry_dsn:
             # Forward Python logger.info+ to Sentry logs; errors create Issues
             LoggingIntegration(level=logging.INFO, event_level=logging.ERROR),
         ],
-        # Unlocks sentry_sdk.logger.info/warning/error() API
-        enable_logs=True,
         traces_sample_rate=0.2,   # 20% of requests — fine for this traffic level
         profiles_sample_rate=0.0, # Profiling off — not needed at this scale
         # Keep False: we don't want user IPs/passwords sent to a third party
