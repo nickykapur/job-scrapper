@@ -15,15 +15,16 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from linkedin_job_scraper import LinkedInJobScraper
 
 # Configuration for parallelization
-MAX_CONCURRENT_SEARCHES = 4  # Safe for GitHub Actions (2 cores, 7GB RAM)
+MAX_CONCURRENT_SEARCHES = 8  # GitHub Actions has enough headroom for 8 parallel browsers
 BATCH_DELAY_SECONDS = 2      # Delay between batches to avoid LinkedIn rate limits
 
 # Title keywords for job type validation
 # Only jobs with these keywords in title will be kept for each job type
 TITLE_KEYWORDS = {
-    'software': ['software', 'developer', 'engineer', 'frontend', 'backend', 'full stack', 'fullstack',
-                 'python', 'java', 'react', 'node', 'devops', 'cloud', 'data engineer', 'web developer',
-                 'mobile developer', 'ios', 'android', 'qa', 'sdet', 'programming', 'coder'],
+    'software': ['software', 'developer', 'software engineer', 'cloud engineer', 'frontend', 'backend',
+                 'full stack', 'fullstack', 'python', 'java', 'react', 'node', 'devops', 'data engineer',
+                 'web developer', 'mobile developer', 'ios', 'android', 'qa', 'sdet', 'programming',
+                 'coder', 'ml engineer', 'ai engineer', 'platform engineer'],
     'hr': ['hr', 'human resources', 'recruiter', 'recruiting', 'talent', 'people operations',
            'people partner', 'hiring', 'staffing', 'workforce'],
     'cybersecurity': ['security', 'cyber', 'soc', 'infosec', 'information security', 'penetration',
@@ -54,6 +55,29 @@ def is_relevant_job(title, job_type):
 
     title_lower = title.lower()
     return any(kw in title_lower for kw in keywords)
+
+def get_active_job_types(railway_url):
+    """Fetch which job types have active users from the API.
+    Returns a set of job type strings, e.g. {'software', 'hr', 'biotech'}.
+    Falls back to all types if the API call fails so scraping never silently stops."""
+    try:
+        if not railway_url.startswith('http'):
+            railway_url = f'https://{railway_url}'
+
+        response = requests.get(f"{railway_url}/api/admin/scraping-targets", timeout=15)
+        if response.status_code == 200:
+            data = response.json()
+            active = {jt['type'] for jt in data.get('job_types', [])}
+            if active:
+                print(f"[API] Active job types: {', '.join(sorted(active))}")
+                return active
+    except Exception as e:
+        print(f"[WARN] Could not fetch active job types: {e}")
+
+    # Default: scrape everything so no jobs are missed on API failure
+    all_types = {'software', 'hr', 'cybersecurity', 'sales', 'finance', 'marketing', 'biotech', 'engineering', 'events'}
+    print(f"[WARN] Falling back to all job types: {', '.join(sorted(all_types))}")
+    return all_types
 
 def load_existing_jobs_from_railway(railway_url):
     """Load existing jobs from Railway database via API"""
@@ -232,8 +256,9 @@ def scrape_single_country(location, country_name, railway_url):
     print(f"🌍 Scraping {country_name} - {location}")
     print(f"{'='*80}\n")
 
-    # Load existing jobs from Railway
+    # Load existing jobs and active job types from Railway
     existing_jobs = load_existing_jobs_from_railway(railway_url)
+    active_job_types = get_active_job_types(railway_url)
 
     # Search terms - Multi-user configuration
     software_search_terms = [
@@ -491,7 +516,17 @@ def scrape_single_country(location, country_name, railway_url):
         "Hospitality Assistant"
     ]
 
-    search_terms = software_search_terms + hr_search_terms + cybersecurity_search_terms + sales_search_terms + finance_search_terms + marketing_search_terms + biotech_search_terms + engineering_search_terms + events_search_terms
+    # Only include search terms for job types that have active users
+    search_terms = []
+    if 'software'      in active_job_types: search_terms += software_search_terms
+    if 'hr'            in active_job_types: search_terms += hr_search_terms
+    if 'cybersecurity' in active_job_types: search_terms += cybersecurity_search_terms
+    if 'sales'         in active_job_types: search_terms += sales_search_terms
+    if 'finance'       in active_job_types: search_terms += finance_search_terms
+    if 'marketing'     in active_job_types: search_terms += marketing_search_terms
+    if 'biotech'       in active_job_types: search_terms += biotech_search_terms
+    if 'engineering'   in active_job_types: search_terms += engineering_search_terms
+    if 'events'        in active_job_types: search_terms += events_search_terms
 
     # Initialize shared data structures (thread-safe)
     all_new_jobs = {}

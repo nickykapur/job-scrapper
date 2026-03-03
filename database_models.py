@@ -36,6 +36,7 @@ class JobDatabase:
         self.db_url = os.environ.get('DATABASE_URL')
         self.use_postgres = bool(self.db_url)
         self.json_file = "jobs_database.json"
+        self._pool = None  # Connection pool — reuses connections instead of opening new ones
 
         if self.use_postgres:
             print("🐘 Using PostgreSQL database")
@@ -124,7 +125,7 @@ class JobDatabase:
             return False, None
         finally:
             if own_conn:
-                await conn.close()
+                await self._release(conn)
 
     async def add_job_signature(self, company: str, title: str, country: str, job_id: str) -> bool:
         """
@@ -167,7 +168,7 @@ class JobDatabase:
             print(f"⚠️  Error adding job signature: {e}")
             return False
         finally:
-            await conn.close()
+            await self._release(conn)
 
     def _parse_datetime_string(self, date_string: Optional[str]) -> Optional[datetime]:
         """Parse datetime string to datetime object"""
@@ -189,23 +190,51 @@ class JobDatabase:
             print(f"Warning: Could not parse date '{date_string}': {e}")
             return None
 
+    async def _ensure_pool(self):
+        """Create connection pool if not already created."""
+        if self._pool is not None:
+            return
+        try:
+            self._pool = await asyncpg.create_pool(
+                self.db_url,
+                min_size=2,   # Keep 2 connections always ready
+                max_size=10,  # Max 10 concurrent connections
+                command_timeout=60,
+            )
+            print("🔗 PostgreSQL connection pool created (min=2, max=10)")
+        except Exception as e:
+            print(f"❌ Failed to create connection pool: {e}")
+            self.use_postgres = False
+
     async def get_connection(self):
-        """Get database connection"""
+        """Acquire a connection from the pool."""
         if not self.use_postgres:
             return None
-        
+        await self._ensure_pool()
+        if self._pool is None:
+            return None
         try:
-            return await asyncpg.connect(self.db_url)
+            return await self._pool.acquire()
         except Exception as e:
             print(f"❌ Database connection failed: {e}")
-            self.use_postgres = False
             return None
+
+    async def _release(self, conn):
+        """Return a connection back to the pool."""
+        if self._pool and conn:
+            try:
+                await self._pool.release(conn)
+            except Exception:
+                pass
 
     async def init_database(self):
         """Initialize database tables"""
         if not self.use_postgres:
             return True
-            
+
+        # Create pool eagerly on startup so the first real request doesn't pay for it
+        await self._ensure_pool()
+
         conn = await self.get_connection()
         if not conn:
             return False
@@ -221,7 +250,7 @@ class JobDatabase:
             print(f"❌ Database initialization failed: {e}")
             return False
         finally:
-            await conn.close()
+            await self._release(conn)
 
     async def get_all_jobs(self) -> Dict[str, Any]:
         """Get all jobs from database or JSON"""
@@ -309,7 +338,7 @@ class JobDatabase:
             print(f"❌ Error fetching jobs from PostgreSQL: {e}")
             return self._get_jobs_from_json()
         finally:
-            await conn.close()
+            await self._release(conn)
 
     def _get_jobs_from_json(self) -> Dict[str, Any]:
         """Fallback: Get jobs from JSON file"""
@@ -365,25 +394,19 @@ class JobDatabase:
             print(f"❌ Error updating job in PostgreSQL: {e}")
             return False
         finally:
-            await conn.close()
+            await self._release(conn)
 
     async def _update_job_status_postgres(self, job_id: str, applied: Optional[bool] = None, rejected: Optional[bool] = None) -> bool:
         """Update job applied and/or rejected status in PostgreSQL"""
-        print(f"🔄 DEBUG: _update_job_status_postgres called for job {job_id} - applied: {applied}, rejected: {rejected}")
-
         conn = await self.get_connection()
         if not conn:
-            print(f"❌ DEBUG: No PostgreSQL connection, falling back to JSON")
             return self._update_job_status_json(job_id, applied, rejected)
 
         try:
             # First check if job exists and get its details
             existing = await conn.fetchrow("SELECT id, rejected, applied, title, company, country FROM jobs WHERE id = $1", job_id)
             if not existing:
-                print(f"❌ DEBUG: Job {job_id} not found in PostgreSQL database")
                 return False
-
-            print(f"✅ DEBUG: Found job {job_id} in database - current status: rejected={existing['rejected']}, applied={existing['applied']}")
 
             # Build dynamic SQL based on what fields need updating
             updates = []
@@ -413,32 +436,13 @@ class JobDatabase:
 
             # Build and execute query with explicit transaction
             query = f"UPDATE jobs SET {', '.join(updates)}, updated_at = CURRENT_TIMESTAMP WHERE id = ${param_count}"
-            print(f"🔄 DEBUG: Executing SQL: {query}")
-            print(f"🔄 DEBUG: With parameters: {params}")
 
             # Use explicit transaction to ensure changes are committed
             async with conn.transaction():
                 result = await conn.execute(query, *params)
-                print(f"✅ DEBUG: SQL execution result: {result}")
 
                 # Check if any rows were affected (job was found and updated)
                 rows_affected = int(result.split()[-1]) if result and 'UPDATE' in result else 0
-                print(f"✅ DEBUG: Rows affected: {rows_affected}")
-
-                if rows_affected > 0:
-                    # Verify the update by reading the job back WITHIN the same transaction
-                    updated_job = await conn.fetchrow("SELECT id, rejected, applied FROM jobs WHERE id = $1", job_id)
-                    if updated_job:
-                        print(f"✅ DEBUG: After update WITHIN transaction - job {job_id}: rejected={updated_job['rejected']}, applied={updated_job['applied']}")
-                    else:
-                        print(f"❌ DEBUG: Could not verify update - job {job_id} not found after update")
-
-            # Verify the update OUTSIDE the transaction to confirm persistence
-            final_check = await conn.fetchrow("SELECT id, rejected, applied FROM jobs WHERE id = $1", job_id)
-            if final_check:
-                print(f"🔍 DEBUG: Final verification OUTSIDE transaction - job {job_id}: rejected={final_check['rejected']}, applied={final_check['applied']}")
-            else:
-                print(f"❌ DEBUG: Final verification failed - job {job_id} not found")
 
             # If marking as applied OR rejected, add job signature for deduplication
             if (applied or rejected) and rows_affected > 0:
@@ -456,7 +460,7 @@ class JobDatabase:
             print(f"❌ Error updating job in PostgreSQL: {e}")
             return False
         finally:
-            await conn.close()
+            await self._release(conn)
 
     def _update_job_json(self, job_id: str, applied: bool) -> bool:
         """Fallback: Update job in JSON"""
@@ -720,7 +724,7 @@ class JobDatabase:
             print(f"❌ Error syncing to PostgreSQL: {e}")
             return {"error": str(e)}
         finally:
-            await conn.close()
+            await self._release(conn)
 
     def _sync_jobs_json(self, jobs_data: Dict[str, Any]) -> Dict[str, int]:
         """Fallback: Sync jobs to JSON"""

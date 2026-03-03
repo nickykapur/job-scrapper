@@ -6,6 +6,7 @@ Just serves existing job database - no React build needed
 
 from fastapi import FastAPI, HTTPException, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -18,6 +19,43 @@ import asyncio
 # Load environment variables from .env file
 from dotenv import load_dotenv
 load_dotenv()
+
+# ── Logging setup ────────────────────────────────────────────────────────────
+# Use Python logging instead of print() so Sentry and Railway can filter by level
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s %(name)s: %(message)s",
+)
+logger = logging.getLogger("job_scraper")
+
+# ── Sentry: errors + tracing + logs ─────────────────────────────────────────
+import sentry_sdk
+from sentry_sdk.integrations.fastapi import FastApiIntegration
+from sentry_sdk.integrations.asyncio import AsyncioIntegration
+from sentry_sdk.integrations.logging import LoggingIntegration
+
+_sentry_dsn = os.environ.get("SENTRY_DSN")
+if _sentry_dsn:
+    sentry_sdk.init(
+        dsn=_sentry_dsn,
+        environment=os.environ.get("RAILWAY_ENVIRONMENT", "development"),
+        integrations=[
+            FastApiIntegration(),
+            AsyncioIntegration(),
+            # Forward Python logger.warning/error calls to Sentry automatically
+            LoggingIntegration(level=logging.WARNING, event_level=logging.ERROR),
+        ],
+        # Unlocks sentry_sdk.logger.info/warning/error() API
+        enable_logs=True,
+        traces_sample_rate=0.2,   # 20% of requests — fine for this traffic level
+        profiles_sample_rate=0.0, # Profiling off — not needed at this scale
+        # Keep False: we don't want user IPs/passwords sent to a third party
+        send_default_pii=False,
+        ignore_errors=[KeyboardInterrupt],
+    )
+    logger.info("Sentry error tracking enabled")
 
 # Import database functionality
 try:
@@ -53,6 +91,9 @@ db = None
 if DATABASE_AVAILABLE:
     db = JobDatabase()
     print(f"🗄️  Database initialization: {'PostgreSQL' if db.use_postgres else 'JSON fallback'}")
+
+# Compress responses — reduces egress on Railway (minimum_size=500 bytes skips tiny responses)
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 # Enable CORS for all origins
 app.add_middleware(
@@ -227,32 +268,13 @@ async def startup_event():
 async def load_jobs():
     """Load jobs from database ONLY - no JSON fallback"""
     if not db or not DATABASE_AVAILABLE:
-        print(f"❌ DEBUG: Database not available - db: {db}, DATABASE_AVAILABLE: {DATABASE_AVAILABLE}")
         raise HTTPException(status_code=500, detail="Database not available")
-
-    print(f"🔄 DEBUG: load_jobs() called - use_postgres: {db.use_postgres if db else 'N/A'}")
-    print(f"🔄 DEBUG: DATABASE_URL exists: {bool(os.environ.get('DATABASE_URL'))}")
 
     try:
         jobs_data = await db.get_all_jobs()
-
-        # DEBUG: Check what we're returning and WHERE it came from
-        actual_jobs = {k: v for k, v in jobs_data.items() if not k.startswith('_')}
-        rejected_jobs = {k: v for k, v in actual_jobs.items() if v.get('rejected', False)}
-
-        print(f"🔄 DEBUG: load_jobs() returning {len(actual_jobs)} jobs, {len(rejected_jobs)} rejected")
-        print(f"🔍 DEBUG: Data source - PostgreSQL: {db.use_postgres}, JSON fallback: {not db.use_postgres}")
-
-        if len(rejected_jobs) > 0:
-            print(f"🚫 DEBUG: Rejected jobs being returned:")
-            for job_id, job in rejected_jobs.items():
-                print(f"   {job_id[:12]}... - rejected: {job.get('rejected')}, applied: {job.get('applied')}")
-        else:
-            print(f"📋 DEBUG: No rejected jobs found in returned data")
-
         return jobs_data
     except Exception as e:
-        print(f"❌ DEBUG: Database load failed: {e}")
+        print(f"❌ Database load failed: {e}")
         raise HTTPException(status_code=500, detail=f"Database load failed: {str(e)}")
 
 async def save_jobs(jobs_data):
@@ -280,12 +302,19 @@ async def home():
 
 @app.get("/health")
 async def health():
-    """Health check"""
-    jobs = await load_jobs()
+    """Health check — lightweight ping, does not load all jobs"""
+    db_ok = False
+    if db and db.use_postgres and db._pool:
+        try:
+            conn = await db.get_connection()
+            await conn.fetchval("SELECT 1")
+            await db._release(conn)
+            db_ok = True
+        except Exception:
+            pass
     return {
         "status": "healthy",
-        "jobs_count": len([k for k in jobs.keys() if not k.startswith("_")]),
-        "database_type": "postgresql" if (db and db.use_postgres) else "json_fallback"
+        "database": "postgresql" if db_ok else ("json_fallback" if db else "unavailable"),
     }
 
 async def get_current_user_optional(authorization: Optional[str] = Header(None)):
@@ -298,6 +327,14 @@ async def get_current_user_optional(authorization: Optional[str] = Header(None))
         # Remove 'Bearer ' prefix
         token = authorization.replace("Bearer ", "")
         payload = decode_access_token(token)
+
+        # Tell Sentry who this user is — shows up on every error from this request
+        if payload and _sentry_dsn:
+            sentry_sdk.set_user({
+                "id": payload.get("user_id"),
+                "username": payload.get("username"),
+            })
+
         return payload
     except:
         return None
@@ -1252,15 +1289,31 @@ async def sync_jobs(request: SyncJobsRequest):
         raise HTTPException(status_code=500, detail="Database not available")
 
     try:
+        logger.info("Scraper sync started: %d jobs incoming", len(request.jobs_data))
+
         # Use database sync method
         result = await db.sync_jobs_from_scraper(request.jobs_data)
         if "error" in result:
             raise HTTPException(status_code=500, detail=result["error"])
 
+        new_jobs = result.get("new_jobs", 0)
+        updated_jobs = result.get("updated_jobs", 0)
+        skipped_reposts = result.get("skipped_reposts", 0)
+
+        # Metrics: track scraper output in Sentry so you can see trends over time
+        if _sentry_dsn:
+            sentry_sdk.metrics.incr("jobs.synced",   value=len(request.jobs_data))
+            sentry_sdk.metrics.incr("jobs.new",       value=new_jobs)
+            sentry_sdk.metrics.incr("jobs.updated",   value=updated_jobs)
+            sentry_sdk.metrics.incr("jobs.reposts_skipped", value=skipped_reposts)
+
+        logger.info("Scraper sync done: %d new, %d updated, %d reposts skipped",
+                    new_jobs, updated_jobs, skipped_reposts)
+
         return {
             "success": True,
             "message": f"Synced jobs successfully to database",
-            "new_jobs": result.get("new_jobs", 0),
+            "new_jobs": new_jobs,
             "new_software": result.get("new_software", 0),
             "new_hr": result.get("new_hr", 0),
             "new_cybersecurity": result.get("new_cybersecurity", 0),
@@ -1270,11 +1323,11 @@ async def sync_jobs(request: SyncJobsRequest):
             "new_biotech": result.get("new_biotech", 0),
             "new_engineering": result.get("new_engineering", 0),
             "new_events": result.get("new_events", 0),
-            "updated_jobs": result.get("updated_jobs", 0),
-            "skipped_reposts": result.get("skipped_reposts", 0)
+            "updated_jobs": updated_jobs,
+            "skipped_reposts": skipped_reposts,
         }
     except Exception as e:
-        print(f"❌ Database sync failed: {e}")
+        logger.error("Database sync failed: %s", e)
         raise HTTPException(status_code=500, detail=f"Database sync failed: {str(e)}")
 
 @app.post("/api/jobs/bulk-reject")

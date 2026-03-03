@@ -138,6 +138,10 @@ class LinkedInJobScraper:
                 chrome_options.binary_location = "/usr/bin/google-chrome-stable"
                 print("🐳 Railway environment detected - using optimized Chrome settings")
 
+            # GitHub Actions environment detection - use pre-installed Chrome
+            if os.environ.get("GITHUB_ACTIONS") == "true":
+                chrome_options.binary_location = "/usr/bin/google-chrome"
+
             chrome_options.add_argument("--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
             
             # Try to use chromedriver from PATH first
@@ -404,10 +408,12 @@ class LinkedInJobScraper:
             'operaciones de seguridad', 'respuesta a incidentes', 'ingeniero de seguridad'
         ]
 
-        # Software-related keywords
+        # Software-related keywords (NO broad 'engineer' - causes misclassification with other engineering types)
         software_keywords = [
             # Core programming roles
-            'software', 'developer', 'engineer', 'programming', 'programmer',
+            'software', 'developer', 'programming', 'programmer',
+            'software engineer', 'cloud engineer', 'site reliability engineer',
+            'platform engineer', 'infrastructure engineer',
             'development', 'coding', 'technical',
 
             # Languages
@@ -423,7 +429,7 @@ class LinkedInJobScraper:
             'cloud', 'aws', 'azure', 'firebase', 'lambda', 'devops', 'gcp', 'google cloud',
             'cloudflare', 'heroku', 'digital ocean', 'kubernetes', 'k8s', 'docker', 'terraform',
 
-            # Data skills (EXPANDED)
+            # Data skills
             'data', 'analytics', 'machine learning', 'ai', 'artificial intelligence',
             'data science', 'data scientist', 'data engineer', 'data engineering',
             'data analyst', 'data analytics', 'business intelligence', 'bi analyst',
@@ -434,7 +440,7 @@ class LinkedInJobScraper:
             'deep learning', 'neural network', 'nlp', 'natural language processing',
             'computer vision', 'tensorflow', 'pytorch', 'scikit-learn', 'pandas',
             'numpy', 'jupyter', 'data mining', 'predictive analytics', 'statistical analysis',
-            'quantitative analyst', 'research scientist', 'applied scientist',
+            'quantitative analyst', 'applied scientist',
 
             # Database
             'database', 'sql', 'nosql', 'mysql', 'postgresql', 'mongodb', 'oracle',
@@ -587,6 +593,14 @@ class LinkedInJobScraper:
                     continue
                 # Exception: Allow if it's an events/hospitality role
                 if any(ev in title_lower for ev in ['event', 'events', 'conference', 'hospitality', 'venue', 'catering', 'banquet']):
+                    continue
+                # Exception: Allow if it's an engineering role (we have engineering users)
+                if any(eng in title_lower for eng in ['mechanical engineer', 'manufacturing engineer', 'industrial engineer',
+                    'process engineer', 'aerospace engineer', 'design engineer', 'production engineer',
+                    'quality engineer', 'electrical engineer', 'chemical engineer', 'project engineer', 'field engineer']):
+                    continue
+                # Exception: Allow if it's a biotech/lab role
+                if any(bio in title_lower for bio in ['scientist', 'research', 'biotech', 'laboratory', 'lab ', 'biolog', 'cell culture']):
                     continue
                 # Otherwise, reject this job
                 return False
@@ -827,55 +841,35 @@ class LinkedInJobScraper:
             'talento humano', 'analista de recursos humanos', 'coordinador de rrhh'
         ]
 
-        # Software keywords (English and Spanish) - EXPANDED
+        # Software keywords (English and Spanish) - SPECIFIC to software/tech roles
         software_keywords = [
-            # English - Core programming roles
-            'software', 'developer', 'engineer', 'programming', 'programmer',
+            # English - Core programming roles (NO broad 'engineer' - causes misclassification)
+            'software', 'developer', 'programming', 'programmer',
+            'software engineer', 'cloud engineer', 'site reliability engineer',
+            'platform engineer', 'infrastructure engineer',
             'frontend', 'backend', 'full stack', 'devops', 'react', 'python',
             'javascript', 'node', 'java', 'web developer', 'mobile developer',
 
-            # Data science & engineering roles (EXPANDED)
+            # Data science & engineering roles
             'data scientist', 'data engineer', 'data engineering', 'data analyst',
             'data analytics', 'machine learning', 'ml engineer', 'mlops',
             'business intelligence', 'bi analyst', 'data science', 'big data',
             'data pipeline', 'data warehouse', 'data lake', 'etl', 'elt',
-            'analytics engineer', 'quantitative analyst', 'research scientist',
+            'analytics engineer', 'quantitative analyst',
             'applied scientist', 'ai engineer', 'deep learning', 'nlp engineer',
             'computer vision', 'data modeling', 'statistical analyst',
+
+            # QA/Testing
+            'qa engineer', 'sdet', 'test automation', 'qa automation',
 
             # Spanish
             'desarrollador', 'programador', 'ingeniero de software', 'ingeniero software',
             'desarrollador web', 'desarrollador fullstack', 'desarrollador full stack',
             'desarrollador frontend', 'desarrollador backend', 'arquitecto de software',
-            'arquitecto software', 'ingeniero', 'dev ', ' dev', 'qa automation',
+            'arquitecto software', 'dev ', ' dev',
             'qa automatizador', 'desarrollador mobile', 'desarrollador móvil',
             'científico de datos', 'ingeniero de datos', 'analista de datos'
         ]
-
-        # Check for cybersecurity first (most specific)
-        for keyword in cybersecurity_keywords:
-            if keyword in text:
-                return 'cybersecurity'
-
-        # Check for sales (before HR and software to avoid false positives)
-        for keyword in sales_keywords:
-            if keyword in text:
-                return 'sales'
-
-        # Check for finance (before HR to avoid false positives with "financial" in other contexts)
-        for keyword in finance_keywords:
-            if keyword in text:
-                return 'finance'
-
-        # Check for HR (more specific than software)
-        for keyword in hr_keywords:
-            if keyword in text:
-                return 'hr'
-
-        # Check for software
-        for keyword in software_keywords:
-            if keyword in text:
-                return 'software'
 
         # Marketing keywords
         marketing_keywords = [
@@ -886,11 +880,6 @@ class LinkedInJobScraper:
             'growth marketing', 'campaign manager', 'paid media', 'copywriter'
         ]
 
-        # Check for marketing
-        for keyword in marketing_keywords:
-            if keyword in text:
-                return 'marketing'
-
         # Biotech/Life Sciences keywords
         biotech_keywords = [
             'research scientist', 'scientist', 'research associate',
@@ -899,11 +888,6 @@ class LinkedInJobScraper:
             'biochemist', 'microbiologist', 'lab technician', 'laboratory'
         ]
 
-        # Check for biotech
-        for keyword in biotech_keywords:
-            if keyword in text:
-                return 'biotech'
-
         # Engineering (non-software) keywords
         engineering_keywords = [
             'mechanical engineer', 'manufacturing engineer', 'industrial engineer',
@@ -911,11 +895,6 @@ class LinkedInJobScraper:
             'production engineer', 'quality engineer', 'electrical engineer',
             'chemical engineer', 'project engineer', 'field engineer'
         ]
-
-        # Check for engineering
-        for keyword in engineering_keywords:
-            if keyword in text:
-                return 'engineering'
 
         # Events & Hospitality keywords
         events_keywords = [
@@ -941,10 +920,52 @@ class LinkedInJobScraper:
             'events trainee', 'events officer', 'event officer'
         ]
 
-        # Check for events
+        # === CHECK ORDER: most specific first, broad software last ===
+
+        # 1. Cybersecurity (most specific)
+        for keyword in cybersecurity_keywords:
+            if keyword in text:
+                return 'cybersecurity'
+
+        # 2. Engineering (before software - 'engineer' is too broad for software)
+        for keyword in engineering_keywords:
+            if keyword in text:
+                return 'engineering'
+
+        # 3. Biotech (before software - 'research scientist' conflicts)
+        for keyword in biotech_keywords:
+            if keyword in text:
+                return 'biotech'
+
+        # 4. Events & Hospitality
         for keyword in events_keywords:
             if keyword in text:
                 return 'events'
+
+        # 5. Sales
+        for keyword in sales_keywords:
+            if keyword in text:
+                return 'sales'
+
+        # 6. Finance
+        for keyword in finance_keywords:
+            if keyword in text:
+                return 'finance'
+
+        # 7. Marketing
+        for keyword in marketing_keywords:
+            if keyword in text:
+                return 'marketing'
+
+        # 8. HR
+        for keyword in hr_keywords:
+            if keyword in text:
+                return 'hr'
+
+        # 9. Software (last - broadest category, catches remaining tech roles)
+        for keyword in software_keywords:
+            if keyword in text:
+                return 'software'
 
         # Default
         return 'other'
