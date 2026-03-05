@@ -33,7 +33,7 @@ if _sentry_dsn:
 
 # Configuration for parallelization
 MAX_CONCURRENT_SEARCHES = 8  # GitHub Actions has enough headroom for 8 parallel browsers
-BATCH_DELAY_SECONDS = 2      # Delay between batches to avoid LinkedIn rate limits
+BATCH_DELAY_SECONDS = 1      # Delay between batches to avoid LinkedIn rate limits
 
 # Title keywords for job type validation
 # Only jobs with these keywords in title will be kept for each job type
@@ -190,10 +190,9 @@ def search_single_term(term, location, country_name, existing_jobs, job_type, th
         print(f"   [THREAD-{thread_id}] Searching: {term}")
 
         results = {}
-        easy_apply_count = 0
 
-        # First pass: Get ALL jobs (without Easy Apply filter)
-        # Use "7d" (7 days) for more job coverage — "week" was a typo that fell back to 24h
+        # Single pass: Get all jobs — card-level Easy Apply detection runs inside extract_job_data
+        # (detect_easy_apply reads the card HTML, so no second pass needed)
         all_results = thread_scraper.search_jobs(
             keywords=term,
             location=location,
@@ -202,38 +201,12 @@ def search_single_term(term, location, country_name, existing_jobs, job_type, th
         )
 
         if all_results:
-            # Add country info to all jobs
             for job_id, job_data in all_results.items():
                 job_data["country"] = country_name
                 job_data["search_location"] = location
                 results[job_id] = job_data
 
             print(f"   [THREAD-{thread_id}] ✓ {term}: Found {len(all_results)} jobs")
-
-            # Second pass: Get Easy Apply jobs ONLY to mark them
-            try:
-                easy_apply_results = thread_scraper.search_jobs(
-                    keywords=term,
-                    location=location,
-                    date_filter="7d",
-                    easy_apply_filter=True
-                )
-
-                if easy_apply_results:
-                    for job_id, job_data in easy_apply_results.items():
-                        if job_id in results:
-                            results[job_id]['easy_apply'] = True
-                            easy_apply_count += 1
-                        else:
-                            # Add new job that wasn't in first pass
-                            job_data["country"] = country_name
-                            job_data["search_location"] = location
-                            job_data['easy_apply'] = True
-                            results[job_id] = job_data
-
-                    print(f"   [THREAD-{thread_id}] ⚡ {term}: Marked {easy_apply_count} as Easy Apply")
-            except Exception as ea_error:
-                print(f"   [THREAD-{thread_id}] ⚠ {term}: Easy Apply failed: {ea_error}")
         else:
             print(f"   [THREAD-{thread_id}] ⊗ {term}: No new jobs")
 
@@ -368,169 +341,75 @@ def scrape_single_country(location, country_name, railway_url, dry_run=False):
 
     # Marketing / Digital Marketing search terms
     marketing_search_terms = [
-        # Digital Marketing
-        "Digital Marketing",
         "Digital Marketing Manager",
-        "Digital Marketing Executive",
-        "Digital Marketing Specialist",
-        "Digital Marketing Coordinator",
-        # PPC & Paid Media
-        "PPC Executive",
+        "Performance Marketing",
         "PPC Manager",
         "Paid Media Manager",
-        "Paid Social Manager",
-        "Performance Marketing",
-        # Social Media
         "Social Media Manager",
-        "Social Media Executive",
-        "Social Media Marketing",
-        "Community Manager",
-        # SEO & Content
-        "SEO Specialist",
-        "SEO Executive",
         "SEO Manager",
         "Content Marketing Manager",
-        "Content Marketing Specialist",
-        # CRM & Email
         "CRM Manager",
-        "CRM Executive",
         "Email Marketing Manager",
-        "Marketing Automation",
-        # General Marketing
         "Marketing Manager",
-        "Marketing Executive",
-        "Marketing Coordinator",
-        "Marketing Specialist",
         "Brand Manager",
         "Growth Marketing",
-        # Communications
-        "Communications Manager",
-        "Communications Executive",
-        "Marketing Communications",
-        "PR Executive"
+        "Community Manager",
+        "PR Manager",
     ]
 
     # Biotech / Life Sciences search terms (for Melis - Molecular Biology)
     biotech_search_terms = [
-        # Research Scientist roles
         "Research Scientist",
-        "Scientist",
         "Research Associate",
-        "Junior Scientist",
-        "Associate Scientist",
-        "R&D Scientist",
-        "Lab Scientist",
-        # Molecular Biology specific
-        "Molecular Biologist",
-        "Cell Biologist",
         "Cell Culture Scientist",
-        # Gene Editing & Gene Therapy
+        "Molecular Biologist",
         "Gene Therapy Scientist",
         "CRISPR Scientist",
-        "Gene Editing",
-        # Biotech specific
-        "Biotechnology",
         "Biotech Scientist",
-        "Biologics",
-        "Biopharmaceutical",
-        # Viral Vectors
-        "Viral Vector",
-        "AAV Scientist",
-        "Vector Production",
-        # Process Development
         "Process Development Scientist",
-        "Upstream Process",
-        "Downstream Process",
-        # Lab Technician roles
+        "Upstream Process Scientist",
+        "Downstream Process Scientist",
         "Lab Technician",
-        "Research Technician",
         "Laboratory Technician",
-        # German terms
+        # German terms (for Germany searches)
         "Wissenschaftler",
         "Laborant",
         "Biotechnologe",
-        "Molekularbiologe"
     ]
 
     # Engineering / Manufacturing search terms (for Maria - Mechanical/Manufacturing Engineering)
     engineering_search_terms = [
-        # Mechanical Engineering
         "Mechanical Engineer",
-        "Junior Mechanical Engineer",
-        "Mechanical Design Engineer",
-        "Mechanical Engineer Entry Level",
-        # Manufacturing Engineering
         "Manufacturing Engineer",
-        "Junior Manufacturing Engineer",
         "Production Engineer",
         "Process Engineer",
-        "Manufacturing Process Engineer",
-        # Industrial Engineering
         "Industrial Engineer",
-        "Junior Industrial Engineer",
-        "Operations Engineer",
-        "Continuous Improvement Engineer",
-        "Lean Engineer",
-        # Aerospace Engineering
         "Aerospace Engineer",
-        "Junior Aerospace Engineer",
-        "Propulsion Engineer",
-        # Design & CAD
         "Design Engineer",
-        "CAD Engineer",
-        "Product Design Engineer",
         "R&D Engineer",
-        # Quality & Testing
         "Quality Engineer",
         "Test Engineer",
-        "Reliability Engineer",
-        # Data & Simulation
         "Simulation Engineer",
-        "Data Analyst Manufacturing",
-        "Process Optimization",
-        # Entry level
-        "Entry Level Engineer",
+        "Continuous Improvement Engineer",
         "Associate Engineer",
-        "Engineering Trainee"
+        "Entry Level Engineer",
     ]
 
     # Events / Hospitality search terms (for Blanca - Event Management)
     events_search_terms = [
-        # Event Management
         "Event Manager",
         "Event Coordinator",
-        "Event Executive",
         "Event Planner",
-        "Events Manager",
-        "Events Coordinator",
-        "Junior Event Manager",
-        "Event Assistant",
-        # Conference & Meetings
+        "Event Executive",
         "Conference Manager",
-        "Conference Coordinator",
-        "Meeting Planner",
-        "Meeting Coordinator",
-        "Corporate Events",
         "Corporate Event Manager",
-        # Hospitality
+        "Meeting Planner",
         "Hospitality Manager",
-        "Hospitality Coordinator",
         "Venue Manager",
-        "Venue Coordinator",
-        "Banquet Manager",
         "Catering Manager",
-        # Weddings & Social
         "Wedding Planner",
-        "Wedding Coordinator",
-        "Social Events Manager",
-        # Tourism
-        "Tourism Manager",
-        "Business Tourism",
         "MICE Coordinator",
-        # Entry level
-        "Event Intern",
         "Events Assistant",
-        "Hospitality Assistant"
     ]
 
     # Default search terms per job type (hardcoded fallback/base)

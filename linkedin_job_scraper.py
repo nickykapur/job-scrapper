@@ -215,7 +215,7 @@ class LinkedInJobScraper:
         filter_label = " [Easy Apply]" if easy_apply_filter else ""
         print(f"Searching jobs{filter_label}: {url}")
         self.driver.get(url)
-        time.sleep(3)
+        time.sleep(2)
 
         # Wait for job listings to load — try multiple selectors since LinkedIn changes their HTML
         job_loaded = False
@@ -235,7 +235,7 @@ class LinkedInJobScraper:
             return []
 
         # Additional wait for dynamic content to load
-        time.sleep(3)
+        time.sleep(2)
 
         # Try to dismiss any popups or overlays
         try:
