@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Activity, RefreshCw, ExternalLink, AlertCircle } from 'lucide-react';
+import { Activity, RefreshCw, ExternalLink, AlertCircle, Database, Trash2 } from 'lucide-react';
 import { jobApi } from '../services/api';
 
 interface WorkflowRun {
@@ -34,6 +34,13 @@ interface JobTypeStat {
   count: number;
 }
 
+interface TableStat {
+  table_name: string;
+  total_bytes: number;
+  data_bytes: number;
+  row_estimate: number;
+}
+
 interface MonitoringData {
   generated_at: string;
   github: {
@@ -44,6 +51,21 @@ interface MonitoringData {
     total_jobs: number;
     by_country: CountryStat[];
     by_job_type: JobTypeStat[];
+    storage: {
+      db_bytes: number;
+      jobs_total_bytes: number;
+      jobs_data_bytes: number;
+      jobs_index_bytes: number;
+    } | null;
+    tables: TableStat[];
+    oldest_job: string | null;
+    newest_job: string | null;
+    cleanup_candidates: {
+      rejected: number;
+      applied: number;
+      older_than_30d: number;
+      older_than_60d: number;
+    } | null;
     error: string | null;
   };
   sentry: {
@@ -71,6 +93,34 @@ const formatDate = (iso: string | null): string => {
   } catch {
     return iso;
   }
+};
+
+const formatBytes = (bytes: number): string => {
+  if (bytes === 0) return '0 B';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+};
+
+// Railway Hobby plan free tier: 1 GB storage
+const RAILWAY_LIMIT_BYTES = 1 * 1024 * 1024 * 1024;
+
+const StorageBar: React.FC<{ bytes: number; limitBytes: number; label: string }> = ({ bytes, limitBytes, label }) => {
+  const pct = Math.min((bytes / limitBytes) * 100, 100);
+  const color = pct > 85 ? 'bg-red-500' : pct > 60 ? 'bg-yellow-500' : 'bg-green-500';
+  return (
+    <div>
+      <div className="flex justify-between text-sm mb-1">
+        <span>{label}</span>
+        <span className="font-medium">{formatBytes(bytes)} / {formatBytes(limitBytes)}</span>
+      </div>
+      <div className="h-3 rounded-full bg-muted overflow-hidden">
+        <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
+      </div>
+      <div className="text-xs text-muted-foreground mt-0.5 text-right">{pct.toFixed(1)}% used</div>
+    </div>
+  );
 };
 
 const getStatusBadge = (run: WorkflowRun) => {
@@ -136,6 +186,8 @@ export const MonitoringPage: React.FC = () => {
 
   if (!data) return null;
 
+  const db = data.database;
+
   return (
     <div className="container mx-auto p-6 max-w-7xl space-y-6">
       {/* Header */}
@@ -154,6 +206,188 @@ export const MonitoringPage: React.FC = () => {
           Refresh
         </Button>
       </div>
+
+      {/* DB Storage — most important, show first */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Database className="h-5 w-5" />
+            Database Storage
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {db.error ? (
+            <p className="text-sm text-red-500">{db.error}</p>
+          ) : db.storage ? (
+            <div className="space-y-5">
+              {/* Progress bars */}
+              <StorageBar
+                bytes={db.storage.db_bytes}
+                limitBytes={RAILWAY_LIMIT_BYTES}
+                label="Total DB size (Railway 1 GB limit)"
+              />
+              <StorageBar
+                bytes={db.storage.jobs_total_bytes}
+                limitBytes={RAILWAY_LIMIT_BYTES}
+                label="Jobs table (data + indexes)"
+              />
+
+              {/* Breakdown cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+                <div className="rounded-lg border p-3 text-center">
+                  <div className="text-xs text-muted-foreground mb-1">Total DB</div>
+                  <div className="font-bold text-lg">{formatBytes(db.storage.db_bytes)}</div>
+                </div>
+                <div className="rounded-lg border p-3 text-center">
+                  <div className="text-xs text-muted-foreground mb-1">Jobs Data</div>
+                  <div className="font-bold text-lg">{formatBytes(db.storage.jobs_data_bytes)}</div>
+                </div>
+                <div className="rounded-lg border p-3 text-center">
+                  <div className="text-xs text-muted-foreground mb-1">Jobs Indexes</div>
+                  <div className="font-bold text-lg">{formatBytes(db.storage.jobs_index_bytes)}</div>
+                </div>
+                <div className="rounded-lg border p-3 text-center">
+                  <div className="text-xs text-muted-foreground mb-1">Total Jobs</div>
+                  <div className="font-bold text-lg">{db.total_jobs.toLocaleString()}</div>
+                </div>
+              </div>
+
+              {/* Date range */}
+              {(db.oldest_job || db.newest_job) && (
+                <div className="flex gap-6 text-sm text-muted-foreground border-t pt-3">
+                  <span>Oldest job: <span className="text-foreground">{formatDate(db.oldest_job)}</span></span>
+                  <span>Newest job: <span className="text-foreground">{formatDate(db.newest_job)}</span></span>
+                </div>
+              )}
+
+              {/* All tables */}
+              {db.tables && db.tables.length > 0 && (
+                <div>
+                  <h3 className="font-semibold mb-2 text-sm">All Tables</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b text-muted-foreground">
+                          <th className="text-left p-2">Table</th>
+                          <th className="text-left p-2">Size (total)</th>
+                          <th className="text-left p-2">Data</th>
+                          <th className="text-left p-2">Rows (est.)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {db.tables.map(t => (
+                          <tr key={t.table_name} className="border-b hover:bg-muted/50">
+                            <td className="p-2 font-mono text-xs">{t.table_name}</td>
+                            <td className="p-2">{formatBytes(t.total_bytes)}</td>
+                            <td className="p-2">{formatBytes(t.data_bytes)}</td>
+                            <td className="p-2">{t.row_estimate.toLocaleString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Storage data unavailable</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Cleanup Candidates */}
+      {db.cleanup_candidates && (
+        <Card className="border-orange-500/30">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-orange-500" />
+              Cleanup Candidates
+              <span className="text-sm font-normal text-muted-foreground ml-1">— safe rows to delete to free space</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-3 text-center">
+                <div className="text-xs text-muted-foreground mb-1">Rejected jobs</div>
+                <div className="font-bold text-xl text-red-600">{db.cleanup_candidates.rejected.toLocaleString()}</div>
+              </div>
+              <div className="rounded-lg border border-green-500/30 bg-green-500/5 p-3 text-center">
+                <div className="text-xs text-muted-foreground mb-1">Applied jobs</div>
+                <div className="font-bold text-xl text-green-600">{db.cleanup_candidates.applied.toLocaleString()}</div>
+              </div>
+              <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-3 text-center">
+                <div className="text-xs text-muted-foreground mb-1">Older than 30 days</div>
+                <div className="font-bold text-xl text-yellow-600">{db.cleanup_candidates.older_than_30d.toLocaleString()}</div>
+              </div>
+              <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 p-3 text-center">
+                <div className="text-xs text-muted-foreground mb-1">Older than 60 days</div>
+                <div className="font-bold text-xl text-orange-600">{db.cleanup_candidates.older_than_60d.toLocaleString()}</div>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              Tip: deleting rejected + old unapplied jobs is safe and will free the most space.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Job Distribution */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Job Distribution</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {db.error ? (
+            <p className="text-sm text-red-500">{db.error}</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* By Country */}
+              <div>
+                <h3 className="font-semibold mb-2 text-sm">By Country</h3>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-muted-foreground">
+                      <th className="text-left p-2">Country</th>
+                      <th className="text-left p-2">Count</th>
+                      <th className="text-left p-2">Last Scraped</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {db.by_country.map((row) => (
+                      <tr key={row.country} className="border-b hover:bg-muted/50">
+                        <td className="p-2">{row.country}</td>
+                        <td className="p-2 font-medium">{row.count.toLocaleString()}</td>
+                        <td className="p-2 text-muted-foreground">{formatDate(row.last_scraped)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* By Job Type */}
+              <div>
+                <h3 className="font-semibold mb-2 text-sm">By Job Type</h3>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-muted-foreground">
+                      <th className="text-left p-2">Job Type</th>
+                      <th className="text-left p-2">Count</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {db.by_job_type.map((row) => (
+                      <tr key={row.job_type} className="border-b hover:bg-muted/50">
+                        <td className="p-2 capitalize">{row.job_type}</td>
+                        <td className="p-2 font-medium">{row.count.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* GitHub Actions */}
       <Card>
@@ -212,71 +446,6 @@ export const MonitoringPage: React.FC = () => {
               )}
             </div>
           ))}
-        </CardContent>
-      </Card>
-
-      {/* Database Stats */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Database Stats</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {data.database.error ? (
-            <p className="text-sm text-red-500">{data.database.error}</p>
-          ) : (
-            <div className="space-y-6">
-              <div className="flex items-center gap-4">
-                <div className="text-4xl font-bold">{data.database.total_jobs.toLocaleString()}</div>
-                <div className="text-muted-foreground">total jobs in database</div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* By Country */}
-                <div>
-                  <h3 className="font-semibold mb-2">Jobs by Country</h3>
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b text-muted-foreground">
-                        <th className="text-left p-2">Country</th>
-                        <th className="text-left p-2">Count</th>
-                        <th className="text-left p-2">Last Scraped</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.database.by_country.map((row) => (
-                        <tr key={row.country} className="border-b hover:bg-muted/50">
-                          <td className="p-2">{row.country}</td>
-                          <td className="p-2 font-medium">{row.count.toLocaleString()}</td>
-                          <td className="p-2 text-muted-foreground">{formatDate(row.last_scraped)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* By Job Type */}
-                <div>
-                  <h3 className="font-semibold mb-2">Jobs by Job Type</h3>
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b text-muted-foreground">
-                        <th className="text-left p-2">Job Type</th>
-                        <th className="text-left p-2">Count</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.database.by_job_type.map((row) => (
-                        <tr key={row.job_type} className="border-b hover:bg-muted/50">
-                          <td className="p-2 capitalize">{row.job_type}</td>
-                          <td className="p-2 font-medium">{row.count.toLocaleString()}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
 

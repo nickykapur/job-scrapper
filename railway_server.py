@@ -2468,7 +2468,7 @@ async def get_monitoring(current_user: Dict[str, Any] = Depends(get_current_user
     workflow_results = await asyncio.gather(*[fetch_workflow_runs(w) for w in workflows])
 
     # DB stats
-    db_stats = {"total_jobs": 0, "by_country": [], "by_job_type": [], "error": None}
+    db_stats = {"total_jobs": 0, "by_country": [], "by_job_type": [], "storage": None, "oldest_job": None, "newest_job": None, "error": None}
     if db and DATABASE_AVAILABLE and db.use_postgres:
         conn = None
         try:
@@ -2496,6 +2496,68 @@ async def get_monitoring(current_user: Dict[str, Any] = Depends(get_current_user
                     {"job_type": r["job_type"] or "unknown", "count": r["count"]}
                     for r in job_type_rows
                 ]
+
+                # Storage metrics
+                storage_row = await conn.fetchrow("""
+                    SELECT
+                        pg_database_size(current_database()) AS db_bytes,
+                        pg_total_relation_size('jobs') AS jobs_total_bytes,
+                        pg_relation_size('jobs') AS jobs_data_bytes,
+                        pg_indexes_size('jobs') AS jobs_index_bytes
+                """)
+                if storage_row:
+                    db_stats["storage"] = {
+                        "db_bytes": storage_row["db_bytes"],
+                        "jobs_total_bytes": storage_row["jobs_total_bytes"],
+                        "jobs_data_bytes": storage_row["jobs_data_bytes"],
+                        "jobs_index_bytes": storage_row["jobs_index_bytes"],
+                    }
+
+                # Table sizes for all tables
+                table_rows = await conn.fetch("""
+                    SELECT
+                        relname AS table_name,
+                        pg_total_relation_size(relid) AS total_bytes,
+                        pg_relation_size(relid) AS data_bytes,
+                        n_live_tup AS row_estimate
+                    FROM pg_stat_user_tables
+                    ORDER BY total_bytes DESC
+                """)
+                db_stats["tables"] = [
+                    {
+                        "table_name": r["table_name"],
+                        "total_bytes": r["total_bytes"],
+                        "data_bytes": r["data_bytes"],
+                        "row_estimate": r["row_estimate"],
+                    }
+                    for r in table_rows
+                ]
+
+                # Oldest/newest jobs for cleanup guidance
+                date_row = await conn.fetchrow("""
+                    SELECT MIN(scraped_at) AS oldest, MAX(scraped_at) AS newest FROM jobs
+                """)
+                if date_row:
+                    db_stats["oldest_job"] = date_row["oldest"].isoformat() if date_row["oldest"] else None
+                    db_stats["newest_job"] = date_row["newest"].isoformat() if date_row["newest"] else None
+
+                # Rejected + applied job counts (safe to delete)
+                cleanup_row = await conn.fetchrow("""
+                    SELECT
+                        COUNT(*) FILTER (WHERE rejected = TRUE) AS rejected_count,
+                        COUNT(*) FILTER (WHERE applied = TRUE) AS applied_count,
+                        COUNT(*) FILTER (WHERE scraped_at < NOW() - INTERVAL '30 days') AS older_than_30d,
+                        COUNT(*) FILTER (WHERE scraped_at < NOW() - INTERVAL '60 days') AS older_than_60d
+                    FROM jobs
+                """)
+                if cleanup_row:
+                    db_stats["cleanup_candidates"] = {
+                        "rejected": cleanup_row["rejected_count"],
+                        "applied": cleanup_row["applied_count"],
+                        "older_than_30d": cleanup_row["older_than_30d"],
+                        "older_than_60d": cleanup_row["older_than_60d"],
+                    }
+
         except Exception as e:
             db_stats["error"] = str(e)
         finally:
