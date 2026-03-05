@@ -142,7 +142,7 @@ class LinkedInJobScraper:
             if os.environ.get("GITHUB_ACTIONS") == "true":
                 chrome_options.binary_location = "/usr/bin/google-chrome"
 
-            chrome_options.add_argument("--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+            chrome_options.add_argument("--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
             
             # Try to use chromedriver from PATH first
             try:
@@ -217,12 +217,20 @@ class LinkedInJobScraper:
         self.driver.get(url)
         time.sleep(3)
 
-        # Wait for job listings to load
-        try:
-            WebDriverWait(self.driver, 15).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, ".job-search-card"))
-            )
-        except:
+        # Wait for job listings to load — try multiple selectors since LinkedIn changes their HTML
+        job_loaded = False
+        for wait_selector in [".job-search-card", ".base-card", "[data-entity-urn*='job']",
+                               ".jobs-search__results-list li", ".scaffold-layout__list-container li"]:
+            try:
+                WebDriverWait(self.driver, 10).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, wait_selector))
+                )
+                job_loaded = True
+                break
+            except:
+                continue
+
+        if not job_loaded:
             print("No job listings found or page didn't load properly")
             return []
 
@@ -251,9 +259,16 @@ class LinkedInJobScraper:
         # Scroll to load more jobs
         self.scroll_to_load_jobs()
 
-        # Find all job cards - try multiple selectors
+        # Find all job cards - try multiple selectors (LinkedIn changes these periodically)
         job_cards = []
-        selectors = [".job-search-card", ".base-card", ".job-result-card", "[data-entity-urn*='job']"]
+        selectors = [
+            ".job-search-card",
+            ".base-card",
+            ".job-result-card",
+            "[data-entity-urn*='job']",
+            ".jobs-search__results-list li",
+            ".scaffold-layout__list-container li",
+        ]
 
         for selector in selectors:
             cards = self.driver.find_elements(By.CSS_SELECTOR, selector)

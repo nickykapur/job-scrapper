@@ -1,0 +1,136 @@
+name: Test Scraper (Dry Run)
+
+on:
+  workflow_dispatch:
+    inputs:
+      country:
+        description: Country to scrape
+        required: true
+        type: choice
+        default: Ireland
+        options:
+          - Ireland
+          - Spain
+          - Panama
+          - Luxembourg
+          - Germany
+          - Switzerland
+          - United States (New York)
+          - United States (Chicago)
+          - United States (Los Angeles)
+      min_jobs_expected:
+        description: Fail if fewer than this many jobs found (0 = never fail on count)
+        required: false
+        default: '5'
+
+jobs:
+  test-scrape:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Resolve location string
+        id: location
+        run: |
+          case "${{ github.event.inputs.country }}" in
+            "Ireland")                   echo "location=Dublin, County Dublin, Ireland" >> $GITHUB_OUTPUT ; echo "country=Ireland" >> $GITHUB_OUTPUT ;;
+            "Spain")                     echo "location=Madrid, Community of Madrid, Spain" >> $GITHUB_OUTPUT ; echo "country=Spain" >> $GITHUB_OUTPUT ;;
+            "Panama")                    echo "location=Panama City, Panama" >> $GITHUB_OUTPUT ; echo "country=Panama" >> $GITHUB_OUTPUT ;;
+            "Luxembourg")                echo "location=Luxembourg City, Luxembourg" >> $GITHUB_OUTPUT ; echo "country=Luxembourg" >> $GITHUB_OUTPUT ;;
+            "Germany")                   echo "location=Berlin, Germany" >> $GITHUB_OUTPUT ; echo "country=Germany" >> $GITHUB_OUTPUT ;;
+            "Switzerland")               echo "location=Basel, Switzerland" >> $GITHUB_OUTPUT ; echo "country=Switzerland" >> $GITHUB_OUTPUT ;;
+            "United States (New York)")  echo "location=New York, New York, United States" >> $GITHUB_OUTPUT ; echo "country=United States" >> $GITHUB_OUTPUT ;;
+            "United States (Chicago)")   echo "location=Chicago, Illinois, United States" >> $GITHUB_OUTPUT ; echo "country=United States" >> $GITHUB_OUTPUT ;;
+            "United States (Los Angeles)") echo "location=Los Angeles, California, United States" >> $GITHUB_OUTPUT ; echo "country=United States" >> $GITHUB_OUTPUT ;;
+          esac
+
+      - name: Run scraper (dry-run — no DB writes)
+        id: scrape
+        run: |
+          python daily_single_country_scraper.py \
+            --location "${{ steps.location.outputs.location }}" \
+            --country "${{ steps.location.outputs.country }}" \
+            --dry-run
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+
+      - name: Upload scraped jobs as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scraped-jobs-${{ steps.location.outputs.country }}-${{ github.run_id }}
+          path: scraped_jobs_*.json
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Parse results and assert
+        if: always()
+        run: |
+          COUNTRY="${{ steps.location.outputs.country }}"
+          FILE="scraped_jobs_$(echo "$COUNTRY" | tr '[:upper:]' '[:lower:]' | tr ' ' '_').json"
+          MIN_JOBS="${{ github.event.inputs.min_jobs_expected }}"
+
+          echo "### Scraper Test Results — ${{ github.event.inputs.country }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ ! -f "$FILE" ]; then
+            echo "#### ❌ No output file found" >> $GITHUB_STEP_SUMMARY
+            echo "The scraper produced no JSON file. This usually means it crashed before finishing." >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+          TOTAL=$(python3 -c "import json; d=json.load(open('$FILE')); print(d['total_scraped'])")
+          BY_TYPE=$(python3 -c "
+          import json
+          d = json.load(open('$FILE'))
+          for jt, count in d['by_type'].items():
+              print(f'| {jt} | {count} |')
+          ")
+
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Country | ${{ github.event.inputs.country }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Total jobs scraped | $TOTAL |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### By Job Type" >> $GITHUB_STEP_SUMMARY
+          echo "| Job Type | Jobs Found |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|------------|" >> $GITHUB_STEP_SUMMARY
+          echo "$BY_TYPE" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Sample job titles for quick sanity check
+          echo "#### Sample Job Titles (first 10)" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          python3 -c "
+          import json
+          d = json.load(open('$FILE'))
+          for job in list(d['jobs'])[:10]:
+              title = job.get('title', 'N/A')
+              company = job.get('company', 'N/A')
+              jt = job.get('job_type', '?')
+              print(f'[{jt}] {title} @ {company}')
+          " >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+          # Pass/fail assertion
+          if [ "$MIN_JOBS" -gt "0" ] && [ "$TOTAL" -lt "$MIN_JOBS" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "#### ❌ FAILED: Only $TOTAL jobs found (expected at least $MIN_JOBS)" >> $GITHUB_STEP_SUMMARY
+            echo "This likely means LinkedIn selectors are broken or the scraper is being blocked." >> $GITHUB_STEP_SUMMARY
+            exit 1
+          else
+            echo "#### ✅ PASSED: $TOTAL jobs found" >> $GITHUB_STEP_SUMMARY
+          fi

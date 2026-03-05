@@ -193,11 +193,11 @@ def search_single_term(term, location, country_name, existing_jobs, job_type, th
         easy_apply_count = 0
 
         # First pass: Get ALL jobs (without Easy Apply filter)
-        # Changed from "24h" to "week" to get more job coverage (7 days)
+        # Use "7d" (7 days) for more job coverage — "week" was a typo that fell back to 24h
         all_results = thread_scraper.search_jobs(
             keywords=term,
             location=location,
-            date_filter="week",
+            date_filter="7d",
             easy_apply_filter=False
         )
 
@@ -215,7 +215,7 @@ def search_single_term(term, location, country_name, existing_jobs, job_type, th
                 easy_apply_results = thread_scraper.search_jobs(
                     keywords=term,
                     location=location,
-                    date_filter="week",
+                    date_filter="7d",
                     easy_apply_filter=True
                 )
 
@@ -263,7 +263,7 @@ def search_single_term(term, location, country_name, existing_jobs, job_type, th
             except:
                 pass
 
-def scrape_single_country(location, country_name, railway_url):
+def scrape_single_country(location, country_name, railway_url, dry_run=False):
     """Scrape jobs for a single country"""
 
     logger.info("=== Scraping %s (%s) ===", country_name, location)
@@ -646,32 +646,47 @@ def scrape_single_country(location, country_name, railway_url):
     actual_new_total = 0
 
     if all_new_jobs:
-        logger.info("[UPLOAD] Uploading %d jobs to Railway...", len(all_new_jobs))
-        upload_result = upload_jobs_to_railway(railway_url, all_new_jobs)
-
-        if upload_result['success']:
-            actual_new_total = upload_result['new_jobs']
-            logger.info("[UPLOAD] Success: %d new jobs added to DB for %s", actual_new_total, country_name)
-            if _sentry_dsn:
-                sentry_sdk.add_breadcrumb(
-                    message=f"{country_name}: {actual_new_total} new jobs uploaded",
-                    data={"country": country_name, "new_jobs": actual_new_total, **{f"{jt}_jobs": len(jobs) for jt, jobs in jobs_by_type.items()}},
-                    level="info",
-                )
+        if dry_run:
+            # Dry-run: save to JSON artifact instead of uploading to Railway
+            import json as _json
+            output_file = f"scraped_jobs_{country_name.lower().replace(' ', '_')}.json"
+            with open(output_file, 'w') as f:
+                _json.dump({
+                    'country': country_name,
+                    'location': location,
+                    'total_scraped': len(all_new_jobs),
+                    'by_type': {jt: len(jobs) for jt, jobs in jobs_by_type.items()},
+                    'jobs': list(all_new_jobs.values())
+                }, f, indent=2, default=str)
+            actual_new_total = len(all_new_jobs)
+            logger.info("[DRY-RUN] Saved %d jobs to %s (no upload to Railway)", actual_new_total, output_file)
         else:
-            logger.error("[UPLOAD] Failed to upload jobs for %s", country_name)
-            return False
+            logger.info("[UPLOAD] Uploading %d jobs to Railway...", len(all_new_jobs))
+            upload_result = upload_jobs_to_railway(railway_url, all_new_jobs)
+
+            if upload_result['success']:
+                actual_new_total = upload_result['new_jobs']
+                logger.info("[UPLOAD] Success: %d new jobs added to DB for %s", actual_new_total, country_name)
+                if _sentry_dsn:
+                    sentry_sdk.add_breadcrumb(
+                        message=f"{country_name}: {actual_new_total} new jobs uploaded",
+                        data={"country": country_name, "new_jobs": actual_new_total, **{f"{jt}_jobs": len(jobs) for jt, jobs in jobs_by_type.items()}},
+                        level="info",
+                    )
+            else:
+                logger.error("[UPLOAD] Failed to upload jobs for %s", country_name)
+                return False
     else:
-        logger.info("[SKIP] No new jobs to upload for %s", country_name)
+        logger.info("[SKIP] No jobs scraped for %s", country_name)
 
     # Set output for GitHub Actions
     if os.getenv('GITHUB_OUTPUT'):
         with open(os.getenv('GITHUB_OUTPUT'), 'a') as f:
             f.write(f"jobs_found={actual_new_total}\n")
             f.write(f"country={country_name}\n")
-            # Write per-type counts dynamically so new job types show up automatically
             for jt, jobs in jobs_by_type.items():
                 f.write(f"{jt}_jobs={len(jobs)}\n")
+            f.write(f"dry_run={'true' if dry_run else 'false'}\n")
 
     logger.info("=== %s scraping complete ===", country_name)
     return True
@@ -682,17 +697,19 @@ if __name__ == "__main__":
     parser.add_argument('--location', required=True, help='Location string (e.g., "Dublin, County Dublin, Ireland")')
     parser.add_argument('--country', required=True, help='Country name (e.g., "Ireland")')
     parser.add_argument('--railway-url', help='Railway URL (default from env)')
+    parser.add_argument('--dry-run', action='store_true',
+                        help='Scrape but save results to JSON file instead of uploading to Railway')
 
     args = parser.parse_args()
 
-    railway_url = args.railway_url or os.environ.get('RAILWAY_URL')
+    railway_url = args.railway_url or os.environ.get('RAILWAY_URL', '')
 
-    if not railway_url:
-        print("❌ Error: RAILWAY_URL not provided")
+    if not args.dry_run and not railway_url:
+        print("❌ Error: RAILWAY_URL not provided (use --dry-run to skip upload)")
         sys.exit(1)
 
     try:
-        success = scrape_single_country(args.location, args.country, railway_url)
+        success = scrape_single_country(args.location, args.country, railway_url, dry_run=args.dry_run)
     except Exception as e:
         logger.error("Scraper crashed for %s: %s", args.country, e, exc_info=True)
         if _sentry_dsn:
