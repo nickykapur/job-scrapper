@@ -173,6 +173,16 @@ export const jobApi = {
     const response = await api.post('/api/auth/change-password', data);
     return response.data;
   },
+
+  // Admin: Get monitoring data (GitHub Actions, DB stats, Sentry)
+  getMonitoring: async (): Promise<any> => (await api.get('/api/admin/monitoring')).data,
+
+  // Admin: Get all users with country breakdown
+  getUserCountries: async (): Promise<any> => (await api.get('/api/admin/user-countries')).data,
+
+  // Admin: Update enabled countries for a user
+  updateUserCountries: async (userId: number, countries: string[]): Promise<any> =>
+    (await api.post(`/api/admin/users/${userId}/countries`, { countries })).data,
 };
 
 export default api;

@@ -6,6 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Users, CheckCircle, XCircle, Clock, AlertCircle, Plus, X } from 'lucide-react';
 import { jobApi } from '../services/api';
 
+interface CountryBreakdown {
+  country: string;
+  enabled: boolean;
+  job_count: number;
+}
+
 interface UserData {
   id: number;
   username: string;
@@ -17,6 +23,7 @@ interface UserData {
   last_login: string | null;
   job_types: string[] | null;
   countries: string[] | null;
+  country_breakdown?: CountryBreakdown[];
   stats: {
     total_applied: number;
     total_rejected: number;
@@ -60,8 +67,15 @@ export const UserManagement: React.FC = () => {
     preferred_countries: [],
   });
 
+  // Country breakdown state
+  const [expandedUserId, setExpandedUserId] = useState<number | null>(null);
+  const [userCountriesData, setUserCountriesData] = useState<Record<number, CountryBreakdown[]>>({});
+  const [countriesLoading, setCountriesLoading] = useState(false);
+  const [updatingCountry, setUpdatingCountry] = useState<string | null>(null);
+
   useEffect(() => {
     loadUsers();
+    loadUserCountries();
   }, []);
 
   const loadUsers = async () => {
@@ -78,19 +92,30 @@ export const UserManagement: React.FC = () => {
     }
   };
 
+  const loadUserCountries = async () => {
+    try {
+      setCountriesLoading(true);
+      const data = await jobApi.getUserCountries();
+      const lookup: Record<number, CountryBreakdown[]> = {};
+      for (const u of data.users) {
+        lookup[u.id] = u.country_breakdown;
+      }
+      setUserCountriesData(lookup);
+    } catch (err) {
+      console.error('Failed to load user countries:', err);
+    } finally {
+      setCountriesLoading(false);
+    }
+  };
+
   const handleToggleUserStatus = async (userId: number, currentStatus: boolean) => {
     try {
       setProcessingUserId(userId);
-
       if (currentStatus) {
-        // Deactivate user
         await jobApi.deactivateUser(userId);
       } else {
-        // Activate user
         await jobApi.activateUser(userId);
       }
-
-      // Reload users to get updated status
       await loadUsers();
     } catch (err: any) {
       const errorMsg = err.response?.data?.detail || 'Failed to update user status';
@@ -98,6 +123,30 @@ export const UserManagement: React.FC = () => {
       console.error('Failed to update user:', err);
     } finally {
       setProcessingUserId(null);
+    }
+  };
+
+  const handleToggleCountry = async (userId: number, country: string, currentlyEnabled: boolean) => {
+    const key = `${userId}-${country}`;
+    setUpdatingCountry(key);
+
+    const prevBreakdown = userCountriesData[userId] || [];
+    const newBreakdown = prevBreakdown.map(c =>
+      c.country === country ? { ...c, enabled: !currentlyEnabled } : c
+    );
+    const newCountries = newBreakdown.filter(c => c.enabled).map(c => c.country);
+
+    // Optimistic update
+    setUserCountriesData(prev => ({ ...prev, [userId]: newBreakdown }));
+
+    try {
+      await jobApi.updateUserCountries(userId, newCountries);
+    } catch (err) {
+      // Rollback
+      setUserCountriesData(prev => ({ ...prev, [userId]: prevBreakdown }));
+      console.error('Failed to update countries:', err);
+    } finally {
+      setUpdatingCountry(null);
     }
   };
 
@@ -120,6 +169,7 @@ export const UserManagement: React.FC = () => {
       setCreateForm({ username: '', email: '', password: '', full_name: '', is_admin: false, job_types: [], keywords: [], preferred_countries: [] });
       setKeywordInput('');
       await loadUsers();
+      await loadUserCountries();
     } catch (err: any) {
       setCreateError(err.response?.data?.detail || 'Failed to create user');
     } finally {
@@ -411,96 +461,168 @@ export const UserManagement: React.FC = () => {
                   <th className="text-left p-3 font-semibold">Email</th>
                   <th className="text-left p-3 font-semibold">Status</th>
                   <th className="text-left p-3 font-semibold">Job Types</th>
+                  <th className="text-left p-3 font-semibold">Countries</th>
                   <th className="text-left p-3 font-semibold">Stats</th>
                   <th className="text-left p-3 font-semibold">Last Login</th>
                   <th className="text-right p-3 font-semibold">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {users.map((user) => (
-                  <tr key={user.id} className="border-b hover:bg-muted/50">
-                    <td className="p-3">
-                      <div>
-                        <div className="font-semibold">{user.full_name || user.username}</div>
-                        <div className="text-sm text-muted-foreground">@{user.username}</div>
-                      </div>
-                    </td>
-                    <td className="p-3 text-sm">{user.email}</td>
-                    <td className="p-3">
-                      <div className="flex items-center gap-2">
-                        {user.is_active ? (
-                          <Badge className="bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/50">
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            Active
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="border-red-500/50 text-red-600 dark:text-red-400">
-                            <XCircle className="h-3 w-3 mr-1" />
-                            Inactive
-                          </Badge>
-                        )}
-                        {user.is_admin && (
-                          <Badge variant="secondary" className="text-xs">
-                            Admin
-                          </Badge>
-                        )}
-                      </div>
-                    </td>
-                    <td className="p-3">
-                      <div className="flex flex-wrap gap-1">
-                        {user.job_types && user.job_types.length > 0 ? (
-                          user.job_types.slice(0, 2).map((type) => (
-                            <Badge key={type} variant="outline" className="text-xs">
-                              {type}
-                            </Badge>
-                          ))
-                        ) : (
-                          <span className="text-xs text-muted-foreground">None</span>
-                        )}
-                        {user.job_types && user.job_types.length > 2 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{user.job_types.length - 2}
-                          </Badge>
-                        )}
-                      </div>
-                    </td>
-                    <td className="p-3">
-                      <div className="text-sm space-y-1">
-                        <div className="text-green-600 dark:text-green-400">
-                          {user.stats.total_applied} applied
-                        </div>
-                        <div className="text-red-600 dark:text-red-400">
-                          {user.stats.total_rejected} rejected
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-3 text-sm">
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <Clock className="h-3 w-3" />
-                        {formatDate(user.last_login)}
-                      </div>
-                    </td>
-                    <td className="p-3 text-right">
-                      <Button
-                        size="sm"
-                        variant={user.is_active ? "destructive" : "default"}
-                        onClick={() => handleToggleUserStatus(user.id, user.is_active)}
-                        disabled={processingUserId === user.id || user.is_admin}
-                      >
-                        {processingUserId === user.id ? (
-                          <div className="flex items-center gap-2">
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                            Processing...
+                {users.map((user) => {
+                  const breakdown = userCountriesData[user.id];
+                  const enabledCountries = breakdown ? breakdown.filter(c => c.enabled) : [];
+                  const isExpanded = expandedUserId === user.id;
+
+                  return (
+                    <React.Fragment key={user.id}>
+                      <tr className="border-b hover:bg-muted/50">
+                        <td className="p-3">
+                          <div>
+                            <div className="font-semibold">{user.full_name || user.username}</div>
+                            <div className="text-sm text-muted-foreground">@{user.username}</div>
                           </div>
-                        ) : user.is_active ? (
-                          'Deactivate'
-                        ) : (
-                          'Activate'
-                        )}
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
+                        </td>
+                        <td className="p-3 text-sm">{user.email}</td>
+                        <td className="p-3">
+                          <div className="flex items-center gap-2">
+                            {user.is_active ? (
+                              <Badge className="bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/50">
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Active
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="border-red-500/50 text-red-600 dark:text-red-400">
+                                <XCircle className="h-3 w-3 mr-1" />
+                                Inactive
+                              </Badge>
+                            )}
+                            {user.is_admin && (
+                              <Badge variant="secondary" className="text-xs">
+                                Admin
+                              </Badge>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-3">
+                          <div className="flex flex-wrap gap-1">
+                            {user.job_types && user.job_types.length > 0 ? (
+                              user.job_types.slice(0, 2).map((type) => (
+                                <Badge key={type} variant="outline" className="text-xs">
+                                  {type}
+                                </Badge>
+                              ))
+                            ) : (
+                              <span className="text-xs text-muted-foreground">None</span>
+                            )}
+                            {user.job_types && user.job_types.length > 2 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{user.job_types.length - 2}
+                              </Badge>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-3">
+                          <button
+                            className="flex flex-wrap gap-1 text-left hover:opacity-80 transition-opacity"
+                            onClick={() => setExpandedUserId(isExpanded ? null : user.id)}
+                            title="Click to manage countries"
+                          >
+                            {countriesLoading ? (
+                              <span className="text-xs text-muted-foreground">Loading...</span>
+                            ) : enabledCountries.length > 0 ? (
+                              <>
+                                {enabledCountries.slice(0, 2).map(c => (
+                                  <Badge key={c.country} className="text-xs bg-blue-500/20 text-blue-600 border-blue-500/50">
+                                    {c.country}
+                                  </Badge>
+                                ))}
+                                {enabledCountries.length > 2 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    +{enabledCountries.length - 2}
+                                  </Badge>
+                                )}
+                              </>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">None</span>
+                            )}
+                          </button>
+                        </td>
+                        <td className="p-3">
+                          <div className="text-sm space-y-1">
+                            <div className="text-green-600 dark:text-green-400">
+                              {user.stats.total_applied} applied
+                            </div>
+                            <div className="text-red-600 dark:text-red-400">
+                              {user.stats.total_rejected} rejected
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-3 text-sm">
+                          <div className="flex items-center gap-1 text-muted-foreground">
+                            <Clock className="h-3 w-3" />
+                            {formatDate(user.last_login)}
+                          </div>
+                        </td>
+                        <td className="p-3 text-right">
+                          <Button
+                            size="sm"
+                            variant={user.is_active ? "destructive" : "default"}
+                            onClick={() => handleToggleUserStatus(user.id, user.is_active)}
+                            disabled={processingUserId === user.id || user.is_admin}
+                          >
+                            {processingUserId === user.id ? (
+                              <div className="flex items-center gap-2">
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                Processing...
+                              </div>
+                            ) : user.is_active ? (
+                              'Deactivate'
+                            ) : (
+                              'Activate'
+                            )}
+                          </Button>
+                        </td>
+                      </tr>
+
+                      {/* Expanded country breakdown row */}
+                      {isExpanded && breakdown && (
+                        <tr className="border-b bg-muted/30">
+                          <td colSpan={8} className="p-4">
+                            <div className="mb-2 text-sm font-medium text-muted-foreground">
+                              Countries for {user.full_name || user.username} — click to toggle
+                            </div>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
+                              {breakdown.map(c => {
+                                const key = `${user.id}-${c.country}`;
+                                const isUpdating = updatingCountry === key;
+                                return (
+                                  <button
+                                    key={c.country}
+                                    onClick={() => handleToggleCountry(user.id, c.country, c.enabled)}
+                                    disabled={isUpdating}
+                                    className={`rounded-lg border p-2 text-center text-xs transition-colors ${
+                                      c.enabled
+                                        ? 'bg-green-500/15 border-green-500/50 text-green-700 dark:text-green-400'
+                                        : 'bg-muted border-muted-foreground/20 text-muted-foreground'
+                                    } ${isUpdating ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-80 cursor-pointer'}`}
+                                  >
+                                    <div className="font-medium">{c.country}</div>
+                                    <div className="mt-0.5 opacity-75">{c.job_count} jobs</div>
+                                    {isUpdating && (
+                                      <div className="mt-1">
+                                        <div className="animate-spin rounded-full h-3 w-3 border-b border-current mx-auto" />
+                                      </div>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
 

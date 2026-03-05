@@ -2268,6 +2268,9 @@ class AdminCreateUserRequest(BaseModel):
     keywords: Optional[List[str]] = None
     preferred_countries: Optional[List[str]] = None
 
+class UpdateUserCountriesRequest(BaseModel):
+    countries: List[str]
+
 @app.post("/api/admin/users")
 async def admin_create_user(
     request: AdminCreateUserRequest,
@@ -2410,6 +2413,228 @@ async def get_scraping_targets():
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to get scraping targets: {str(e)}")
+
+ALL_COUNTRIES = ['Ireland', 'Spain', 'Panama', 'Luxembourg', 'Germany', 'Switzerland', 'United States']
+
+@app.get("/api/admin/monitoring")
+async def get_monitoring(current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Get GitHub Actions pipeline status, DB stats, and Sentry info"""
+    if not current_user.get('is_admin'):
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    import requests as req_lib
+
+    github_token = os.environ.get("GITHUB_TOKEN", "")
+    sentry_dsn = os.environ.get("SENTRY_DSN", "")
+    workflows = ["parallel-scraper.yml", "test-scraper.yml"]
+
+    async def fetch_workflow_runs(filename: str):
+        url = f"https://api.github.com/repos/nickykapur/job-scrapper/actions/workflows/{filename}/runs?per_page=5"
+        headers = {"Authorization": f"Bearer {github_token}", "Accept": "application/vnd.github+json"}
+        try:
+            resp = await asyncio.to_thread(req_lib.get, url, headers=headers, timeout=10)
+            if resp.status_code == 200:
+                data = resp.json()
+                runs = []
+                for r in data.get("workflow_runs", []):
+                    started = r.get("run_started_at") or r.get("created_at")
+                    updated = r.get("updated_at")
+                    duration = None
+                    if started and updated:
+                        try:
+                            from datetime import timezone
+                            s = datetime.fromisoformat(started.replace("Z", "+00:00"))
+                            e = datetime.fromisoformat(updated.replace("Z", "+00:00"))
+                            duration = int((e - s).total_seconds())
+                        except Exception:
+                            pass
+                    runs.append({
+                        "id": r.get("id"),
+                        "status": r.get("status"),
+                        "conclusion": r.get("conclusion"),
+                        "event": r.get("event"),
+                        "run_started_at": started,
+                        "updated_at": updated,
+                        "duration_seconds": duration,
+                        "html_url": r.get("html_url"),
+                        "run_number": r.get("run_number"),
+                    })
+                return {"name": filename, "runs": runs, "error": None}
+            else:
+                return {"name": filename, "runs": [], "error": f"HTTP {resp.status_code}"}
+        except Exception as e:
+            return {"name": filename, "runs": [], "error": str(e)}
+
+    workflow_results = await asyncio.gather(*[fetch_workflow_runs(w) for w in workflows])
+
+    # DB stats
+    db_stats = {"total_jobs": 0, "by_country": [], "by_job_type": [], "error": None}
+    if db and DATABASE_AVAILABLE and db.use_postgres:
+        conn = None
+        try:
+            conn = await db.get_connection()
+            if conn:
+                country_rows = await conn.fetch("""
+                    SELECT country, COUNT(*) as count, MAX(scraped_at) as last_scraped
+                    FROM jobs
+                    GROUP BY country
+                    ORDER BY count DESC
+                """)
+                job_type_rows = await conn.fetch("""
+                    SELECT job_type, COUNT(*) as count
+                    FROM jobs
+                    GROUP BY job_type
+                    ORDER BY count DESC
+                """)
+                total_row = await conn.fetchrow("SELECT COUNT(*) as total FROM jobs")
+                db_stats["total_jobs"] = total_row["total"] if total_row else 0
+                db_stats["by_country"] = [
+                    {"country": r["country"], "count": r["count"], "last_scraped": r["last_scraped"].isoformat() if r["last_scraped"] else None}
+                    for r in country_rows
+                ]
+                db_stats["by_job_type"] = [
+                    {"job_type": r["job_type"] or "unknown", "count": r["count"]}
+                    for r in job_type_rows
+                ]
+        except Exception as e:
+            db_stats["error"] = str(e)
+        finally:
+            if conn:
+                await db._release(conn)
+    else:
+        db_stats["error"] = "Database not available"
+
+    # Sentry link
+    sentry_info = {"configured": bool(sentry_dsn), "url": None}
+    if sentry_dsn:
+        try:
+            # DSN format: https://<key>@<org>.ingest.sentry.io/<project>
+            parts = sentry_dsn.split("@")
+            if len(parts) == 2:
+                host_part = parts[1].split("/")[0]
+                org = host_part.replace(".ingest.sentry.io", "")
+                sentry_info["url"] = f"https://sentry.io/organizations/{org}/issues/"
+        except Exception:
+            pass
+
+    return {
+        "success": True,
+        "generated_at": datetime.utcnow().isoformat() + "Z",
+        "github": {
+            "token_configured": bool(github_token),
+            "workflows": workflow_results,
+        },
+        "database": db_stats,
+        "sentry": sentry_info,
+    }
+
+
+@app.get("/api/admin/user-countries")
+async def get_user_countries(current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Get all users with their enabled countries and per-country job counts"""
+    if not current_user.get('is_admin'):
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    if not db or not DATABASE_AVAILABLE or not db.use_postgres:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    conn = None
+    try:
+        conn = await db.get_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Could not connect to database")
+
+        users_rows = await conn.fetch("""
+            SELECT u.id, u.username, u.full_name, u.is_active,
+                   up.preferred_countries, up.job_types
+            FROM users u
+            LEFT JOIN user_preferences up ON u.id = up.user_id
+            WHERE u.is_active = TRUE
+            ORDER BY u.id
+        """)
+
+        # Job counts by country + job_type
+        job_rows = await conn.fetch("""
+            SELECT country, job_type, COUNT(*) as count
+            FROM jobs
+            GROUP BY country, job_type
+        """)
+
+        # Build lookup: {country: {job_type: count}}
+        jobs_lookup: Dict[str, Dict[str, int]] = {}
+        for row in job_rows:
+            c = row["country"] or "Unknown"
+            jt = row["job_type"] or "unknown"
+            jobs_lookup.setdefault(c, {})[jt] = row["count"]
+
+        users_out = []
+        for u in users_rows:
+            enabled_countries = list(u["preferred_countries"] or [])
+            user_job_types = list(u["job_types"] or [])
+
+            country_breakdown = []
+            for country in ALL_COUNTRIES:
+                enabled = country in enabled_countries
+                if user_job_types:
+                    job_count = sum(
+                        jobs_lookup.get(country, {}).get(jt, 0)
+                        for jt in user_job_types
+                    )
+                else:
+                    job_count = sum(jobs_lookup.get(country, {}).values())
+                country_breakdown.append({
+                    "country": country,
+                    "enabled": enabled,
+                    "job_count": job_count,
+                })
+
+            users_out.append({
+                "id": u["id"],
+                "username": u["username"],
+                "full_name": u["full_name"],
+                "enabled_countries": enabled_countries,
+                "job_types": user_job_types,
+                "country_breakdown": country_breakdown,
+            })
+
+        return {"success": True, "users": users_out}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Failed to get user countries: %s", e)
+        raise HTTPException(status_code=500, detail=f"Failed to get user countries: {str(e)}")
+    finally:
+        if conn:
+            await db._release(conn)
+
+
+@app.post("/api/admin/users/{user_id}/countries")
+async def update_user_countries(
+    user_id: int,
+    request: UpdateUserCountriesRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
+    """Update which countries are enabled for a user"""
+    if not current_user.get('is_admin'):
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    invalid = [c for c in request.countries if c not in ALL_COUNTRIES]
+    if invalid:
+        raise HTTPException(status_code=400, detail=f"Invalid countries: {invalid}")
+
+    from user_database import UserDatabase
+    user_db = UserDatabase()
+    result = await user_db.update_user_preferences(user_id, {"preferred_countries": request.countries})
+    if not result:
+        raise HTTPException(status_code=404, detail="User not found or update failed")
+
+    logger.info(
+        "Admin %s updated countries for user %d: %s",
+        current_user.get("username"), user_id, request.countries
+    )
+    return {"success": True, "user_id": user_id, "countries": request.countries}
+
 
 @app.post("/api/admin/backfill-rejected-signatures")
 async def backfill_rejected_signatures():
