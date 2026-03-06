@@ -22,6 +22,7 @@ import {
   Trophy,
   Users,
   Activity,
+  MousePointerClick,
 } from 'lucide-react';
 import { JobCard } from './components/JobCard';
 import { StatsCards } from './components/StatsCards';
@@ -34,6 +35,7 @@ import { CountryAnalytics } from './components/CountryAnalytics';
 import { RewardsRevamped as Rewards } from './components/RewardsRevamped';
 import { UserManagement } from './components/UserManagement';
 import { MonitoringPage } from './components/MonitoringPage';
+import { UserBehaviourPage } from './components/UserBehaviourPage';
 import { InterviewTracker } from './components/InterviewTracker';
 // import JobSearch from './components/JobSearch';
 // import CountryStats from './components/CountryStats';
@@ -55,7 +57,7 @@ const App: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [localRejectedCount, setLocalRejectedCount] = useState(0);
-  const [currentTab, setCurrentTab] = useState<'dashboard' | 'training' | 'system-design' | 'my-analytics' | 'analytics' | 'rewards' | 'user-management' | 'interview-tracker' | 'monitoring'>('dashboard');
+  const [currentTab, setCurrentTab] = useState<'dashboard' | 'training' | 'system-design' | 'my-analytics' | 'analytics' | 'rewards' | 'user-management' | 'interview-tracker' | 'monitoring' | 'user-behaviour'>('dashboard');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [timeAgo, setTimeAgo] = useState<string>('');
@@ -416,6 +418,16 @@ const App: React.FC = () => {
               Monitoring
               <Badge variant="secondary" className="ml-auto">Admin</Badge>
             </Button>
+
+            <Button
+              variant={currentTab === 'user-behaviour' ? 'secondary' : 'ghost'}
+              className="w-full justify-start"
+              onClick={() => handleTabChange('user-behaviour')}
+            >
+              <MousePointerClick className="mr-3 h-4 w-4" />
+              User Behaviour
+              <Badge variant="secondary" className="ml-auto">Admin</Badge>
+            </Button>
           </>
         )}
       </nav>
@@ -505,7 +517,8 @@ const App: React.FC = () => {
                  currentTab === 'analytics' ? 'User Analytics' :
                  currentTab === 'country-analytics' ? 'Country Analytics' :
                  currentTab === 'user-management' ? 'User Management' :
-                 currentTab === 'monitoring' ? 'System Monitoring' : 'Dashboard'}
+                 currentTab === 'monitoring' ? 'System Monitoring' :
+                 currentTab === 'user-behaviour' ? 'User Behaviour' : 'Dashboard'}
               </h2>
               {currentTab === 'dashboard' && (
                 <div className="space-y-0.5">
@@ -632,6 +645,7 @@ const App: React.FC = () => {
             {currentTab === 'country-analytics' && hasAdminAccess && <CountryAnalytics />}
             {currentTab === 'user-management' && hasAdminAccess && <UserManagement />}
             {currentTab === 'monitoring' && hasAdminAccess && <MonitoringPage />}
+            {currentTab === 'user-behaviour' && hasAdminAccess && <UserBehaviourPage />}
           </div>
         </main>
       </div>
