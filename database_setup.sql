@@ -108,6 +108,17 @@ CREATE TABLE IF NOT EXISTS scraper_run_logs (
 CREATE INDEX IF NOT EXISTS idx_scraper_run_logs_started_at ON scraper_run_logs(started_at DESC);
 CREATE INDEX IF NOT EXISTS idx_scraper_run_logs_country ON scraper_run_logs(country);
 
+-- User activity / interaction tracking
+CREATE TABLE IF NOT EXISTS user_activity_events (
+  id BIGSERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  event_type VARCHAR(50) NOT NULL,
+  event_data JSONB DEFAULT '{}',
+  occurred_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_activity_user_time ON user_activity_events(user_id, occurred_at DESC);
+CREATE INDEX IF NOT EXISTS idx_activity_type_time ON user_activity_events(event_type, occurred_at DESC);
+
 -- Create indexes for rewards tables
 CREATE INDEX IF NOT EXISTS idx_user_rewards_user_id ON user_rewards(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_rewards_level ON user_rewards(level);

@@ -40,12 +40,14 @@ import { InterviewTracker } from './components/InterviewTracker';
 import { jobApi } from './services/api';
 import { useAuth } from './contexts/AuthContext';
 import { useDarkMode } from './hooks/use-dark-mode';
+import { useActivityTracker } from './hooks/useActivityTracker';
 import type { Job, JobStats, FilterState } from './types';
 
 const App: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { darkMode, toggleDarkMode } = useDarkMode();
+  const { track } = useActivityTracker();
 
   // State
   const [jobs, setJobs] = useState<Record<string, Job>>({});
@@ -167,6 +169,7 @@ const App: React.FC = () => {
       [jobId]: { ...prev[jobId], applied: true }
     }));
     showNotification('Marked as applied', 'success');
+    track('job_action', { action: 'applied', job_id: jobId });
 
     // Update backend in background (fire-and-forget with error handling)
     try {
@@ -194,6 +197,7 @@ const App: React.FC = () => {
     }));
     setLocalRejectedCount(prev => prev + 1);
     showNotification('Job rejected', 'info');
+    track('job_action', { action: 'rejected', job_id: jobId });
 
     // Update backend in background (fire-and-forget with error handling)
     try {
@@ -208,6 +212,12 @@ const App: React.FC = () => {
       showNotification('Failed to reject job - please try again', 'error');
     }
   };
+
+  const handleTabChange = useCallback((tab: typeof currentTab) => {
+    setCurrentTab(tab);
+    track('page_view', { page: tab });
+    if (isMobile) setDrawerOpen(false);
+  }, [track, isMobile]);
 
   const handleLogout = async () => {
     await logout();
@@ -310,7 +320,7 @@ const App: React.FC = () => {
         <Button
           variant={currentTab === 'dashboard' ? 'secondary' : 'ghost'}
           className="w-full justify-start"
-          onClick={() => { setCurrentTab('dashboard'); if (isMobile) setDrawerOpen(false); }}
+          onClick={() => handleTabChange('dashboard')}
         >
           <LayoutDashboard className="mr-3 h-4 w-4" />
           Dashboard
@@ -319,7 +329,7 @@ const App: React.FC = () => {
         <Button
           variant={currentTab === 'my-analytics' ? 'secondary' : 'ghost'}
           className="w-full justify-start"
-          onClick={() => { setCurrentTab('my-analytics'); if (isMobile) setDrawerOpen(false); }}
+          onClick={() => handleTabChange('my-analytics')}
         >
           <BarChart3 className="mr-3 h-4 w-4" />
           My Analytics
@@ -328,7 +338,7 @@ const App: React.FC = () => {
         <Button
           variant={currentTab === 'rewards' ? 'secondary' : 'ghost'}
           className="w-full justify-start"
-          onClick={() => { setCurrentTab('rewards'); if (isMobile) setDrawerOpen(false); }}
+          onClick={() => handleTabChange('rewards')}
         >
           <Trophy className="mr-3 h-4 w-4" />
           Rewards
@@ -337,7 +347,7 @@ const App: React.FC = () => {
         <Button
           variant={currentTab === 'interview-tracker' ? 'secondary' : 'ghost'}
           className="w-full justify-start"
-          onClick={() => { setCurrentTab('interview-tracker'); if (isMobile) setDrawerOpen(false); }}
+          onClick={() => handleTabChange('interview-tracker')}
         >
           <Bookmark className="mr-3 h-4 w-4" />
           Interview Tracker
@@ -348,7 +358,7 @@ const App: React.FC = () => {
             <Button
               variant={currentTab === 'training' ? 'secondary' : 'ghost'}
               className="w-full justify-start"
-              onClick={() => { setCurrentTab('training'); if (isMobile) setDrawerOpen(false); }}
+              onClick={() => handleTabChange('training')}
             >
               <GraduationCap className="mr-3 h-4 w-4" />
               DSA Training
@@ -357,7 +367,7 @@ const App: React.FC = () => {
             <Button
               variant={currentTab === 'system-design' ? 'secondary' : 'ghost'}
               className="w-full justify-start"
-              onClick={() => { setCurrentTab('system-design'); if (isMobile) setDrawerOpen(false); }}
+              onClick={() => handleTabChange('system-design')}
             >
               <Building2 className="mr-3 h-4 w-4" />
               System Design
@@ -370,7 +380,7 @@ const App: React.FC = () => {
             <Button
               variant={currentTab === 'analytics' ? 'secondary' : 'ghost'}
               className="w-full justify-start"
-              onClick={() => { setCurrentTab('analytics'); if (isMobile) setDrawerOpen(false); }}
+              onClick={() => handleTabChange('analytics')}
             >
               <BarChart3 className="mr-3 h-4 w-4" />
               User Analytics
@@ -380,7 +390,7 @@ const App: React.FC = () => {
             <Button
               variant={currentTab === 'country-analytics' ? 'secondary' : 'ghost'}
               className="w-full justify-start"
-              onClick={() => { setCurrentTab('country-analytics'); if (isMobile) setDrawerOpen(false); }}
+              onClick={() => handleTabChange('country-analytics')}
             >
               <Building2 className="mr-3 h-4 w-4" />
               Country Analytics
@@ -390,7 +400,7 @@ const App: React.FC = () => {
             <Button
               variant={currentTab === 'user-management' ? 'secondary' : 'ghost'}
               className="w-full justify-start"
-              onClick={() => { setCurrentTab('user-management'); if (isMobile) setDrawerOpen(false); }}
+              onClick={() => handleTabChange('user-management')}
             >
               <Users className="mr-3 h-4 w-4" />
               User Management
@@ -400,7 +410,7 @@ const App: React.FC = () => {
             <Button
               variant={currentTab === 'monitoring' ? 'secondary' : 'ghost'}
               className="w-full justify-start"
-              onClick={() => { setCurrentTab('monitoring'); if (isMobile) setDrawerOpen(false); }}
+              onClick={() => handleTabChange('monitoring')}
             >
               <Activity className="mr-3 h-4 w-4" />
               Monitoring

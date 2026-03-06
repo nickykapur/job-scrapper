@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Activity, RefreshCw, ExternalLink, AlertCircle, Database, Trash2, Timer } from 'lucide-react';
+import { Activity, RefreshCw, ExternalLink, AlertCircle, Database, Trash2, Timer, Users } from 'lucide-react';
 import { jobApi } from '../services/api';
 
 interface WorkflowRun {
@@ -60,6 +60,23 @@ interface ScraperRunLog {
   new_jobs: number | null;
   dry_run: boolean;
   error: string | null;
+}
+
+interface ActivityEvent {
+  id: number;
+  user_id: number;
+  username: string;
+  display_name: string;
+  event_type: string;
+  event_data: Record<string, any>;
+  occurred_at: string | null;
+}
+
+interface ActivityData {
+  active_today: number;
+  total_events_7d: number;
+  page_views_7d: { page: string; count: number }[];
+  events: ActivityEvent[];
 }
 
 interface MonitoringData {
@@ -163,19 +180,40 @@ const getStatusBadge = (run: WorkflowRun) => {
 
 export const MonitoringPage: React.FC = () => {
   const [data, setData] = useState<MonitoringData | null>(null);
+  const [activity, setActivity] = useState<ActivityData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [cleaningUp, setCleaningUp] = useState<string | null>(null);
+  const [cleanupResult, setCleanupResult] = useState<Record<string, number>>({});
 
   const load = async () => {
     setLoading(true);
     setError(null);
     try {
-      const result = await jobApi.getMonitoring();
+      const [result, activityResult] = await Promise.all([
+        jobApi.getMonitoring(),
+        jobApi.getActivity(150).catch(() => null),
+      ]);
       setData(result);
+      setActivity(activityResult);
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to load monitoring data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCleanup = async (action: 'rejected' | 'applied' | 'older_30d' | 'older_60d') => {
+    if (!window.confirm(`Delete all ${action.replace('_', ' ')} jobs? This cannot be undone.`)) return;
+    setCleaningUp(action);
+    try {
+      const result = await jobApi.cleanupJobs(action);
+      setCleanupResult(prev => ({ ...prev, [action]: result.deleted }));
+      await load(); // Refresh monitoring data
+    } catch (err: any) {
+      alert(err.response?.data?.detail || 'Cleanup failed');
+    } finally {
+      setCleaningUp(null);
     }
   };
 
@@ -329,22 +367,30 @@ export const MonitoringPage: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-3 text-center">
-                <div className="text-xs text-muted-foreground mb-1">Rejected jobs</div>
-                <div className="font-bold text-xl text-red-600">{db.cleanup_candidates.rejected.toLocaleString()}</div>
-              </div>
-              <div className="rounded-lg border border-green-500/30 bg-green-500/5 p-3 text-center">
-                <div className="text-xs text-muted-foreground mb-1">Applied jobs</div>
-                <div className="font-bold text-xl text-green-600">{db.cleanup_candidates.applied.toLocaleString()}</div>
-              </div>
-              <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-3 text-center">
-                <div className="text-xs text-muted-foreground mb-1">Older than 30 days</div>
-                <div className="font-bold text-xl text-yellow-600">{db.cleanup_candidates.older_than_30d.toLocaleString()}</div>
-              </div>
-              <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 p-3 text-center">
-                <div className="text-xs text-muted-foreground mb-1">Older than 60 days</div>
-                <div className="font-bold text-xl text-orange-600">{db.cleanup_candidates.older_than_60d.toLocaleString()}</div>
-              </div>
+              {[
+                { action: 'rejected' as const, label: 'Rejected jobs', count: db.cleanup_candidates.rejected, color: 'red' },
+                { action: 'applied' as const, label: 'Applied jobs', count: db.cleanup_candidates.applied, color: 'green' },
+                { action: 'older_30d' as const, label: 'Older than 30 days', count: db.cleanup_candidates.older_than_30d, color: 'yellow' },
+                { action: 'older_60d' as const, label: 'Older than 60 days', count: db.cleanup_candidates.older_than_60d, color: 'orange' },
+              ].map(({ action, label, count, color }) => (
+                <div key={action} className={`rounded-lg border border-${color}-500/30 bg-${color}-500/5 p-3 text-center`}>
+                  <div className="text-xs text-muted-foreground mb-1">{label}</div>
+                  <div className={`font-bold text-xl text-${color}-600`}>
+                    {cleanupResult[action] !== undefined
+                      ? <span className="text-green-600 text-sm">Deleted {cleanupResult[action]}</span>
+                      : count.toLocaleString()}
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="mt-2 w-full text-xs h-7"
+                    onClick={() => handleCleanup(action)}
+                    disabled={cleaningUp !== null || count === 0}
+                  >
+                    {cleaningUp === action ? 'Deleting...' : 'Delete'}
+                  </Button>
+                </div>
+              ))}
             </div>
             <p className="text-xs text-muted-foreground mt-3">
               Tip: deleting rejected + old unapplied jobs is safe and will free the most space.
@@ -553,6 +599,85 @@ export const MonitoringPage: React.FC = () => {
           ))}
         </CardContent>
       </Card>
+
+      {/* User Activity Feed */}
+      {activity && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              User Activity
+              <span className="text-sm font-normal text-muted-foreground ml-1">— last 7 days</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Summary stats */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="rounded-lg border p-3 text-center">
+                <div className="text-xs text-muted-foreground mb-1">Active today</div>
+                <div className="font-bold text-2xl text-blue-600">{activity.active_today}</div>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <div className="text-xs text-muted-foreground mb-1">Events (7d)</div>
+                <div className="font-bold text-2xl">{activity.total_events_7d.toLocaleString()}</div>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <div className="text-xs text-muted-foreground mb-1">Pages tracked (7d)</div>
+                <div className="font-bold text-2xl">{activity.page_views_7d.length}</div>
+              </div>
+            </div>
+
+            {/* Page view breakdown */}
+            {activity.page_views_7d.length > 0 && (
+              <div>
+                <h3 className="font-semibold text-sm mb-2">Page Views (7d)</h3>
+                <div className="flex flex-wrap gap-2">
+                  {activity.page_views_7d.map(({ page, count }) => (
+                    <Badge key={page} variant="outline" className="text-xs">
+                      {page}: <span className="font-bold ml-1">{count}</span>
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Recent events table */}
+            {activity.events.length > 0 && (
+              <div>
+                <h3 className="font-semibold text-sm mb-2">Recent Events</h3>
+                <div className="overflow-x-auto max-h-72 overflow-y-auto">
+                  <table className="w-full text-sm">
+                    <thead className="sticky top-0 bg-background">
+                      <tr className="border-b text-muted-foreground">
+                        <th className="text-left p-2">Time</th>
+                        <th className="text-left p-2">User</th>
+                        <th className="text-left p-2">Event</th>
+                        <th className="text-left p-2">Data</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {activity.events.map((e) => (
+                        <tr key={e.id} className="border-b hover:bg-muted/50">
+                          <td className="p-2 text-muted-foreground whitespace-nowrap">{formatDate(e.occurred_at)}</td>
+                          <td className="p-2 font-medium">{e.display_name}</td>
+                          <td className="p-2">
+                            <Badge variant="outline" className="text-xs">{e.event_type}</Badge>
+                          </td>
+                          <td className="p-2 text-xs text-muted-foreground font-mono">
+                            {Object.keys(e.event_data).length > 0
+                              ? Object.entries(e.event_data).map(([k, v]) => `${k}=${v}`).join(', ')
+                              : '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Sentry */}
       <Card>

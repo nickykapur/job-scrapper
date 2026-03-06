@@ -2307,6 +2307,10 @@ class UpdateUserCountriesRequest(BaseModel):
 class UpdateUserJobTypesRequest(BaseModel):
     job_types: List[str]
 
+class ActivityEventRequest(BaseModel):
+    event_type: str
+    event_data: Optional[Dict[str, Any]] = None
+
 @app.post("/api/admin/users")
 async def admin_create_user(
     request: AdminCreateUserRequest,
@@ -2855,6 +2859,92 @@ async def update_user_job_types(
         current_user.get("username"), user_id, request.job_types
     )
     return {"success": True, "user_id": user_id, "job_types": request.job_types}
+
+
+async def _store_activity_event(user_id: int, event_type: str, event_data: dict):
+    """Background task to store activity event without blocking the response"""
+    try:
+        conn = await db.get_connection()
+        try:
+            await conn.execute(
+                "INSERT INTO user_activity_events (user_id, event_type, event_data) VALUES ($1, $2, $3::jsonb)",
+                user_id, event_type, json.dumps(event_data)
+            )
+        finally:
+            await db._release(conn)
+    except Exception as e:
+        logger.warning("Failed to store activity event: %s", e)
+
+@app.post("/api/activity", status_code=202)
+async def track_activity(
+    request: ActivityEventRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
+    """Track a user activity event — fire and forget (202 Accepted)"""
+    asyncio.create_task(_store_activity_event(
+        current_user.get('user_id'),
+        request.event_type,
+        request.event_data or {}
+    ))
+    return {"accepted": True}
+
+@app.get("/api/admin/activity")
+async def get_activity_feed(
+    limit: int = 150,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
+    """Get recent user activity events + aggregated stats (admin only)"""
+    if not current_user.get('is_admin'):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    conn = await db.get_connection()
+    try:
+        events = await conn.fetch("""
+            SELECT e.id, e.user_id, u.username, COALESCE(u.full_name, u.username) as display_name,
+                   e.event_type, e.event_data, e.occurred_at
+            FROM user_activity_events e
+            JOIN users u ON u.id = e.user_id
+            ORDER BY e.occurred_at DESC
+            LIMIT $1
+        """, limit)
+
+        page_counts = await conn.fetch("""
+            SELECT event_data->>'page' as page, COUNT(*) as count
+            FROM user_activity_events
+            WHERE event_type = 'page_view' AND occurred_at > NOW() - INTERVAL '7 days'
+            GROUP BY event_data->>'page'
+            ORDER BY count DESC
+        """)
+
+        active_today = await conn.fetchval("""
+            SELECT COUNT(DISTINCT user_id) FROM user_activity_events
+            WHERE occurred_at > NOW() - INTERVAL '24 hours'
+        """) or 0
+
+        total_events_7d = await conn.fetchval("""
+            SELECT COUNT(*) FROM user_activity_events
+            WHERE occurred_at > NOW() - INTERVAL '7 days'
+        """) or 0
+
+        return {
+            "success": True,
+            "active_today": int(active_today),
+            "total_events_7d": int(total_events_7d),
+            "page_views_7d": [{"page": r["page"], "count": int(r["count"])} for r in page_counts],
+            "events": [
+                {
+                    "id": r["id"],
+                    "user_id": r["user_id"],
+                    "username": r["username"],
+                    "display_name": r["display_name"],
+                    "event_type": r["event_type"],
+                    "event_data": dict(r["event_data"]) if r["event_data"] else {},
+                    "occurred_at": r["occurred_at"].isoformat() if r["occurred_at"] else None,
+                }
+                for r in events
+            ],
+        }
+    finally:
+        await db._release(conn)
 
 
 @app.post("/api/admin/cleanup")

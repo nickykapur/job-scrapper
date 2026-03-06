@@ -195,6 +195,15 @@ export const jobApi = {
   // Admin: Permanently delete a user and all their data
   deleteUser: async (userId: number): Promise<any> =>
     (await api.delete(`/api/admin/users/${userId}`)).data,
+
+  // Track a user activity event (fire and forget — errors swallowed)
+  trackActivity: (eventType: string, data?: Record<string, any>): void => {
+    api.post('/api/activity', { event_type: eventType, event_data: data || {} }).catch(() => {});
+  },
+
+  // Admin: Get activity feed
+  getActivity: async (limit = 150): Promise<any> =>
+    (await api.get(`/api/admin/activity?limit=${limit}`)).data,
 };
 
 export default api;
