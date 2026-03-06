@@ -12,6 +12,7 @@ import requests
 import time
 import threading
 import logging
+from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from linkedin_job_scraper import LinkedInJobScraper
 
