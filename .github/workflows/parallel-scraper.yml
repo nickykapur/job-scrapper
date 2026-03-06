@@ -6,6 +6,21 @@ on:
     - cron: '0 9,11,13,15,16,18,20 * * *'
 
   workflow_dispatch:
+    inputs:
+      country:
+        description: 'Country to scrape (admin manual run)'
+        required: true
+        default: 'All Countries'
+        type: choice
+        options:
+          - All Countries
+          - Ireland
+          - Germany
+          - Spain
+          - Switzerland
+          - Luxembourg
+          - Panama
+          - United States
 
 jobs:
   # First job: Check if scraping is needed based on active users
@@ -16,6 +31,7 @@ jobs:
       active_users: ${{ steps.check.outputs.active_users }}
       countries_json: ${{ steps.check.outputs.countries_json }}
       job_types: ${{ steps.check.outputs.job_types }}
+      countries_matrix: ${{ steps.matrix.outputs.countries_matrix }}
 
     steps:
       - name: Checkout code
@@ -35,6 +51,16 @@ jobs:
       - name: Check if scraping is needed
         id: check
         run: |
+          # Manual dispatch always runs — skip active-users check
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "Manual trigger by admin — skipping active users check"
+            echo "should_scrape=true" >> $GITHUB_OUTPUT
+            echo "active_users=manual" >> $GITHUB_OUTPUT
+            echo "countries_json=${{ inputs.country }}" >> $GITHUB_OUTPUT
+            echo "job_types=all" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
           echo "Checking active users and their preferences..."
 
           # Run the script to get scraping targets
@@ -72,36 +98,48 @@ jobs:
         env:
           API_BASE_URL: https://web-production-110bb.up.railway.app
 
+      - name: Build countries matrix
+        id: matrix
+        run: |
+          ALL='[
+            {"location":"Dublin, County Dublin, Ireland","name":"Ireland"},
+            {"location":"Madrid, Community of Madrid, Spain","name":"Spain"},
+            {"location":"Panama City, Panama","name":"Panama"},
+            {"location":"Luxembourg City, Luxembourg","name":"Luxembourg"},
+            {"location":"Berlin, Germany","name":"Germany"},
+            {"location":"Basel, Switzerland","name":"Switzerland"},
+            {"location":"New York, New York, United States","name":"United States"},
+            {"location":"Chicago, Illinois, United States","name":"United States"},
+            {"location":"Los Angeles, California, United States","name":"United States"},
+            {"location":"Houston, Texas, United States","name":"United States"},
+            {"location":"Detroit, Michigan, United States","name":"United States"}
+          ]'
+
+          case "${{ inputs.country }}" in
+            "Ireland")     MATRIX='[{"location":"Dublin, County Dublin, Ireland","name":"Ireland"}]' ;;
+            "Germany")     MATRIX='[{"location":"Berlin, Germany","name":"Germany"}]' ;;
+            "Spain")       MATRIX='[{"location":"Madrid, Community of Madrid, Spain","name":"Spain"}]' ;;
+            "Switzerland") MATRIX='[{"location":"Basel, Switzerland","name":"Switzerland"}]' ;;
+            "Luxembourg")  MATRIX='[{"location":"Luxembourg City, Luxembourg","name":"Luxembourg"}]' ;;
+            "Panama")      MATRIX='[{"location":"Panama City, Panama","name":"Panama"}]' ;;
+            "United States") MATRIX='[{"location":"New York, New York, United States","name":"United States"},{"location":"Chicago, Illinois, United States","name":"United States"},{"location":"Los Angeles, California, United States","name":"United States"},{"location":"Houston, Texas, United States","name":"United States"},{"location":"Detroit, Michigan, United States","name":"United States"}]' ;;
+            *)             MATRIX="$ALL" ;;
+          esac
+
+          echo "countries_matrix=$MATRIX" >> $GITHUB_OUTPUT
+          echo "Matrix: $MATRIX"
+
   # Second job: Actually scrape (only if needed)
   scrape-country:
     runs-on: ubuntu-latest
     needs: check-scraping-needed
     if: needs.check-scraping-needed.outputs.should_scrape == 'true'
 
-    # Run 4 countries in parallel (only active user preferences will be scraped)
     strategy:
       matrix:
-        country:
-          - { location: "Dublin, County Dublin, Ireland", name: "Ireland" }
-          - { location: "Madrid, Community of Madrid, Spain", name: "Spain" }
-          - { location: "Panama City, Panama", name: "Panama" }
-          - { location: "Luxembourg City, Luxembourg", name: "Luxembourg" }
-          - { location: "Berlin, Germany", name: "Germany" }
-          - { location: "Basel, Switzerland", name: "Switzerland" }
-          - { location: "New York, New York, United States", name: "United States" }
-          - { location: "Chicago, Illinois, United States", name: "United States" }
-          - { location: "Los Angeles, California, United States", name: "United States" }
-          - { location: "Houston, Texas, United States", name: "United States" }
-          - { location: "Detroit, Michigan, United States", name: "United States" }
-          # DISABLED - No active users in these countries:
-          # - { location: "Amsterdam, North Holland, Netherlands", name: "Netherlands" }
-          # - { location: "Stockholm, Sweden", name: "Sweden" }
-          # - { location: "Brussels, Belgium", name: "Belgium" }
-          # - { location: "Copenhagen, Denmark", name: "Denmark" }
-          # REMOVED - Jobs from Chile are no longer needed:
-          # - { location: "Santiago, Chile", name: "Chile" }
-      max-parallel: 11  # Run all 11 at once (6 Europe + 5 US cities)
-      fail-fast: false  # Continue even if one fails
+        country: ${{ fromJson(needs.check-scraping-needed.outputs.countries_matrix) }}
+      max-parallel: 11
+      fail-fast: false  # Continue even if one country fails
 
     steps:
       - name: Checkout code
@@ -121,10 +159,20 @@ jobs:
       - name: Run smart scraper for ${{ matrix.country.name }}
         id: scrape
         run: |
-          # The scraper will check active user preferences internally
+          START_TIME=$(date +%s)
+          echo "⏱️ [${{ matrix.country.name }}] Started at $(date -u '+%H:%M:%S UTC')"
+
           python daily_single_country_scraper.py \
             --location "${{ matrix.country.location }}" \
             --country "${{ matrix.country.name }}"
+
+          END_TIME=$(date +%s)
+          DURATION=$(( END_TIME - START_TIME ))
+          MINS=$(( DURATION / 60 ))
+          SECS=$(( DURATION % 60 ))
+          echo "start_time=$START_TIME" >> $GITHUB_OUTPUT
+          echo "duration_seconds=$DURATION" >> $GITHUB_OUTPUT
+          echo "⏱️ [${{ matrix.country.name }}] Finished in ${MINS}m ${SECS}s"
         env:
           RAILWAY_URL: https://web-production-110bb.up.railway.app
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
@@ -132,6 +180,11 @@ jobs:
       - name: Log results
         if: always()
         run: |
+          DURATION="${{ steps.scrape.outputs.duration_seconds }}"
+          MINS=$(( ${DURATION:-0} / 60 ))
+          SECS=$(( ${DURATION:-0} % 60 ))
+          TIMER="${MINS}m ${SECS}s"
+
           if [ "${{ steps.scrape.outcome }}" == "success" ]; then
             SOFTWARE_JOBS="${{ steps.scrape.outputs.software_jobs }}"
             HR_JOBS="${{ steps.scrape.outputs.hr_jobs }}"
@@ -139,10 +192,13 @@ jobs:
             SALES_JOBS="${{ steps.scrape.outputs.sales_jobs }}"
             FINANCE_JOBS="${{ steps.scrape.outputs.finance_jobs }}"
             TOTAL_JOBS="${{ steps.scrape.outputs.jobs_found }}"
-            echo "[SUCCESS] ${{ matrix.country.name }}: $TOTAL_JOBS new jobs (Software: $SOFTWARE_JOBS, HR: $HR_JOBS, Cybersecurity: $CYBER_JOBS, Sales: $SALES_JOBS, Finance: $FINANCE_JOBS)"
+            echo "[SUCCESS] ${{ matrix.country.name }} (${TIMER}): $TOTAL_JOBS new jobs (Software: $SOFTWARE_JOBS, HR: $HR_JOBS, Cybersecurity: $CYBER_JOBS, Sales: $SALES_JOBS, Finance: $FINANCE_JOBS)"
           else
-            echo "[FAILED] ${{ matrix.country.name }}: Scraping failed"
+            echo "[FAILED] ${{ matrix.country.name }} (${TIMER}): Scraping failed"
           fi
+
+          # Write per-country timing to step summary
+          echo "| ${{ matrix.country.name }} | ${{ matrix.country.location }} | ${{ steps.scrape.outcome }} | ${TIMER} |" >> $GITHUB_STEP_SUMMARY
 
   # Cleanup and Summary - runs after all countries finish OR if scraping was skipped
   cleanup:
@@ -335,12 +391,22 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "💡 **Tip:** Activate users in the admin panel to resume scraping" >> $GITHUB_STEP_SUMMARY
           else
-            echo "#### ✅ Scraping Complete" >> $GITHUB_STEP_SUMMARY
-            echo "- **Active Users:** ${{ needs.check-scraping-needed.outputs.active_users }}" >> $GITHUB_STEP_SUMMARY
+            TRIGGER="${{ github.event_name }}"
+            if [ "$TRIGGER" == "workflow_dispatch" ]; then
+              echo "#### ✅ Manual Run — ${{ inputs.country }}" >> $GITHUB_STEP_SUMMARY
+              echo "- **Triggered by:** Admin (manual dispatch)" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "#### ✅ Scraping Complete" >> $GITHUB_STEP_SUMMARY
+              echo "- **Active Users:** ${{ needs.check-scraping-needed.outputs.active_users }}" >> $GITHUB_STEP_SUMMARY
+            fi
             echo "- **Total Jobs:** ${{ steps.cleanup.outputs.total_jobs }}" >> $GITHUB_STEP_SUMMARY
             echo "- **Jobs Removed:** ${{ steps.cleanup.outputs.jobs_deleted }}" >> $GITHUB_STEP_SUMMARY
             echo "- **Job Types:** ${{ needs.check-scraping-needed.outputs.job_types }}" >> $GITHUB_STEP_SUMMARY
             echo "- **Countries:** ${{ needs.check-scraping-needed.outputs.countries_json }}" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "#### ⏱️ Per-Country Timing" >> $GITHUB_STEP_SUMMARY
+            echo "| Country | Location | Result | Duration |" >> $GITHUB_STEP_SUMMARY
+            echo "|---------|----------|--------|----------|" >> $GITHUB_STEP_SUMMARY
           fi
 
           echo "" >> $GITHUB_STEP_SUMMARY
