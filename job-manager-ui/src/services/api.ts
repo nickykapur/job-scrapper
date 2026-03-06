@@ -183,6 +183,18 @@ export const jobApi = {
   // Admin: Update enabled countries for a user
   updateUserCountries: async (userId: number, countries: string[]): Promise<any> =>
     (await api.post(`/api/admin/users/${userId}/countries`, { countries })).data,
+
+  // Admin: Update enabled job types for a user
+  updateUserJobTypes: async (userId: number, jobTypes: string[]): Promise<any> =>
+    (await api.post(`/api/admin/users/${userId}/job-types`, { job_types: jobTypes })).data,
+
+  // Admin: Cleanup jobs by category
+  cleanupJobs: async (action: 'rejected' | 'applied' | 'older_30d' | 'older_60d'): Promise<any> =>
+    (await api.post(`/api/admin/cleanup?action=${action}`)).data,
+
+  // Admin: Permanently delete a user and all their data
+  deleteUser: async (userId: number): Promise<any> =>
+    (await api.delete(`/api/admin/users/${userId}`)).data,
 };
 
 export default api;

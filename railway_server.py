@@ -2258,6 +2258,39 @@ async def activate_user(user_id: int, current_user: Dict[str, Any] = Depends(get
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to activate user: {str(e)}")
 
+@app.delete("/api/admin/users/{user_id}")
+async def delete_user_permanently(user_id: int, current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Permanently delete a user and all their data (admin only)"""
+    if not current_user.get('is_admin'):
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    if current_user.get('user_id') == user_id:
+        raise HTTPException(status_code=400, detail="Cannot delete your own account")
+
+    try:
+        conn = await db.get_connection()
+        try:
+            user = await conn.fetchrow("SELECT id, username FROM users WHERE id = $1", user_id)
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+
+            # Delete all user data in order (FK constraints)
+            await conn.execute("DELETE FROM user_job_interactions WHERE user_id = $1", user_id)
+            await conn.execute("DELETE FROM interview_tracker WHERE user_id = $1", user_id)
+            await conn.execute("DELETE FROM user_preferences WHERE user_id = $1", user_id)
+            await conn.execute("DELETE FROM users WHERE id = $1", user_id)
+
+            logger.info("User %s (ID: %d) permanently deleted by admin %s", user['username'], user_id, current_user.get('username'))
+
+            return {'success': True, 'message': f"User '{user['username']}' permanently deleted", 'user_id': user_id}
+        finally:
+            await db._release(conn)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Failed to delete user %d: %s", user_id, e)
+        raise HTTPException(status_code=500, detail=f"Failed to delete user: {str(e)}")
+
 class AdminCreateUserRequest(BaseModel):
     username: str
     email: str
@@ -2270,6 +2303,9 @@ class AdminCreateUserRequest(BaseModel):
 
 class UpdateUserCountriesRequest(BaseModel):
     countries: List[str]
+
+class UpdateUserJobTypesRequest(BaseModel):
+    job_types: List[str]
 
 @app.post("/api/admin/users")
 async def admin_create_user(
@@ -2790,6 +2826,76 @@ async def update_user_countries(
         current_user.get("username"), user_id, request.countries
     )
     return {"success": True, "user_id": user_id, "countries": request.countries}
+
+
+ALL_JOB_TYPES = ['software', 'hr', 'cybersecurity', 'sales', 'finance', 'marketing', 'data', 'design', 'biotech', 'engineering', 'events']
+
+@app.post("/api/admin/users/{user_id}/job-types")
+async def update_user_job_types(
+    user_id: int,
+    request: UpdateUserJobTypesRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
+    """Update which job types are enabled for a user"""
+    if not current_user.get('is_admin'):
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    invalid = [jt for jt in request.job_types if jt not in ALL_JOB_TYPES]
+    if invalid:
+        raise HTTPException(status_code=400, detail=f"Invalid job types: {invalid}")
+
+    from user_database import UserDatabase
+    user_db = UserDatabase()
+    result = await user_db.update_user_preferences(user_id, {"job_types": request.job_types})
+    if not result:
+        raise HTTPException(status_code=404, detail="User not found or update failed")
+
+    logger.info(
+        "Admin %s updated job_types for user %d: %s",
+        current_user.get("username"), user_id, request.job_types
+    )
+    return {"success": True, "user_id": user_id, "job_types": request.job_types}
+
+
+@app.post("/api/admin/cleanup")
+async def admin_cleanup_jobs(
+    action: str,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
+    """Delete jobs by category to free DB space. action: rejected|applied|older_30d|older_60d"""
+    if not current_user.get('is_admin'):
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    if not db or not DATABASE_AVAILABLE or not db.use_postgres:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    action_sql = {
+        "rejected":   "WHERE rejected = TRUE",
+        "applied":    "WHERE applied = TRUE AND rejected = FALSE",
+        "older_30d":  "WHERE scraped_at < NOW() - INTERVAL '30 days' AND rejected = FALSE AND applied = FALSE",
+        "older_60d":  "WHERE scraped_at < NOW() - INTERVAL '60 days' AND rejected = FALSE AND applied = FALSE",
+    }
+    if action not in action_sql:
+        raise HTTPException(status_code=400, detail=f"Unknown action. Use: {list(action_sql.keys())}")
+
+    conn = None
+    try:
+        conn = await db.get_connection()
+        if not conn:
+            raise HTTPException(status_code=500, detail="Could not connect to database")
+
+        result = await conn.execute(f"DELETE FROM jobs {action_sql[action]}")
+        deleted = int(result.split()[-1]) if result else 0
+        logger.info("Admin %s cleanup action '%s': deleted %d jobs", current_user.get("username"), action, deleted)
+        return {"success": True, "action": action, "deleted": deleted}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Cleanup failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if conn:
+            await db._release(conn)
 
 
 @app.post("/api/admin/backfill-rejected-signatures")

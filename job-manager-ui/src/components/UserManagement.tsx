@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Users, CheckCircle, XCircle, Clock, AlertCircle, Plus, X } from 'lucide-react';
+import { Users, CheckCircle, XCircle, Clock, AlertCircle, Plus, X, Trash2 } from 'lucide-react';
 import { jobApi } from '../services/api';
 
 interface CountryBreakdown {
@@ -73,6 +73,14 @@ export const UserManagement: React.FC = () => {
   const [countriesLoading, setCountriesLoading] = useState(false);
   const [updatingCountry, setUpdatingCountry] = useState<string | null>(null);
 
+  const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
+  const [confirmDeleteUserId, setConfirmDeleteUserId] = useState<number | null>(null);
+
+  // Job types breakdown state
+  const [expandedJobTypesUserId, setExpandedJobTypesUserId] = useState<number | null>(null);
+  const [userJobTypesData, setUserJobTypesData] = useState<Record<number, string[]>>({});
+  const [updatingJobType, setUpdatingJobType] = useState<string | null>(null);
+
   useEffect(() => {
     loadUsers();
     loadUserCountries();
@@ -96,11 +104,14 @@ export const UserManagement: React.FC = () => {
     try {
       setCountriesLoading(true);
       const data = await jobApi.getUserCountries();
-      const lookup: Record<number, CountryBreakdown[]> = {};
+      const countryLookup: Record<number, CountryBreakdown[]> = {};
+      const jobTypesLookup: Record<number, string[]> = {};
       for (const u of data.users) {
-        lookup[u.id] = u.country_breakdown;
+        countryLookup[u.id] = u.country_breakdown;
+        jobTypesLookup[u.id] = u.job_types || [];
       }
-      setUserCountriesData(lookup);
+      setUserCountriesData(countryLookup);
+      setUserJobTypesData(jobTypesLookup);
     } catch (err) {
       console.error('Failed to load user countries:', err);
     } finally {
@@ -126,6 +137,19 @@ export const UserManagement: React.FC = () => {
     }
   };
 
+  const handleDeleteUser = async (userId: number) => {
+    setDeletingUserId(userId);
+    try {
+      await jobApi.deleteUser(userId);
+      setUsers(prev => prev.filter(u => u.id !== userId));
+      setConfirmDeleteUserId(null);
+    } catch (err: any) {
+      alert(err.response?.data?.detail || 'Failed to delete user');
+    } finally {
+      setDeletingUserId(null);
+    }
+  };
+
   const handleToggleCountry = async (userId: number, country: string, currentlyEnabled: boolean) => {
     const key = `${userId}-${country}`;
     setUpdatingCountry(key);
@@ -147,6 +171,29 @@ export const UserManagement: React.FC = () => {
       console.error('Failed to update countries:', err);
     } finally {
       setUpdatingCountry(null);
+    }
+  };
+
+  const handleToggleJobType = async (userId: number, jobType: string, currentlyEnabled: boolean) => {
+    const key = `${userId}-${jobType}`;
+    setUpdatingJobType(key);
+
+    const prevTypes = userJobTypesData[userId] || [];
+    const newTypes = currentlyEnabled
+      ? prevTypes.filter(t => t !== jobType)
+      : [...prevTypes, jobType];
+
+    // Optimistic update
+    setUserJobTypesData(prev => ({ ...prev, [userId]: newTypes }));
+
+    try {
+      await jobApi.updateUserJobTypes(userId, newTypes);
+    } catch (err) {
+      // Rollback
+      setUserJobTypesData(prev => ({ ...prev, [userId]: prevTypes }));
+      console.error('Failed to update job types:', err);
+    } finally {
+      setUpdatingJobType(null);
     }
   };
 
@@ -504,22 +551,28 @@ export const UserManagement: React.FC = () => {
                           </div>
                         </td>
                         <td className="p-3">
-                          <div className="flex flex-wrap gap-1">
-                            {user.job_types && user.job_types.length > 0 ? (
-                              user.job_types.slice(0, 2).map((type) => (
-                                <Badge key={type} variant="outline" className="text-xs">
-                                  {type}
-                                </Badge>
-                              ))
+                          <button
+                            className="flex flex-wrap gap-1 text-left hover:opacity-80 transition-opacity"
+                            onClick={() => setExpandedJobTypesUserId(expandedJobTypesUserId === user.id ? null : user.id)}
+                            title="Click to manage job types"
+                          >
+                            {countriesLoading ? (
+                              <span className="text-xs text-muted-foreground">Loading...</span>
+                            ) : (userJobTypesData[user.id] || []).length > 0 ? (
+                              <>
+                                {(userJobTypesData[user.id] || []).slice(0, 2).map(type => (
+                                  <Badge key={type} variant="outline" className="text-xs">{type}</Badge>
+                                ))}
+                                {(userJobTypesData[user.id] || []).length > 2 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    +{(userJobTypesData[user.id] || []).length - 2}
+                                  </Badge>
+                                )}
+                              </>
                             ) : (
                               <span className="text-xs text-muted-foreground">None</span>
                             )}
-                            {user.job_types && user.job_types.length > 2 && (
-                              <Badge variant="outline" className="text-xs">
-                                +{user.job_types.length - 2}
-                              </Badge>
-                            )}
-                          </div>
+                          </button>
                         </td>
                         <td className="p-3">
                           <button
@@ -564,23 +617,54 @@ export const UserManagement: React.FC = () => {
                           </div>
                         </td>
                         <td className="p-3 text-right">
-                          <Button
-                            size="sm"
-                            variant={user.is_active ? "destructive" : "default"}
-                            onClick={() => handleToggleUserStatus(user.id, user.is_active)}
-                            disabled={processingUserId === user.id || user.is_admin}
-                          >
-                            {processingUserId === user.id ? (
-                              <div className="flex items-center gap-2">
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                Processing...
-                              </div>
-                            ) : user.is_active ? (
-                              'Deactivate'
-                            ) : (
-                              'Activate'
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              size="sm"
+                              variant={user.is_active ? "destructive" : "default"}
+                              onClick={() => handleToggleUserStatus(user.id, user.is_active)}
+                              disabled={processingUserId === user.id || user.is_admin}
+                            >
+                              {processingUserId === user.id ? (
+                                <div className="flex items-center gap-2">
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                  Processing...
+                                </div>
+                              ) : user.is_active ? (
+                                'Deactivate'
+                              ) : (
+                                'Activate'
+                              )}
+                            </Button>
+                            {!user.is_admin && (
+                              confirmDeleteUserId === user.id ? (
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    onClick={() => handleDeleteUser(user.id)}
+                                    disabled={deletingUserId === user.id}
+                                  >
+                                    {deletingUserId === user.id ? (
+                                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                                    ) : 'Confirm'}
+                                  </Button>
+                                  <Button size="sm" variant="outline" onClick={() => setConfirmDeleteUserId(null)}>
+                                    Cancel
+                                  </Button>
+                                </div>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-red-600 border-red-500/50 hover:bg-red-500/10"
+                                  onClick={() => setConfirmDeleteUserId(user.id)}
+                                  title="Permanently delete user"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )
                             )}
-                          </Button>
+                          </div>
                         </td>
                       </tr>
 
@@ -608,6 +692,43 @@ export const UserManagement: React.FC = () => {
                                   >
                                     <div className="font-medium">{c.country}</div>
                                     <div className="mt-0.5 opacity-75">{c.job_count} jobs</div>
+                                    {isUpdating && (
+                                      <div className="mt-1">
+                                        <div className="animate-spin rounded-full h-3 w-3 border-b border-current mx-auto" />
+                                      </div>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+
+                      {/* Expanded job types row */}
+                      {expandedJobTypesUserId === user.id && (
+                        <tr className="border-b bg-muted/30">
+                          <td colSpan={8} className="p-4">
+                            <div className="mb-2 text-sm font-medium text-muted-foreground">
+                              Job Types for {user.full_name || user.username} — click to toggle
+                            </div>
+                            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-11 gap-2">
+                              {ALL_JOB_TYPES.map(jt => {
+                                const key = `${user.id}-${jt}`;
+                                const enabled = (userJobTypesData[user.id] || []).includes(jt);
+                                const isUpdating = updatingJobType === key;
+                                return (
+                                  <button
+                                    key={jt}
+                                    onClick={() => handleToggleJobType(user.id, jt, enabled)}
+                                    disabled={isUpdating}
+                                    className={`rounded-lg border p-2 text-center text-xs transition-colors ${
+                                      enabled
+                                        ? 'bg-blue-500/15 border-blue-500/50 text-blue-700 dark:text-blue-400'
+                                        : 'bg-muted border-muted-foreground/20 text-muted-foreground'
+                                    } ${isUpdating ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-80 cursor-pointer'}`}
+                                  >
+                                    <div className="font-medium">{jt}</div>
                                     {isUpdating && (
                                       <div className="mt-1">
                                         <div className="animate-spin rounded-full h-3 w-3 border-b border-current mx-auto" />
