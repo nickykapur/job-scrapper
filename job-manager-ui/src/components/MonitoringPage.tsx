@@ -181,6 +181,7 @@ const getStatusBadge = (run: WorkflowRun) => {
 export const MonitoringPage: React.FC = () => {
   const [data, setData] = useState<MonitoringData | null>(null);
   const [activity, setActivity] = useState<ActivityData | null>(null);
+  const [activityError, setActivityError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cleaningUp, setCleaningUp] = useState<string | null>(null);
@@ -189,10 +190,14 @@ export const MonitoringPage: React.FC = () => {
   const load = async () => {
     setLoading(true);
     setError(null);
+    setActivityError(null);
     try {
       const [result, activityResult] = await Promise.all([
         jobApi.getMonitoring(),
-        jobApi.getActivity(150).catch(() => null),
+        jobApi.getActivity(150).catch((err: any) => {
+          setActivityError(err.response?.data?.detail || err.message || 'Failed to load activity');
+          return null;
+        }),
       ]);
       setData(result);
       setActivity(activityResult);
@@ -601,7 +606,7 @@ export const MonitoringPage: React.FC = () => {
       </Card>
 
       {/* User Activity Feed */}
-      {activity && (
+      {(activity || activityError) && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -611,69 +616,79 @@ export const MonitoringPage: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Summary stats */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="rounded-lg border p-3 text-center">
-                <div className="text-xs text-muted-foreground mb-1">Active today</div>
-                <div className="font-bold text-2xl text-blue-600">{activity.active_today}</div>
-              </div>
-              <div className="rounded-lg border p-3 text-center">
-                <div className="text-xs text-muted-foreground mb-1">Events (7d)</div>
-                <div className="font-bold text-2xl">{activity.total_events_7d.toLocaleString()}</div>
-              </div>
-              <div className="rounded-lg border p-3 text-center">
-                <div className="text-xs text-muted-foreground mb-1">Pages tracked (7d)</div>
-                <div className="font-bold text-2xl">{activity.page_views_7d.length}</div>
-              </div>
-            </div>
-
-            {/* Page view breakdown */}
-            {activity.page_views_7d.length > 0 && (
-              <div>
-                <h3 className="font-semibold text-sm mb-2">Page Views (7d)</h3>
-                <div className="flex flex-wrap gap-2">
-                  {activity.page_views_7d.map(({ page, count }) => (
-                    <Badge key={page} variant="outline" className="text-xs">
-                      {page}: <span className="font-bold ml-1">{count}</span>
-                    </Badge>
-                  ))}
-                </div>
+            {activityError && (
+              <div className="flex items-center gap-2 text-sm text-red-500 bg-red-500/10 rounded-lg p-3">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{activityError}</span>
               </div>
             )}
-
-            {/* Recent events table */}
-            {activity.events.length > 0 && (
-              <div>
-                <h3 className="font-semibold text-sm mb-2">Recent Events</h3>
-                <div className="overflow-x-auto max-h-72 overflow-y-auto">
-                  <table className="w-full text-sm">
-                    <thead className="sticky top-0 bg-background">
-                      <tr className="border-b text-muted-foreground">
-                        <th className="text-left p-2">Time</th>
-                        <th className="text-left p-2">User</th>
-                        <th className="text-left p-2">Event</th>
-                        <th className="text-left p-2">Data</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {activity.events.map((e) => (
-                        <tr key={e.id} className="border-b hover:bg-muted/50">
-                          <td className="p-2 text-muted-foreground whitespace-nowrap">{formatDate(e.occurred_at)}</td>
-                          <td className="p-2 font-medium">{e.display_name}</td>
-                          <td className="p-2">
-                            <Badge variant="outline" className="text-xs">{e.event_type}</Badge>
-                          </td>
-                          <td className="p-2 text-xs text-muted-foreground font-mono">
-                            {Object.keys(e.event_data).length > 0
-                              ? Object.entries(e.event_data).map(([k, v]) => `${k}=${v}`).join(', ')
-                              : '—'}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+            {activity && (
+              <>
+                {/* Summary stats */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="rounded-lg border p-3 text-center">
+                    <div className="text-xs text-muted-foreground mb-1">Active today</div>
+                    <div className="font-bold text-2xl text-blue-600">{activity.active_today}</div>
+                  </div>
+                  <div className="rounded-lg border p-3 text-center">
+                    <div className="text-xs text-muted-foreground mb-1">Events (7d)</div>
+                    <div className="font-bold text-2xl">{activity.total_events_7d.toLocaleString()}</div>
+                  </div>
+                  <div className="rounded-lg border p-3 text-center">
+                    <div className="text-xs text-muted-foreground mb-1">Pages tracked (7d)</div>
+                    <div className="font-bold text-2xl">{activity.page_views_7d.length}</div>
+                  </div>
                 </div>
-              </div>
+
+                {/* Page view breakdown */}
+                {activity.page_views_7d.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold text-sm mb-2">Page Views (7d)</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {activity.page_views_7d.map(({ page, count }) => (
+                        <Badge key={page} variant="outline" className="text-xs">
+                          {page}: <span className="font-bold ml-1">{count}</span>
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Recent events table */}
+                {activity.events.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold text-sm mb-2">Recent Events</h3>
+                    <div className="overflow-x-auto max-h-72 overflow-y-auto">
+                      <table className="w-full text-sm">
+                        <thead className="sticky top-0 bg-background">
+                          <tr className="border-b text-muted-foreground">
+                            <th className="text-left p-2">Time</th>
+                            <th className="text-left p-2">User</th>
+                            <th className="text-left p-2">Event</th>
+                            <th className="text-left p-2">Data</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {activity.events.map((e) => (
+                            <tr key={e.id} className="border-b hover:bg-muted/50">
+                              <td className="p-2 text-muted-foreground whitespace-nowrap">{formatDate(e.occurred_at)}</td>
+                              <td className="p-2 font-medium">{e.display_name}</td>
+                              <td className="p-2">
+                                <Badge variant="outline" className="text-xs">{e.event_type}</Badge>
+                              </td>
+                              <td className="p-2 text-xs text-muted-foreground font-mono">
+                                {Object.keys(e.event_data).length > 0
+                                  ? Object.entries(e.event_data).map(([k, v]) => `${k}=${v}`).join(', ')
+                                  : '—'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
