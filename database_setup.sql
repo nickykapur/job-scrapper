@@ -84,6 +84,30 @@ CREATE TABLE IF NOT EXISTS user_countries (
     UNIQUE(user_id, country)
 );
 
+-- Per-country scraper run timing logs (stored by GHA scraper after each run)
+CREATE TABLE IF NOT EXISTS scraper_run_logs (
+    id SERIAL PRIMARY KEY,
+    country VARCHAR(100) NOT NULL,
+    github_run_id VARCHAR(50),
+    github_run_number INTEGER,
+    started_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    duration_seconds INTEGER,
+    phase_fetch_existing_seconds REAL,
+    phase_fetch_job_types_seconds REAL,
+    phase_scraping_seconds REAL,
+    phase_upload_seconds REAL,
+    total_terms INTEGER,
+    successful_searches INTEGER,
+    failed_searches INTEGER,
+    jobs_scraped INTEGER,
+    new_jobs INTEGER,
+    dry_run BOOLEAN DEFAULT FALSE,
+    error TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_scraper_run_logs_started_at ON scraper_run_logs(started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_scraper_run_logs_country ON scraper_run_logs(country);
+
 -- Create indexes for rewards tables
 CREATE INDEX IF NOT EXISTS idx_user_rewards_user_id ON user_rewards(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_rewards_level ON user_rewards(level);

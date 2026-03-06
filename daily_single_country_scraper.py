@@ -248,8 +248,25 @@ def search_single_term(term, location, country_name, existing_jobs, job_type, th
             _thread_local.scraper = None
         return {'term': term, 'jobs': {}, 'job_type': job_type, 'success': False, 'error': str(e), 'thread_id': thread_id}
 
+def _post_run_log(railway_url: str, payload: dict):
+    """Fire-and-forget POST of scraper timing to the backend."""
+    try:
+        requests.post(
+            f"{railway_url}/api/scraper/run-log",
+            json=payload,
+            timeout=10,
+            headers={"Content-Type": "application/json"},
+        )
+    except Exception as e:
+        logger.warning("Could not POST run log: %s", e)
+
+
 def scrape_single_country(location, country_name, railway_url, dry_run=False):
     """Scrape jobs for a single country"""
+
+    run_started_at = datetime.utcnow()
+    phases: dict = {}
+    run_error: str | None = None
 
     logger.info("=== Scraping %s (%s) ===", country_name, location)
 
@@ -259,8 +276,13 @@ def scrape_single_country(location, country_name, railway_url, dry_run=False):
         sentry_sdk.set_tag("location", location)
 
     # Load existing jobs and active job types from Railway
+    _t = time.time()
     existing_jobs = load_existing_jobs_from_railway(railway_url)
+    phases["fetch_existing"] = round(time.time() - _t, 1)
+
+    _t = time.time()
     active_job_types = get_active_job_types(railway_url)
+    phases["fetch_job_types"] = round(time.time() - _t, 1)
 
     # Search terms - Multi-user configuration
     software_search_terms = [
@@ -472,6 +494,7 @@ def scrape_single_country(location, country_name, railway_url, dry_run=False):
     ]
 
     # Execute searches in parallel with ThreadPoolExecutor
+    _scraping_start = time.time()
     with ThreadPoolExecutor(max_workers=MAX_CONCURRENT_SEARCHES) as executor:
         future_to_task = {
             executor.submit(
@@ -527,7 +550,8 @@ def scrape_single_country(location, country_name, railway_url, dry_run=False):
             if completed % MAX_CONCURRENT_SEARCHES == 0:
                 time.sleep(BATCH_DELAY_SECONDS)
 
-    logger.info("[COMPLETE] All %d searches finished for %s", len(term_to_job_type), country_name)
+    phases["scraping"] = round(time.time() - _scraping_start, 1)
+    logger.info("[COMPLETE] All %d searches finished for %s in %.0fs", len(term_to_job_type), country_name, phases["scraping"])
     _close_all_scrapers()  # Release all reused Chrome instances
 
     by_type_summary = ", ".join(f"{jt}: {len(jobs)}" for jt, jobs in jobs_by_type.items())
@@ -554,7 +578,9 @@ def scrape_single_country(location, country_name, railway_url, dry_run=False):
             logger.info("[DRY-RUN] Saved %d jobs to %s (no upload to Railway)", actual_new_total, output_file)
         else:
             logger.info("[UPLOAD] Uploading %d jobs to Railway...", len(all_new_jobs))
+            _t = time.time()
             upload_result = upload_jobs_to_railway(railway_url, all_new_jobs)
+            phases["upload"] = round(time.time() - _t, 1)
 
             if upload_result['success']:
                 actual_new_total = upload_result['new_jobs']
@@ -567,9 +593,38 @@ def scrape_single_country(location, country_name, railway_url, dry_run=False):
                     )
             else:
                 logger.error("[UPLOAD] Failed to upload jobs for %s", country_name)
-                return False
+                run_error = "upload_failed"
     else:
         logger.info("[SKIP] No jobs scraped for %s", country_name)
+
+    # ── POST timing log to backend ────────────────────────────────────────────
+    total_duration = int(time.time() - run_started_at.timestamp())
+    failed_searches = len(term_to_job_type) - successful_searches
+    if railway_url and not dry_run:
+        _post_run_log(railway_url, {
+            "country": country_name,
+            "github_run_id": os.environ.get("GITHUB_RUN_ID"),
+            "github_run_number": int(os.environ["GITHUB_RUN_NUMBER"]) if os.environ.get("GITHUB_RUN_NUMBER") else None,
+            "started_at": run_started_at.isoformat() + "Z",
+            "duration_seconds": total_duration,
+            "phase_fetch_existing_seconds": phases.get("fetch_existing"),
+            "phase_fetch_job_types_seconds": phases.get("fetch_job_types"),
+            "phase_scraping_seconds": phases.get("scraping"),
+            "phase_upload_seconds": phases.get("upload"),
+            "total_terms": len(term_to_job_type),
+            "successful_searches": successful_searches,
+            "failed_searches": failed_searches,
+            "jobs_scraped": len(all_new_jobs),
+            "new_jobs": actual_new_total,
+            "dry_run": dry_run,
+            "error": run_error,
+        })
+    logger.info(
+        "[TIMING] %s — total %ds | fetch_existing=%.0fs | fetch_job_types=%.0fs | scraping=%.0fs | upload=%.0fs",
+        country_name, total_duration,
+        phases.get("fetch_existing", 0), phases.get("fetch_job_types", 0),
+        phases.get("scraping", 0), phases.get("upload", 0),
+    )
 
     # Set output for GitHub Actions
     if os.getenv('GITHUB_OUTPUT'):
@@ -581,7 +636,7 @@ def scrape_single_country(location, country_name, railway_url, dry_run=False):
             f.write(f"dry_run={'true' if dry_run else 'false'}\n")
 
     logger.info("=== %s scraping complete ===", country_name)
-    return True
+    return run_error is None
 
 
 if __name__ == "__main__":

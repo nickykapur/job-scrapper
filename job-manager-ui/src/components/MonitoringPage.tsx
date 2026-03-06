@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Activity, RefreshCw, ExternalLink, AlertCircle, Database, Trash2 } from 'lucide-react';
+import { Activity, RefreshCw, ExternalLink, AlertCircle, Database, Trash2, Timer } from 'lucide-react';
 import { jobApi } from '../services/api';
 
 interface WorkflowRun {
@@ -41,6 +41,27 @@ interface TableStat {
   row_estimate: number;
 }
 
+interface ScraperRunLog {
+  country: string;
+  github_run_id: string | null;
+  github_run_number: number | null;
+  started_at: string | null;
+  duration_seconds: number | null;
+  phases: {
+    fetch_existing: number | null;
+    fetch_job_types: number | null;
+    scraping: number | null;
+    upload: number | null;
+  };
+  total_terms: number | null;
+  successful_searches: number | null;
+  failed_searches: number | null;
+  jobs_scraped: number | null;
+  new_jobs: number | null;
+  dry_run: boolean;
+  error: string | null;
+}
+
 interface MonitoringData {
   generated_at: string;
   github: {
@@ -58,6 +79,7 @@ interface MonitoringData {
       jobs_index_bytes: number;
     } | null;
     tables: TableStat[];
+    scraper_runs: ScraperRunLog[];
     oldest_job: string | null;
     newest_job: string | null;
     cleanup_candidates: {
@@ -326,6 +348,89 @@ export const MonitoringPage: React.FC = () => {
             </div>
             <p className="text-xs text-muted-foreground mt-3">
               Tip: deleting rejected + old unapplied jobs is safe and will free the most space.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Scraper Run Logs */}
+      {db.scraper_runs && db.scraper_runs.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Timer className="h-5 w-5" />
+              Scraper Run Timing
+              <span className="text-sm font-normal text-muted-foreground ml-1">— last {db.scraper_runs.length} country runs</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-muted-foreground">
+                    <th className="text-left p-2">Country</th>
+                    <th className="text-left p-2">Started</th>
+                    <th className="text-left p-2">Total</th>
+                    <th className="text-left p-2">Fetch Jobs</th>
+                    <th className="text-left p-2">Scraping</th>
+                    <th className="text-left p-2">Upload</th>
+                    <th className="text-left p-2">Terms</th>
+                    <th className="text-left p-2">New Jobs</th>
+                    <th className="text-left p-2">Run</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {db.scraper_runs.map((run, i) => {
+                    const total = run.duration_seconds || 0;
+                    const scraping = run.phases.scraping || 0;
+                    const scrapingPct = total > 0 ? Math.round((scraping / total) * 100) : 0;
+                    const hasError = !!run.error;
+                    return (
+                      <tr key={i} className={`border-b hover:bg-muted/50 ${hasError ? 'bg-red-500/5' : ''}`}>
+                        <td className="p-2 font-medium">{run.country}</td>
+                        <td className="p-2 text-muted-foreground">{formatDate(run.started_at)}</td>
+                        <td className="p-2 font-mono">
+                          <span className={total > 900 ? 'text-red-500' : total > 600 ? 'text-yellow-500' : 'text-green-600'}>
+                            {formatDuration(run.duration_seconds)}
+                          </span>
+                        </td>
+                        <td className="p-2 font-mono text-muted-foreground">{formatDuration(run.phases.fetch_existing)}</td>
+                        <td className="p-2">
+                          <div className="flex items-center gap-1">
+                            <span className="font-mono">{formatDuration(run.phases.scraping)}</span>
+                            {scrapingPct > 0 && (
+                              <span className="text-xs text-muted-foreground">({scrapingPct}%)</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-2 font-mono text-muted-foreground">{formatDuration(run.phases.upload)}</td>
+                        <td className="p-2">
+                          <span className={`${(run.failed_searches || 0) > 0 ? 'text-red-500' : ''}`}>
+                            {run.successful_searches}/{run.total_terms}
+                            {(run.failed_searches || 0) > 0 && ` (${run.failed_searches} failed)`}
+                          </span>
+                        </td>
+                        <td className="p-2 font-medium text-green-600">+{run.new_jobs ?? '—'}</td>
+                        <td className="p-2">
+                          {run.github_run_number ? (
+                            <a
+                              href={`https://github.com/nickykapur/job-scrapper/actions/runs/${run.github_run_id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-500 hover:underline flex items-center gap-1"
+                            >
+                              #{run.github_run_number} <ExternalLink className="h-3 w-3" />
+                            </a>
+                          ) : '—'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              Total time colored: <span className="text-green-600">green</span> = under 10 min, <span className="text-yellow-500">yellow</span> = 10-15 min, <span className="text-red-500">red</span> = over 15 min
             </p>
           </CardContent>
         </Card>

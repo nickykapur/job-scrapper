@@ -2416,6 +2416,60 @@ async def get_scraping_targets():
 
 ALL_COUNTRIES = ['Ireland', 'Spain', 'Panama', 'Luxembourg', 'Germany', 'Switzerland', 'United States']
 
+class ScraperRunLogRequest(BaseModel):
+    country: str
+    github_run_id: Optional[str] = None
+    github_run_number: Optional[int] = None
+    started_at: str  # ISO timestamp
+    duration_seconds: Optional[int] = None
+    phase_fetch_existing_seconds: Optional[float] = None
+    phase_fetch_job_types_seconds: Optional[float] = None
+    phase_scraping_seconds: Optional[float] = None
+    phase_upload_seconds: Optional[float] = None
+    total_terms: Optional[int] = None
+    successful_searches: Optional[int] = None
+    failed_searches: Optional[int] = None
+    jobs_scraped: Optional[int] = None
+    new_jobs: Optional[int] = None
+    dry_run: bool = False
+    error: Optional[str] = None
+
+@app.post("/api/scraper/run-log")
+async def post_scraper_run_log(request: ScraperRunLogRequest):
+    """Called by GitHub Actions scraper after each country finishes — no user auth needed"""
+    if not db or not DATABASE_AVAILABLE or not db.use_postgres:
+        return {"success": False, "reason": "database unavailable"}
+    conn = None
+    try:
+        conn = await db.get_connection()
+        if not conn:
+            return {"success": False, "reason": "no connection"}
+        await conn.execute("""
+            INSERT INTO scraper_run_logs (
+                country, github_run_id, github_run_number, started_at, duration_seconds,
+                phase_fetch_existing_seconds, phase_fetch_job_types_seconds,
+                phase_scraping_seconds, phase_upload_seconds,
+                total_terms, successful_searches, failed_searches,
+                jobs_scraped, new_jobs, dry_run, error
+            ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+        """,
+            request.country, request.github_run_id, request.github_run_number,
+            datetime.fromisoformat(request.started_at.replace("Z", "+00:00")),
+            request.duration_seconds,
+            request.phase_fetch_existing_seconds, request.phase_fetch_job_types_seconds,
+            request.phase_scraping_seconds, request.phase_upload_seconds,
+            request.total_terms, request.successful_searches, request.failed_searches,
+            request.jobs_scraped, request.new_jobs, request.dry_run, request.error
+        )
+        logger.info("Scraper run log saved: %s (%ds)", request.country, request.duration_seconds or 0)
+        return {"success": True}
+    except Exception as e:
+        logger.error("Failed to save scraper run log: %s", e)
+        return {"success": False, "reason": str(e)}
+    finally:
+        if conn:
+            await db._release(conn)
+
 @app.get("/api/admin/monitoring")
 async def get_monitoring(current_user: Dict[str, Any] = Depends(get_current_user)):
     """Get GitHub Actions pipeline status, DB stats, and Sentry info"""
@@ -2557,6 +2611,46 @@ async def get_monitoring(current_user: Dict[str, Any] = Depends(get_current_user
                         "older_than_30d": cleanup_row["older_than_30d"],
                         "older_than_60d": cleanup_row["older_than_60d"],
                     }
+
+                # Recent scraper run logs (last 50 rows grouped by github_run_id)
+                try:
+                    run_logs = await conn.fetch("""
+                        SELECT
+                            country, github_run_id, github_run_number,
+                            started_at, duration_seconds,
+                            phase_fetch_existing_seconds, phase_fetch_job_types_seconds,
+                            phase_scraping_seconds, phase_upload_seconds,
+                            total_terms, successful_searches, failed_searches,
+                            jobs_scraped, new_jobs, dry_run, error
+                        FROM scraper_run_logs
+                        ORDER BY started_at DESC
+                        LIMIT 50
+                    """)
+                    db_stats["scraper_runs"] = [
+                        {
+                            "country": r["country"],
+                            "github_run_id": r["github_run_id"],
+                            "github_run_number": r["github_run_number"],
+                            "started_at": r["started_at"].isoformat() if r["started_at"] else None,
+                            "duration_seconds": r["duration_seconds"],
+                            "phases": {
+                                "fetch_existing": r["phase_fetch_existing_seconds"],
+                                "fetch_job_types": r["phase_fetch_job_types_seconds"],
+                                "scraping": r["phase_scraping_seconds"],
+                                "upload": r["phase_upload_seconds"],
+                            },
+                            "total_terms": r["total_terms"],
+                            "successful_searches": r["successful_searches"],
+                            "failed_searches": r["failed_searches"],
+                            "jobs_scraped": r["jobs_scraped"],
+                            "new_jobs": r["new_jobs"],
+                            "dry_run": r["dry_run"],
+                            "error": r["error"],
+                        }
+                        for r in run_logs
+                    ]
+                except Exception:
+                    db_stats["scraper_runs"] = []
 
         except Exception as e:
             db_stats["error"] = str(e)
