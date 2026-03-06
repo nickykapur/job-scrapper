@@ -284,6 +284,17 @@ const App: React.FC = () => {
   // Pagination logic
   const paginatedJobs = useMemo(() => {
     const jobEntries = Object.entries(cleanJobs);
+
+    // Apply sort
+    jobEntries.sort(([, a], [, b]) => {
+      if (filters.sort === 'newest') {
+        return new Date(b.scraped_at || 0).getTime() - new Date(a.scraped_at || 0).getTime();
+      } else if (filters.sort === 'oldest') {
+        return new Date(a.scraped_at || 0).getTime() - new Date(b.scraped_at || 0).getTime();
+      }
+      return 0;
+    });
+
     const totalPages = Math.ceil(jobEntries.length / jobsPerPage);
     const startIndex = (currentPage - 1) * jobsPerPage;
     const endIndex = startIndex + jobsPerPage;
@@ -293,7 +304,7 @@ const App: React.FC = () => {
       totalPages,
       totalJobs: jobEntries.length,
     };
-  }, [cleanJobs, currentPage, jobsPerPage]);
+  }, [cleanJobs, currentPage, jobsPerPage, filters.sort]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
