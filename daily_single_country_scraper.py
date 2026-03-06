@@ -15,6 +15,36 @@ import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from linkedin_job_scraper import LinkedInJobScraper
 
+# ── Browser pool (thread-local) ───────────────────────────────────────────────
+# Each worker thread reuses ONE Chrome instance across all its search tasks
+# instead of creating+destroying a browser for every term (~4s startup saved per term)
+_thread_local = threading.local()
+_all_scrapers: list = []
+_scrapers_lock = threading.Lock()
+
+def _get_thread_scraper(existing_jobs: dict) -> LinkedInJobScraper:
+    """Return this thread's reusable scraper, creating it on first use."""
+    if not getattr(_thread_local, 'scraper', None):
+        scraper = LinkedInJobScraper(headless=True)
+        scraper.existing_jobs = existing_jobs
+        _thread_local.scraper = scraper
+        with _scrapers_lock:
+            _all_scrapers.append(scraper)
+    else:
+        # Keep existing_jobs reference in sync (it's the same shared dict, but be explicit)
+        _thread_local.scraper.existing_jobs = existing_jobs
+    return _thread_local.scraper
+
+def _close_all_scrapers():
+    """Close every browser created during this run."""
+    with _scrapers_lock:
+        for scraper in _all_scrapers:
+            try:
+                scraper.close()
+            except Exception:
+                pass
+        _all_scrapers.clear()
+
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger("scraper")
@@ -178,21 +208,17 @@ def upload_jobs_to_railway(railway_url, jobs_data):
 
 def search_single_term(term, location, country_name, existing_jobs, job_type, thread_id):
     """
-    Search for jobs with a single term (runs in parallel)
+    Search for jobs with a single term (runs in parallel).
+    Reuses this thread's Chrome browser across calls — no startup cost after the first term.
     Returns: dict with jobs found and metadata
     """
-    thread_scraper = None
     try:
-        # Each thread gets its own browser instance
-        thread_scraper = LinkedInJobScraper(headless=True)
-        thread_scraper.existing_jobs = existing_jobs
-
+        thread_scraper = _get_thread_scraper(existing_jobs)
         print(f"   [THREAD-{thread_id}] Searching: {term}")
 
         results = {}
 
-        # Single pass: Get all jobs — card-level Easy Apply detection runs inside extract_job_data
-        # (detect_easy_apply reads the card HTML, so no second pass needed)
+        # Single pass: card-level Easy Apply detection runs inside extract_job_data
         all_results = thread_scraper.search_jobs(
             keywords=term,
             location=location,
@@ -205,36 +231,22 @@ def search_single_term(term, location, country_name, existing_jobs, job_type, th
                 job_data["country"] = country_name
                 job_data["search_location"] = location
                 results[job_id] = job_data
-
             print(f"   [THREAD-{thread_id}] ✓ {term}: Found {len(all_results)} jobs")
         else:
             print(f"   [THREAD-{thread_id}] ⊗ {term}: No new jobs")
 
-        return {
-            'term': term,
-            'jobs': results,
-            'job_type': job_type,
-            'success': True,
-            'thread_id': thread_id
-        }
+        return {'term': term, 'jobs': results, 'job_type': job_type, 'success': True, 'thread_id': thread_id}
 
     except Exception as e:
         print(f"   [THREAD-{thread_id}] ✗ {term}: Search failed: {e}")
-        return {
-            'term': term,
-            'jobs': {},
-            'job_type': job_type,
-            'success': False,
-            'error': str(e),
-            'thread_id': thread_id
-        }
-    finally:
-        # Clean up browser for this thread
-        if thread_scraper:
+        # If browser crashed, reset it so next task gets a fresh one
+        if getattr(_thread_local, 'scraper', None):
             try:
-                thread_scraper.close()
-            except:
+                _thread_local.scraper.close()
+            except Exception:
                 pass
+            _thread_local.scraper = None
+        return {'term': term, 'jobs': {}, 'job_type': job_type, 'success': False, 'error': str(e), 'thread_id': thread_id}
 
 def scrape_single_country(location, country_name, railway_url, dry_run=False):
     """Scrape jobs for a single country"""
@@ -516,6 +528,7 @@ def scrape_single_country(location, country_name, railway_url, dry_run=False):
                 time.sleep(BATCH_DELAY_SECONDS)
 
     logger.info("[COMPLETE] All %d searches finished for %s", len(term_to_job_type), country_name)
+    _close_all_scrapers()  # Release all reused Chrome instances
 
     by_type_summary = ", ".join(f"{jt}: {len(jobs)}" for jt, jobs in jobs_by_type.items())
     logger.info("[SUMMARY] %s: %d/%d searches OK, %d new jobs (%s)",

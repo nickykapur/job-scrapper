@@ -217,20 +217,17 @@ class LinkedInJobScraper:
         self.driver.get(url)
         time.sleep(2)
 
-        # Wait for job listings to load — try multiple selectors since LinkedIn changes their HTML
-        job_loaded = False
-        for wait_selector in [".job-search-card", ".base-card", "[data-entity-urn*='job']",
-                               ".jobs-search__results-list li", ".scaffold-layout__list-container li"]:
-            try:
-                WebDriverWait(self.driver, 10).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, wait_selector))
-                )
-                job_loaded = True
-                break
-            except:
-                continue
-
-        if not job_loaded:
+        # Wait for any job listing selector to appear — single combined wait avoids
+        # the 10s timeout cascade (old code: up to 5 × 10s = 50s if wrong selectors)
+        combined_selector = (
+            ".job-search-card, .base-card, [data-entity-urn*='job'], "
+            ".jobs-search__results-list li, .scaffold-layout__list-container li"
+        )
+        try:
+            WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, combined_selector))
+            )
+        except Exception:
             print("No job listings found or page didn't load properly")
             return []
 
@@ -1417,18 +1414,16 @@ class LinkedInJobScraper:
     def scroll_to_load_jobs(self):
         last_height = self.driver.execute_script("return document.body.scrollHeight")
         scroll_attempts = 0
-        max_scrolls = 5
-        
+        max_scrolls = 3  # 3 is enough; LinkedIn loads all results in 1-2 scrolls
+
         while scroll_attempts < max_scrolls:
-            # Scroll down
             self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            time.sleep(2)
-            
-            # Check if new content loaded
+            time.sleep(1)  # Reduced from 2s — content appears within 1s on GHA
+
             new_height = self.driver.execute_script("return document.body.scrollHeight")
             if new_height == last_height:
                 break
-                
+
             last_height = new_height
             scroll_attempts += 1
     
