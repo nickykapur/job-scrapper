@@ -103,7 +103,7 @@ class LinkedInJobScraper:
         """Save all jobs to persistent storage"""
         try:
             with open(self.storage_file, 'w', encoding='utf-8') as f:
-                json.dump(self.existing_jobs, f, indent=2, ensure_ascii=False)
+                json.dump(dict(self.existing_jobs), f, indent=2, ensure_ascii=False)
         except Exception as e:
             print(f"Error saving jobs database: {e}")
     

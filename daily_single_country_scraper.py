@@ -168,7 +168,7 @@ def upload_jobs_to_railway(railway_url, jobs_data):
         response = requests.post(
             sync_url,
             json={"jobs_data": jobs_data},
-            timeout=60,
+            timeout=300,
             headers={"Content-Type": "application/json"}
         )
 
