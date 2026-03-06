@@ -2924,7 +2924,7 @@ async def get_activity_feed(
     try:
         events = await conn.fetch("""
             SELECT e.id, e.user_id, u.username, COALESCE(u.full_name, u.username) as display_name,
-                   e.event_type, e.event_data, e.occurred_at
+                   e.event_type, e.event_data::text as event_data, e.occurred_at
             FROM user_activity_events e
             JOIN users u ON u.id = e.user_id
             ORDER BY e.occurred_at DESC
@@ -2949,11 +2949,21 @@ async def get_activity_feed(
             WHERE occurred_at > NOW() - INTERVAL '7 days'
         """) or 0
 
+        def parse_event_data(raw):
+            if not raw:
+                return {}
+            if isinstance(raw, dict):
+                return raw
+            try:
+                return json.loads(raw)
+            except Exception:
+                return {}
+
         return {
             "success": True,
             "active_today": int(active_today),
             "total_events_7d": int(total_events_7d),
-            "page_views_7d": [{"page": r["page"], "count": int(r["count"])} for r in page_counts],
+            "page_views_7d": [{"page": r["page"], "count": int(r["count"])} for r in page_counts if r["page"]],
             "events": [
                 {
                     "id": r["id"],
@@ -2961,12 +2971,15 @@ async def get_activity_feed(
                     "username": r["username"],
                     "display_name": r["display_name"],
                     "event_type": r["event_type"],
-                    "event_data": dict(r["event_data"]) if r["event_data"] else {},
+                    "event_data": parse_event_data(r["event_data"]),
                     "occurred_at": r["occurred_at"].isoformat() if r["occurred_at"] else None,
                 }
                 for r in events
             ],
         }
+    except Exception as e:
+        logger.error("Activity feed error: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
     finally:
         await db._release(conn)
 
