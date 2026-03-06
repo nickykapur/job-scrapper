@@ -263,6 +263,30 @@ async def startup_event():
         except Exception as e:
             print(f"⚠️  Database initialization failed: {e}")
 
+        # Run incremental migrations that may not be in the base schema yet
+        try:
+            conn = await db.get_connection()
+            if conn:
+                try:
+                    await conn.execute("""
+                        CREATE TABLE IF NOT EXISTS user_activity_events (
+                            id BIGSERIAL PRIMARY KEY,
+                            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                            event_type VARCHAR(50) NOT NULL,
+                            event_data JSONB DEFAULT '{}',
+                            occurred_at TIMESTAMPTZ DEFAULT NOW()
+                        );
+                        CREATE INDEX IF NOT EXISTS idx_activity_user_time
+                            ON user_activity_events(user_id, occurred_at DESC);
+                        CREATE INDEX IF NOT EXISTS idx_activity_type_time
+                            ON user_activity_events(event_type, occurred_at DESC);
+                    """)
+                    print("✅ Activity events table ready")
+                finally:
+                    await db._release(conn)
+        except Exception as e:
+            print(f"⚠️  Activity events migration failed: {e}")
+
 async def load_jobs():
     """Load jobs from database ONLY - no JSON fallback"""
     if not db or not DATABASE_AVAILABLE:
