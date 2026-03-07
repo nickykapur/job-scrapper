@@ -25,24 +25,10 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ stats }) => {
       colorClass: 'text-emerald-500',
       hoverClass: 'hover:border-emerald-500/40 hover:shadow-emerald-500/10',
     },
-    {
-      label: 'Applied',
-      value: stats.applied,
-      color: 'rgb(139, 92, 246)', // violet-500
-      colorClass: 'text-violet-500',
-      hoverClass: 'hover:border-violet-500/40 hover:shadow-violet-500/10',
-    },
-    {
-      label: 'Pending',
-      value: stats.not_applied,
-      color: 'rgb(245, 158, 11)', // amber-500
-      colorClass: 'text-amber-500',
-      hoverClass: 'hover:border-amber-500/40 hover:shadow-amber-500/10',
-    },
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
+    <div className="grid grid-cols-2 gap-3 md:gap-4 mb-4 md:mb-6">
       {statItems.map((item, index) => (
         <MotionCard
           key={item.label}
