@@ -556,168 +556,167 @@ class JobDatabase:
             print(f"⚠️  Warning: Could not clean up old jobs: {e}")
             return 0
 
+    def _clean_job_row(self, job_id: str, job_data: Dict[str, Any], is_update: bool):
+        """Return a tuple of cleaned values for INSERT or UPDATE, matching the jobs table columns."""
+        title    = str(job_data['title'])[:500]      if job_data.get('title')      else 'No title'
+        company  = str(job_data['company'])[:300]    if job_data.get('company')    else 'Unknown'
+        location = str(job_data['location'])[:300]   if job_data.get('location')   else ''
+        posted_date = str(job_data['posted_date'])[:100] if job_data.get('posted_date') else ''
+        job_url  = job_data.get('job_url', '')
+        country  = str(job_data['country'])[:100]    if job_data.get('country')    else None
+        job_type = str(job_data['job_type'])[:50]    if job_data.get('job_type')   else None
+        experience_level = str(job_data['experience_level'])[:50] if job_data.get('experience_level') else None
+        easy_apply = bool(job_data.get('easy_apply', False))
+        easy_apply_status = str(job_data.get('easy_apply_status', 'unverified'))[:50]
+        easy_apply_verified_at = self._parse_datetime_string(job_data.get('easy_apply_verified_at'))
+        easy_apply_verification_method = str(job_data['easy_apply_verification_method'])[:100] if job_data.get('easy_apply_verification_method') else None
+
+        if is_update:
+            is_new = bool(job_data.get('is_new', False))
+            # UPDATE tuple order matches the SQL below: id first for WHERE clause
+            return (job_id, title, company, location, posted_date, job_url, is_new, easy_apply,
+                    country, job_type, experience_level, easy_apply_status,
+                    easy_apply_verified_at, easy_apply_verification_method)
+        else:
+            applied  = bool(job_data.get('applied', False))
+            is_new   = bool(job_data.get('is_new', True))
+            # INSERT tuple order matches the column list below
+            return (job_id, title, company, location, posted_date, job_url, applied, is_new,
+                    easy_apply, country, job_type, experience_level, easy_apply_status,
+                    easy_apply_verified_at, easy_apply_verification_method)
+
     async def _sync_jobs_postgres(self, jobs_data: Dict[str, Any]) -> Dict[str, int]:
-        """Sync jobs to PostgreSQL"""
+        """Sync jobs to PostgreSQL using bulk operations (4 queries regardless of batch size)."""
         conn = await self.get_connection()
         if not conn:
             return self._sync_jobs_json(jobs_data)
 
         try:
-            new_jobs = 0
-            updated_jobs = 0
-            new_software = 0
-            new_hr = 0
-            new_cybersecurity = 0
-            new_sales = 0
-            new_finance = 0
-            new_marketing = 0
-            new_biotech = 0
-            new_engineering = 0
-            new_events = 0
+            # ── 1. Collect real job entries (skip metadata keys) ──────────────
+            incoming = {k: v for k, v in jobs_data.items() if not k.startswith('_')}
+            if not incoming:
+                return {"new_jobs": 0, "updated_jobs": 0, "skipped_reposts": 0,
+                        "new_software": 0, "new_hr": 0, "new_cybersecurity": 0,
+                        "new_sales": 0, "new_finance": 0, "new_marketing": 0,
+                        "new_biotech": 0, "new_engineering": 0, "new_events": 0,
+                        "deleted_jobs": 0}
+
+            all_ids = list(incoming.keys())
+
+            # ── 2. Single query: which IDs already exist? ─────────────────────
+            existing_ids = {
+                row['id']
+                for row in await conn.fetch(
+                    "SELECT id FROM jobs WHERE id = ANY($1::text[])", all_ids
+                )
+            }
+
+            new_candidate_ids  = [jid for jid in all_ids if jid not in existing_ids]
+            update_ids         = [jid for jid in all_ids if jid in existing_ids]
+
+            # ── 3. Single query: bulk repost check for all new candidates ─────
             skipped_reposts = 0
+            insert_ids = new_candidate_ids  # assume all pass; filter below
 
-            for job_id, job_data in jobs_data.items():
-                if job_id.startswith("_"):  # Skip metadata
-                    continue
+            if new_candidate_ids:
+                cutoff = datetime.now() - timedelta(days=30)
+                # Build (company_lower, normalized_title) pairs for all new jobs
+                candidate_pairs = []
+                for jid in new_candidate_ids:
+                    jd = incoming[jid]
+                    company = str(jd.get('company', '') or '').strip()
+                    title   = str(jd.get('title',   '') or '').strip()
+                    norm    = self.normalize_job_title(title)
+                    if company and norm:
+                        candidate_pairs.append((jid, company.lower(), norm))
 
-                # Check if job exists
-                existing = await conn.fetchrow("SELECT id, applied FROM jobs WHERE id = $1", job_id)
+                if candidate_pairs:
+                    companies  = [p[1] for p in candidate_pairs]
+                    norm_titles = [p[2] for p in candidate_pairs]
 
-                # If this is a new job, check if it's a repost
-                if not existing:
-                    title = str(job_data['title'])[:500] if job_data.get('title') else 'No title'
-                    company = str(job_data['company'])[:300] if job_data.get('company') else 'Unknown'
-                    country = str(job_data.get('country', ''))[:100] if job_data.get('country') else None
+                    repost_sigs = await conn.fetch("""
+                        SELECT LOWER(js.company) AS company, js.normalized_title
+                        FROM job_signatures js
+                        WHERE js.applied_date >= $1
+                          AND LOWER(js.company) = ANY($2::text[])
+                          AND js.normalized_title = ANY($3::text[])
+                    """, cutoff, companies, norm_titles)
 
-                    is_repost, original_job_id = await self.check_if_repost(company, title, country, days_window=30, conn=conn)
+                    repost_set = {(r['company'], r['normalized_title']) for r in repost_sigs}
 
-                    if is_repost:
-                        print(f"⏭️  Skipping repost: '{title}' at {company} (you applied to a similar job)")
-                        skipped_reposts += 1
-                        continue  # Skip this job entirely
+                    repost_ids = set()
+                    for jid, comp_lower, norm in candidate_pairs:
+                        if (comp_lower, norm) in repost_set:
+                            jd = incoming[jid]
+                            print(f"⏭️  Skipping repost: '{jd.get('title')}' at {jd.get('company')}")
+                            repost_ids.add(jid)
+                            skipped_reposts += 1
 
-                if existing:
-                    # Update existing job, preserve applied status
-                    scraped_at = self._parse_datetime_string(job_data.get('scraped_at'))
-                    is_new_bool = bool(job_data.get('is_new', False))
+                    insert_ids = [jid for jid in new_candidate_ids if jid not in repost_ids]
 
-                    # Clean and limit string fields
-                    title = str(job_data['title'])[:500] if job_data.get('title') else 'No title'
-                    company = str(job_data['company'])[:300] if job_data.get('company') else 'Unknown'
-                    location = str(job_data['location'])[:300] if job_data.get('location') else ''
-                    posted_date = str(job_data['posted_date'])[:100] if job_data.get('posted_date') else ''
-                    category = str(job_data.get('category', ''))[:50] if job_data.get('category') else None
+            # ── 4a. Bulk INSERT new jobs ───────────────────────────────────────
+            if insert_ids:
+                insert_rows = [self._clean_job_row(jid, incoming[jid], is_update=False)
+                               for jid in insert_ids]
+                await conn.executemany("""
+                    INSERT INTO jobs (id, title, company, location, posted_date, job_url,
+                                      applied, is_new, easy_apply, country, job_type,
+                                      experience_level, easy_apply_status,
+                                      easy_apply_verified_at, easy_apply_verification_method)
+                    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+                    ON CONFLICT (id) DO NOTHING
+                """, insert_rows)
 
-                    # Update with all fields including country, job_type, experience_level
-                    easy_apply_bool = bool(job_data.get('easy_apply', False))
-                    country = str(job_data.get('country', ''))[:100] if job_data.get('country') else None
-                    job_type = str(job_data.get('job_type', ''))[:50] if job_data.get('job_type') else None
-                    experience_level = str(job_data.get('experience_level', ''))[:50] if job_data.get('experience_level') else None
+            # ── 4b. Bulk UPDATE existing jobs ─────────────────────────────────
+            if update_ids:
+                update_rows = [self._clean_job_row(jid, incoming[jid], is_update=True)
+                               for jid in update_ids]
+                await conn.executemany("""
+                    UPDATE jobs SET
+                        title=$2, company=$3, location=$4, posted_date=$5,
+                        job_url=$6, is_new=$7, easy_apply=$8,
+                        country=$9, job_type=$10, experience_level=$11,
+                        easy_apply_status=$12, easy_apply_verified_at=$13,
+                        easy_apply_verification_method=$14
+                    WHERE id=$1
+                """, update_rows)
 
-                    # Get verification fields if they exist
-                    easy_apply_status = str(job_data.get('easy_apply_status', 'unverified'))[:50]
-                    easy_apply_verified_at = self._parse_datetime_string(job_data.get('easy_apply_verified_at'))
-                    easy_apply_verification_method = str(job_data.get('easy_apply_verification_method', ''))[:100] if job_data.get('easy_apply_verification_method') else None
+            # ── 5. Count new jobs by type ─────────────────────────────────────
+            type_counts = {t: 0 for t in ('software','hr','cybersecurity','sales',
+                                           'finance','marketing','biotech','engineering','events')}
+            for jid in insert_ids:
+                jt = incoming[jid].get('job_type') or ''
+                if jt in type_counts:
+                    type_counts[jt] += 1
 
-                    await conn.execute("""
-                        UPDATE jobs SET
-                            title = $2, company = $3, location = $4, posted_date = $5,
-                            job_url = $6, is_new = $7, easy_apply = $8,
-                            country = $9, job_type = $10, experience_level = $11,
-                            easy_apply_status = $12, easy_apply_verified_at = $13, easy_apply_verification_method = $14
-                        WHERE id = $1
-                    """, job_id, title, company, location, posted_date, job_data['job_url'], is_new_bool, easy_apply_bool,
-                         country, job_type, experience_level, easy_apply_status, easy_apply_verified_at, easy_apply_verification_method)
-                    updated_jobs += 1
-                else:
-                    # Insert new job
-                    scraped_at = self._parse_datetime_string(job_data.get('scraped_at'))
-                    first_seen = self._parse_datetime_string(job_data.get('first_seen'))
+            new_jobs    = len(insert_ids)
+            updated_jobs = len(update_ids)
 
-                    # Ensure proper data types for database consistency
-                    applied_bool = bool(job_data.get('applied', False))
-                    is_new_bool = bool(job_data.get('is_new', True))
-
-                    # Clean and limit string fields to prevent type errors
-                    title = str(job_data['title'])[:500] if job_data.get('title') else 'No title'
-                    company = str(job_data['company'])[:300] if job_data.get('company') else 'Unknown'
-                    location = str(job_data['location'])[:300] if job_data.get('location') else ''
-                    posted_date = str(job_data['posted_date'])[:100] if job_data.get('posted_date') else ''
-                    category = str(job_data.get('category', ''))[:50] if job_data.get('category') else None
-
-                    # Extract new fields
-                    country = str(job_data.get('country', ''))[:100] if job_data.get('country') else None
-                    job_type = str(job_data.get('job_type', ''))[:50] if job_data.get('job_type') else None
-                    experience_level = str(job_data.get('experience_level', ''))[:50] if job_data.get('experience_level') else None
-
-                    # Get verification fields if they exist
-                    easy_apply_status = str(job_data.get('easy_apply_status', 'unverified'))[:50]
-                    easy_apply_verified_at = self._parse_datetime_string(job_data.get('easy_apply_verified_at'))
-                    easy_apply_verification_method = str(job_data.get('easy_apply_verification_method', ''))[:100] if job_data.get('easy_apply_verification_method') else None
-
-                    # INSERT with all fields including country, job_type, experience_level
-                    easy_apply_bool = bool(job_data.get('easy_apply', False))
-                    await conn.execute("""
-                        INSERT INTO jobs (id, title, company, location, posted_date, job_url, applied, is_new, easy_apply, country, job_type, experience_level, easy_apply_status, easy_apply_verified_at, easy_apply_verification_method)
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-                    """, job_id, title, company, location, posted_date, job_data['job_url'], applied_bool, is_new_bool, easy_apply_bool,
-                         country, job_type, experience_level, easy_apply_status, easy_apply_verified_at, easy_apply_verification_method)
-                    new_jobs += 1
-
-                    # Track software vs HR vs cybersecurity vs sales vs finance vs marketing vs biotech new jobs
-                    if job_type == 'software':
-                        new_software += 1
-                    elif job_type == 'hr':
-                        new_hr += 1
-                    elif job_type == 'cybersecurity':
-                        new_cybersecurity += 1
-                    elif job_type == 'sales':
-                        new_sales += 1
-                    elif job_type == 'finance':
-                        new_finance += 1
-                    elif job_type == 'marketing':
-                        new_marketing += 1
-                    elif job_type == 'biotech':
-                        new_biotech += 1
-                    elif job_type == 'engineering':
-                        new_engineering += 1
-                    elif job_type == 'events':
-                        new_events += 1
-            
-            # Log scraping session
+            # ── 6. Log scraping session ───────────────────────────────────────
             await conn.execute("""
                 INSERT INTO scraping_sessions (total_jobs_found, new_jobs_count, updated_jobs_count, notes)
                 VALUES ($1, $2, $3, $4)
-            """, len(jobs_data), new_jobs, updated_jobs, f"Synced from local scraper")
+            """, len(incoming), new_jobs, updated_jobs, "Synced from local scraper")
 
-            print(f"✅ PostgreSQL: {new_jobs} new jobs ({new_software} software, {new_hr} HR, {new_cybersecurity} cybersecurity, {new_sales} sales, {new_finance} finance, {new_marketing} marketing, {new_biotech} biotech, {new_engineering} engineering, {new_events} events), {updated_jobs} updated jobs")
-            if skipped_reposts > 0:
-                print(f"⏭️  Skipped {skipped_reposts} reposted jobs (already applied to similar positions)")
-
-            # CLEANUP NOW HANDLED BY: /api/jobs/enforce-country-limit
-            # Called by GitHub Actions after each scrape run (7x daily)
-            # New cleanup uses per-job-type limits with 24h protection:
-            #   - Software: UNLIMITED (999999)
-            #   - HR/Sales/Finance/Cyber: 20 per country
-            #   - ALL jobs from last 24h: ALWAYS PROTECTED
-            # Old cleanup below is DISABLED to prevent conflicts
-            print(f"\n✅ Job cleanup handled by API endpoint (per-job-type limits)")
-            deleted_jobs = 0  # Cleanup now via /api/jobs/enforce-country-limit
+            print(f"✅ PostgreSQL: {new_jobs} new, {updated_jobs} updated, {skipped_reposts} reposts skipped "
+                  f"({type_counts['software']} sw, {type_counts['hr']} hr, {type_counts['cybersecurity']} cyber, "
+                  f"{type_counts['sales']} sales, {type_counts['finance']} fin, {type_counts['marketing']} mkt, "
+                  f"{type_counts['biotech']} bio, {type_counts['engineering']} eng, {type_counts['events']} evt)")
 
             return {
-                "new_jobs": new_jobs,
-                "new_software": new_software,
-                "new_hr": new_hr,
-                "new_cybersecurity": new_cybersecurity,
-                "new_sales": new_sales,
-                "new_finance": new_finance,
-                "new_marketing": new_marketing,
-                "new_biotech": new_biotech,
-                "new_engineering": new_engineering,
-                "new_events": new_events,
-                "updated_jobs": updated_jobs,
-                "deleted_jobs": deleted_jobs,
-                "skipped_reposts": skipped_reposts
+                "new_jobs":          new_jobs,
+                "new_software":      type_counts['software'],
+                "new_hr":            type_counts['hr'],
+                "new_cybersecurity": type_counts['cybersecurity'],
+                "new_sales":         type_counts['sales'],
+                "new_finance":       type_counts['finance'],
+                "new_marketing":     type_counts['marketing'],
+                "new_biotech":       type_counts['biotech'],
+                "new_engineering":   type_counts['engineering'],
+                "new_events":        type_counts['events'],
+                "updated_jobs":      updated_jobs,
+                "deleted_jobs":      0,
+                "skipped_reposts":   skipped_reposts,
             }
 
         except Exception as e:
