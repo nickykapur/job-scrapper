@@ -156,56 +156,73 @@ def load_existing_jobs_from_railway(railway_url):
         print(f"[WARN] Error loading existing jobs: {e}")
         return {}
 
+UPLOAD_CHUNK_SIZE = 100  # Send at most 100 jobs per request to avoid Railway timeouts
+
+def _empty_upload_result(success=False):
+    return {
+        'success': success,
+        'new_jobs': 0, 'new_software': 0, 'new_hr': 0, 'new_cybersecurity': 0,
+        'new_sales': 0, 'new_finance': 0, 'new_marketing': 0, 'new_biotech': 0,
+        'new_engineering': 0, 'new_events': 0, 'updated_jobs': 0
+    }
+
 def upload_jobs_to_railway(railway_url, jobs_data):
-    """Upload jobs to Railway database and return actual new/updated counts"""
-    try:
-        if not railway_url.startswith('http'):
-            railway_url = f'https://{railway_url}'
+    """Upload jobs to Railway database in chunks to avoid request timeouts."""
+    if not railway_url.startswith('http'):
+        railway_url = f'https://{railway_url}'
 
-        sync_url = f"{railway_url}/sync_jobs"
+    sync_url = f"{railway_url}/sync_jobs"
 
-        print(f"   [API] Uploading to: {sync_url}")
-        response = requests.post(
-            sync_url,
-            json={"jobs_data": jobs_data},
-            timeout=300,
-            headers={"Content-Type": "application/json"}
-        )
+    # Separate metadata keys (start with '_') from real job entries
+    meta = {k: v for k, v in jobs_data.items() if k.startswith('_')}
+    job_items = [(k, v) for k, v in jobs_data.items() if not k.startswith('_')]
 
-        if response.status_code == 200:
-            result = response.json()
-            new_jobs = result.get('new_jobs', 0)
-            new_software = result.get('new_software', 0)
-            new_hr = result.get('new_hr', 0)
-            new_cybersecurity = result.get('new_cybersecurity', 0)
-            new_sales = result.get('new_sales', 0)
-            new_finance = result.get('new_finance', 0)
-            new_marketing = result.get('new_marketing', 0)
-            new_biotech = result.get('new_biotech', 0)
-            new_engineering = result.get('new_engineering', 0)
-            new_events = result.get('new_events', 0)
-            updated_jobs = result.get('updated_jobs', 0)
-            print(f"   [OK] New: {new_jobs} ({new_software} software, {new_hr} HR, {new_cybersecurity} cybersecurity, {new_sales} sales, {new_finance} finance, {new_marketing} marketing, {new_biotech} biotech, {new_engineering} engineering, {new_events} events), Updated: {updated_jobs}")
-            return {
-                'success': True,
-                'new_jobs': new_jobs,
-                'new_software': new_software,
-                'new_hr': new_hr,
-                'new_cybersecurity': new_cybersecurity,
-                'new_sales': new_sales,
-                'new_finance': new_finance,
-                'new_marketing': new_marketing,
-                'new_biotech': new_biotech,
-                'new_engineering': new_engineering,
-                'new_events': new_events,
-                'updated_jobs': updated_jobs
-            }
-        else:
-            print(f"   [ERROR] Upload failed: {response.status_code}")
-            return {'success': False, 'new_jobs': 0, 'new_software': 0, 'new_hr': 0, 'new_cybersecurity': 0, 'new_sales': 0, 'new_finance': 0, 'new_marketing': 0, 'new_biotech': 0, 'new_engineering': 0, 'new_events': 0, 'updated_jobs': 0}
-    except Exception as e:
-        print(f"   [ERROR] Upload error: {e}")
-        return {'success': False, 'new_jobs': 0, 'new_software': 0, 'new_hr': 0, 'new_cybersecurity': 0, 'new_sales': 0, 'new_finance': 0, 'new_marketing': 0, 'new_biotech': 0, 'new_engineering': 0, 'new_events': 0, 'updated_jobs': 0}
+    total = len(job_items)
+    print(f"   [API] Uploading {total} jobs to: {sync_url} (chunks of {UPLOAD_CHUNK_SIZE})")
+
+    totals = _empty_upload_result(success=True)
+    failed_chunks = 0
+
+    for chunk_start in range(0, max(total, 1), UPLOAD_CHUNK_SIZE):
+        chunk = dict(job_items[chunk_start:chunk_start + UPLOAD_CHUNK_SIZE])
+        chunk.update(meta)  # include metadata in every chunk
+        chunk_num = chunk_start // UPLOAD_CHUNK_SIZE + 1
+        num_chunks = max((total + UPLOAD_CHUNK_SIZE - 1) // UPLOAD_CHUNK_SIZE, 1)
+        print(f"   [API] Chunk {chunk_num}/{num_chunks} ({len(chunk) - len(meta)} jobs)...")
+
+        try:
+            response = requests.post(
+                sync_url,
+                json={"jobs_data": chunk},
+                timeout=120,
+                headers={"Content-Type": "application/json"}
+            )
+
+            if response.status_code == 200:
+                result = response.json()
+                for key in ('new_jobs', 'new_software', 'new_hr', 'new_cybersecurity',
+                            'new_sales', 'new_finance', 'new_marketing', 'new_biotech',
+                            'new_engineering', 'new_events', 'updated_jobs'):
+                    totals[key] += result.get(key, 0)
+            else:
+                print(f"   [ERROR] Chunk {chunk_num} failed: HTTP {response.status_code}")
+                failed_chunks += 1
+        except Exception as e:
+            print(f"   [ERROR] Chunk {chunk_num} upload error: {e}")
+            failed_chunks += 1
+
+    if failed_chunks:
+        print(f"   [WARN] {failed_chunks}/{num_chunks} chunks failed")
+        if failed_chunks == num_chunks:
+            totals['success'] = False
+
+    nj = totals['new_jobs']
+    print(f"   [OK] New: {nj} ({totals['new_software']} software, {totals['new_hr']} HR, "
+          f"{totals['new_cybersecurity']} cybersecurity, {totals['new_sales']} sales, "
+          f"{totals['new_finance']} finance, {totals['new_marketing']} marketing, "
+          f"{totals['new_biotech']} biotech, {totals['new_engineering']} engineering, "
+          f"{totals['new_events']} events), Updated: {totals['updated_jobs']}")
+    return totals
 
 def search_single_term(term, location, country_name, existing_jobs, job_type, thread_id):
     """
