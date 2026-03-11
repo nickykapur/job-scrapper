@@ -320,22 +320,26 @@ async def startup_event():
 
 async def _process_queue_once() -> bool:
     """Claim and process one pending queue item. Returns True if something was processed."""
-    # Step 1: claim one item
+    import traceback as _tb
+
+    # Step 1: claim one item using CTE for safe locking
     conn = await db.get_connection()
     if not conn:
         return False
     try:
         row = await conn.fetchrow("""
-            UPDATE job_upload_queue
-            SET status = 'processing', started_at = NOW()
-            WHERE id = (
+            WITH next_item AS (
                 SELECT id FROM job_upload_queue
                 WHERE status = 'pending'
                 ORDER BY created_at
                 LIMIT 1
                 FOR UPDATE SKIP LOCKED
             )
-            RETURNING id, jobs_data
+            UPDATE job_upload_queue q
+            SET status = 'processing', started_at = NOW()
+            FROM next_item
+            WHERE q.id = next_item.id
+            RETURNING q.id, q.jobs_data::text AS jobs_data_text
         """)
     finally:
         await db._release(conn)
@@ -344,37 +348,50 @@ async def _process_queue_once() -> bool:
         return False  # Queue empty
 
     qid = row['id']
-    jobs_data = dict(row['jobs_data'])
+    # Parse JSONB safely regardless of asyncpg codec config
+    try:
+        jobs_data = json.loads(row['jobs_data_text'])
+    except Exception as e:
+        logger.error("Queue item %s: failed to parse jobs_data: %s", qid, e)
+        return True  # Skip this item
 
     # Step 2: process (uses its own connection from the pool)
+    async def _mark(status: str, result_dict=None, error: str = None):
+        c = await db.get_connection()
+        if not c:
+            return
+        try:
+            if status == 'done':
+                await c.execute(
+                    "UPDATE job_upload_queue SET status='done', finished_at=NOW(), result=$1::jsonb WHERE id=$2",
+                    json.dumps(result_dict or {}), qid
+                )
+            else:
+                await c.execute(
+                    "UPDATE job_upload_queue SET status='failed', finished_at=NOW(), error_text=$1 WHERE id=$2",
+                    error or 'unknown error', qid
+                )
+        finally:
+            await db._release(c)
+
     try:
         result = await db.sync_jobs_from_scraper(jobs_data)
-        conn2 = await db.get_connection()
-        if conn2:
-            try:
-                await conn2.execute(
-                    "UPDATE job_upload_queue SET status='done', finished_at=NOW(), result=$1::jsonb WHERE id=$2",
-                    json.dumps(result), qid
-                )
-            finally:
-                await db._release(conn2)
-        logger.info("Queue item %s done: %s new, %s updated", qid,
-                    result.get('new_jobs', 0), result.get('updated_jobs', 0))
+        if 'error' in result:
+            # sync internally failed — mark as failed with the error message
+            logger.error("Queue item %s sync error: %s", qid, result['error'])
+            await _mark('failed', error=result['error'])
+        else:
+            await _mark('done', result_dict=result)
+            logger.info("Queue item %s done: %s new, %s updated", qid,
+                        result.get('new_jobs', 0), result.get('updated_jobs', 0))
     except Exception as e:
-        logger.error("Queue item %s failed: %s", qid, e)
-        conn2 = await db.get_connection()
-        if conn2:
-            try:
-                await conn2.execute(
-                    "UPDATE job_upload_queue SET status='failed', finished_at=NOW(), error_text=$1 WHERE id=$2",
-                    str(e), qid
-                )
-            finally:
-                await db._release(conn2)
+        logger.error("Queue item %s failed: %s\n%s", qid, e, _tb.format_exc())
+        await _mark('failed', error=str(e))
     return True
 
 async def _queue_worker():
     """Background task: drain job_upload_queue one batch at a time."""
+    import traceback as _tb
     logger.info("Queue worker started")
     while True:
         try:
@@ -382,7 +399,7 @@ async def _queue_worker():
             if not processed:
                 await asyncio.sleep(3)  # Nothing pending, poll every 3s
         except Exception as e:
-            logger.error("Queue worker loop error: %s", e)
+            logger.error("Queue worker loop error: %s\n%s", e, _tb.format_exc())
             await asyncio.sleep(5)
 
 async def load_jobs():
