@@ -226,6 +226,26 @@ const App: React.FC = () => {
     navigate('/login');
   };
 
+  // Parse LinkedIn's relative date strings ("5 days ago", "2 weeks ago", etc.)
+  // into a comparable timestamp. Falls back to scraped_at if unparseable.
+  const postedDateToTs = (job: Job): number => {
+    const raw = (job.posted_date || '').toLowerCase().replace(/^posted\s+/, '').trim();
+    const now = Date.now();
+    const m = raw.match(/^(\d+)\s+(second|minute|min|hour|day|week|month)/);
+    if (m) {
+      const n = parseInt(m[1], 10);
+      const unit = m[2];
+      const ms: Record<string, number> = {
+        second: 1000, minute: 60_000, min: 60_000,
+        hour: 3_600_000, day: 86_400_000, week: 604_800_000, month: 2_592_000_000,
+      };
+      return now - n * (ms[unit] ?? 86_400_000);
+    }
+    if (raw === 'just now' || raw === 'moments ago') return now;
+    // Fall back to scraped_at
+    return new Date(job.scraped_at || 0).getTime();
+  };
+
   // Filter and sort jobs
   const cleanJobs = useMemo(() => {
     const filtered: Record<string, Job> = {};
@@ -285,12 +305,12 @@ const App: React.FC = () => {
   const paginatedJobs = useMemo(() => {
     const jobEntries = Object.entries(cleanJobs);
 
-    // Apply sort
+    // Apply sort — use posted_date (parsed) so card dates match the order shown
     jobEntries.sort(([, a], [, b]) => {
       if (filters.sort === 'newest') {
-        return new Date(b.scraped_at || 0).getTime() - new Date(a.scraped_at || 0).getTime();
+        return postedDateToTs(b) - postedDateToTs(a);
       } else if (filters.sort === 'oldest') {
-        return new Date(a.scraped_at || 0).getTime() - new Date(b.scraped_at || 0).getTime();
+        return postedDateToTs(a) - postedDateToTs(b);
       }
       return 0;
     });
