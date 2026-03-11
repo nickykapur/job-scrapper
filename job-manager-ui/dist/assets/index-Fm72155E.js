@@ -82109,7 +82109,7 @@ const StorageBar = ({ bytes, limitBytes, label }) => {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
         lineNumber: 138,
         columnNumber: 9
-      }, void 0),
+      }, undefined),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-medium", children: [
         formatBytes(bytes),
         " / ",
@@ -82118,21 +82118,21 @@ const StorageBar = ({ bytes, limitBytes, label }) => {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
         lineNumber: 139,
         columnNumber: 9
-      }, void 0)
+      }, undefined)
     ] }, void 0, true, {
       fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
       lineNumber: 137,
       columnNumber: 7
-    }, void 0),
+    }, undefined),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "h-3 rounded-full bg-muted overflow-hidden", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `h-full rounded-full transition-all ${color}`, style: { width: `${pct}%` } }, void 0, false, {
       fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
       lineNumber: 142,
       columnNumber: 9
-    }, void 0) }, void 0, false, {
+    }, undefined) }, void 0, false, {
       fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
       lineNumber: 141,
       columnNumber: 7
-    }, void 0),
+    }, undefined),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-xs text-muted-foreground mt-0.5 text-right", children: [
       pct.toFixed(1),
       "% used"
@@ -82140,12 +82140,12 @@ const StorageBar = ({ bytes, limitBytes, label }) => {
       fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
       lineNumber: 144,
       columnNumber: 7
-    }, void 0)
+    }, undefined)
   ] }, void 0, true, {
     fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
     lineNumber: 136,
     columnNumber: 5
-  }, void 0);
+  }, undefined);
 };
 const getStatusBadge = (run) => {
   if (run.status === "in_progress" || run.status === "queued") {
@@ -82153,34 +82153,34 @@ const getStatusBadge = (run) => {
       fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
       lineNumber: 151,
       columnNumber: 12
-    }, void 0);
+    }, undefined);
   }
   if (run.conclusion === "success") {
     return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Badge, { className: "bg-green-500/20 text-green-600 border-green-500/50", children: "Success" }, void 0, false, {
       fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
       lineNumber: 154,
       columnNumber: 12
-    }, void 0);
+    }, undefined);
   }
   if (run.conclusion === "failure") {
     return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Badge, { className: "bg-red-500/20 text-red-600 border-red-500/50", children: "Failed" }, void 0, false, {
       fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
       lineNumber: 157,
       columnNumber: 12
-    }, void 0);
+    }, undefined);
   }
   if (run.conclusion === "cancelled") {
     return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Badge, { variant: "outline", className: "text-muted-foreground", children: "Cancelled" }, void 0, false, {
       fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
       lineNumber: 160,
       columnNumber: 12
-    }, void 0);
+    }, undefined);
   }
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Badge, { variant: "outline", children: run.conclusion || run.status }, void 0, false, {
     fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
     lineNumber: 162,
     columnNumber: 10
-  }, void 0);
+  }, undefined);
 };
 const queueStatusBadge = (status) => {
   if (status === "pending") return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Badge, { className: "bg-yellow-500/20 text-yellow-600 border-yellow-500/50", children: [
@@ -82188,54 +82188,54 @@ const queueStatusBadge = (status) => {
       fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
       lineNumber: 184,
       columnNumber: 112
-    }, void 0),
+    }, undefined),
     "Pending"
   ] }, void 0, true, {
     fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
     lineNumber: 184,
     columnNumber: 39
-  }, void 0);
+  }, undefined);
   if (status === "processing") return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Badge, { className: "bg-blue-500/20 text-blue-600 border-blue-500/50", children: [
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(LoaderCircle, { className: "h-3 w-3 mr-1 animate-spin" }, void 0, false, {
       fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
       lineNumber: 185,
       columnNumber: 106
-    }, void 0),
+    }, undefined),
     "Processing"
   ] }, void 0, true, {
     fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
     lineNumber: 185,
     columnNumber: 39
-  }, void 0);
+  }, undefined);
   if (status === "done") return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Badge, { className: "bg-green-500/20 text-green-600 border-green-500/50", children: [
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(CircleCheckBig, { className: "h-3 w-3 mr-1" }, void 0, false, {
       fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
       lineNumber: 186,
       columnNumber: 109
-    }, void 0),
+    }, undefined),
     "Done"
   ] }, void 0, true, {
     fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
     lineNumber: 186,
     columnNumber: 39
-  }, void 0);
+  }, undefined);
   if (status === "failed") return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Badge, { className: "bg-red-500/20 text-red-600 border-red-500/50", children: [
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(CircleX, { className: "h-3 w-3 mr-1" }, void 0, false, {
       fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
       lineNumber: 187,
       columnNumber: 103
-    }, void 0),
+    }, undefined),
     "Failed"
   ] }, void 0, true, {
     fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
     lineNumber: 187,
     columnNumber: 39
-  }, void 0);
+  }, undefined);
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Badge, { variant: "outline", children: status }, void 0, false, {
     fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
     lineNumber: 188,
     columnNumber: 10
-  }, void 0);
+  }, undefined);
 };
 const MonitoringPage = () => {
   const [data, setData] = reactExports.useState(null);
@@ -82245,47 +82245,24 @@ const MonitoringPage = () => {
   const [cleanupResult, setCleanupResult] = reactExports.useState({});
   const [queue, setQueue] = reactExports.useState(null);
   const [queueConnected, setQueueConnected] = reactExports.useState(false);
-  const esRef = reactExports.useRef(null);
   reactExports.useEffect(() => {
-    const token = localStorage.getItem("access_token");
-    if (!token) return;
-    const baseUrl = "http://localhost:8000/api/auth";
-    const url = `${baseUrl}/api/admin/queue-status/stream?token=${encodeURIComponent(token)}`;
-    const es = new EventSource(url);
-    esRef.current = es;
-    es.onopen = () => setQueueConnected(true);
-    es.onmessage = (e) => {
+    let active = true;
+    const poll = async () => {
       try {
-        const parsed = JSON.parse(e.data);
-        if (!parsed.error) setQueue(parsed);
+        const result = await jobApi.getQueueStatus();
+        if (active && result?.summary) {
+          setQueue(result);
+          setQueueConnected(true);
+        }
       } catch {
+        if (active) setQueueConnected(false);
       }
     };
-    es.onerror = () => {
-      setQueueConnected(false);
-      es.close();
-      setTimeout(() => {
-        const token2 = localStorage.getItem("access_token");
-        if (!token2) return;
-        const es2 = new EventSource(`${baseUrl}/api/admin/queue-status/stream?token=${encodeURIComponent(token2)}`);
-        esRef.current = es2;
-        es2.onopen = () => setQueueConnected(true);
-        es2.onmessage = (e2) => {
-          try {
-            const p = JSON.parse(e2.data);
-            if (!p.error) setQueue(p);
-          } catch {
-          }
-        };
-        es2.onerror = () => {
-          setQueueConnected(false);
-          es2.close();
-        };
-      }, 5e3);
-    };
+    poll();
+    const id = setInterval(poll, 2e3);
     return () => {
-      es.close();
-      esRef.current = null;
+      active = false;
+      clearInterval(id);
     };
   }, []);
   const load = async () => {
@@ -82320,54 +82297,54 @@ const MonitoringPage = () => {
     return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center justify-center min-h-[400px]", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-center", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" }, void 0, false, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 271,
+        lineNumber: 252,
         columnNumber: 11
-      }, void 0),
+      }, undefined),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-muted-foreground", children: "Loading monitoring data..." }, void 0, false, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 272,
+        lineNumber: 253,
         columnNumber: 11
-      }, void 0)
+      }, undefined)
     ] }, void 0, true, {
       fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-      lineNumber: 270,
+      lineNumber: 251,
       columnNumber: 9
-    }, void 0) }, void 0, false, {
+    }, undefined) }, void 0, false, {
       fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-      lineNumber: 269,
+      lineNumber: 250,
       columnNumber: 7
-    }, void 0);
+    }, undefined);
   }
   if (error) {
     return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center justify-center min-h-[400px]", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Card, { className: "max-w-md", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(CardContent, { className: "p-6 text-center", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(CircleAlert, { className: "h-12 w-12 text-red-500 mx-auto mb-4" }, void 0, false, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 283,
+        lineNumber: 264,
         columnNumber: 13
-      }, void 0),
+      }, undefined),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-muted-foreground mb-4", children: error }, void 0, false, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 284,
+        lineNumber: 265,
         columnNumber: 13
-      }, void 0),
+      }, undefined),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Button, { onClick: load, children: "Try Again" }, void 0, false, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 285,
+        lineNumber: 266,
         columnNumber: 13
-      }, void 0)
+      }, undefined)
     ] }, void 0, true, {
       fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-      lineNumber: 282,
+      lineNumber: 263,
       columnNumber: 11
-    }, void 0) }, void 0, false, {
+    }, undefined) }, void 0, false, {
       fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-      lineNumber: 281,
+      lineNumber: 262,
       columnNumber: 9
-    }, void 0) }, void 0, false, {
+    }, undefined) }, void 0, false, {
       fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-      lineNumber: 280,
+      lineNumber: 261,
       columnNumber: 7
-    }, void 0);
+    }, undefined);
   }
   if (!data) return null;
   const db = data.database;
@@ -82377,67 +82354,67 @@ const MonitoringPage = () => {
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h1", { className: "text-3xl font-bold flex items-center gap-2", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Activity, { className: "h-8 w-8" }, void 0, false, {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 302,
+            lineNumber: 283,
             columnNumber: 13
-          }, void 0),
+          }, undefined),
           "System Monitoring"
         ] }, void 0, true, {
           fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-          lineNumber: 301,
+          lineNumber: 282,
           columnNumber: 11
-        }, void 0),
+        }, undefined),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-muted-foreground text-sm mt-1", children: [
           "Generated at ",
           formatDate$1(data.generated_at)
         ] }, void 0, true, {
           fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-          lineNumber: 305,
+          lineNumber: 286,
           columnNumber: 11
-        }, void 0)
+        }, undefined)
       ] }, void 0, true, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 300,
+        lineNumber: 281,
         columnNumber: 9
-      }, void 0),
+      }, undefined),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Button, { variant: "outline", onClick: load, className: "flex items-center gap-2", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(RefreshCw, { className: "h-4 w-4" }, void 0, false, {
           fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-          lineNumber: 310,
+          lineNumber: 291,
           columnNumber: 11
-        }, void 0),
+        }, undefined),
         "Refresh"
       ] }, void 0, true, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 309,
+        lineNumber: 290,
         columnNumber: 9
-      }, void 0)
+      }, undefined)
     ] }, void 0, true, {
       fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-      lineNumber: 299,
+      lineNumber: 280,
       columnNumber: 7
-    }, void 0),
+    }, undefined),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Card, { children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(CardHeader, { children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(CardTitle, { className: "flex items-center gap-2", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Database, { className: "h-5 w-5" }, void 0, false, {
           fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-          lineNumber: 319,
+          lineNumber: 300,
           columnNumber: 13
-        }, void 0),
+        }, undefined),
         "Database Storage"
       ] }, void 0, true, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 318,
+        lineNumber: 299,
         columnNumber: 11
-      }, void 0) }, void 0, false, {
+      }, undefined) }, void 0, false, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 317,
+        lineNumber: 298,
         columnNumber: 9
-      }, void 0),
+      }, undefined),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(CardContent, { children: db.error ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-sm text-red-500", children: db.error }, void 0, false, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 325,
+        lineNumber: 306,
         columnNumber: 13
-      }, void 0) : db.storage ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-5", children: [
+      }, undefined) : db.storage ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-5", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
           StorageBar,
           {
@@ -82449,10 +82426,10 @@ const MonitoringPage = () => {
           false,
           {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 329,
+            lineNumber: 310,
             columnNumber: 15
           },
-          void 0
+          undefined
         ),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
           StorageBar,
@@ -82465,232 +82442,232 @@ const MonitoringPage = () => {
           false,
           {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 334,
+            lineNumber: 315,
             columnNumber: 15
           },
-          void 0
+          undefined
         ),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "rounded-lg border p-3 text-center", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-xs text-muted-foreground mb-1", children: "Total DB" }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 343,
+              lineNumber: 324,
               columnNumber: 19
-            }, void 0),
+            }, undefined),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "font-bold text-lg", children: formatBytes(db.storage.db_bytes) }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 344,
+              lineNumber: 325,
               columnNumber: 19
-            }, void 0)
+            }, undefined)
           ] }, void 0, true, {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 342,
+            lineNumber: 323,
             columnNumber: 17
-          }, void 0),
+          }, undefined),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "rounded-lg border p-3 text-center", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-xs text-muted-foreground mb-1", children: "Jobs Data" }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 347,
+              lineNumber: 328,
               columnNumber: 19
-            }, void 0),
+            }, undefined),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "font-bold text-lg", children: formatBytes(db.storage.jobs_data_bytes) }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 348,
+              lineNumber: 329,
               columnNumber: 19
-            }, void 0)
+            }, undefined)
           ] }, void 0, true, {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 346,
+            lineNumber: 327,
             columnNumber: 17
-          }, void 0),
+          }, undefined),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "rounded-lg border p-3 text-center", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-xs text-muted-foreground mb-1", children: "Jobs Indexes" }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 351,
+              lineNumber: 332,
               columnNumber: 19
-            }, void 0),
+            }, undefined),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "font-bold text-lg", children: formatBytes(db.storage.jobs_index_bytes) }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 352,
+              lineNumber: 333,
               columnNumber: 19
-            }, void 0)
+            }, undefined)
           ] }, void 0, true, {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 350,
+            lineNumber: 331,
             columnNumber: 17
-          }, void 0),
+          }, undefined),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "rounded-lg border p-3 text-center", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-xs text-muted-foreground mb-1", children: "Total Jobs" }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 355,
+              lineNumber: 336,
               columnNumber: 19
-            }, void 0),
+            }, undefined),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "font-bold text-lg", children: db.total_jobs.toLocaleString() }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 356,
+              lineNumber: 337,
               columnNumber: 19
-            }, void 0)
+            }, undefined)
           ] }, void 0, true, {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 354,
+            lineNumber: 335,
             columnNumber: 17
-          }, void 0)
+          }, undefined)
         ] }, void 0, true, {
           fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-          lineNumber: 341,
+          lineNumber: 322,
           columnNumber: 15
-        }, void 0),
+        }, undefined),
         (db.oldest_job || db.newest_job) && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex gap-6 text-sm text-muted-foreground border-t pt-3", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: [
             "Oldest job: ",
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-foreground", children: formatDate$1(db.oldest_job) }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 363,
+              lineNumber: 344,
               columnNumber: 37
-            }, void 0)
+            }, undefined)
           ] }, void 0, true, {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 363,
+            lineNumber: 344,
             columnNumber: 19
-          }, void 0),
+          }, undefined),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: [
             "Newest job: ",
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-foreground", children: formatDate$1(db.newest_job) }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 364,
+              lineNumber: 345,
               columnNumber: 37
-            }, void 0)
+            }, undefined)
           ] }, void 0, true, {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 364,
+            lineNumber: 345,
             columnNumber: 19
-          }, void 0)
+          }, undefined)
         ] }, void 0, true, {
           fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-          lineNumber: 362,
+          lineNumber: 343,
           columnNumber: 17
-        }, void 0),
+        }, undefined),
         db.tables && db.tables.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "font-semibold mb-2 text-sm", children: "All Tables" }, void 0, false, {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 371,
+            lineNumber: 352,
             columnNumber: 19
-          }, void 0),
+          }, undefined),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("table", { className: "w-full text-sm", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("thead", { children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { className: "border-b text-muted-foreground", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-left p-2", children: "Table" }, void 0, false, {
                 fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-                lineNumber: 376,
+                lineNumber: 357,
                 columnNumber: 27
-              }, void 0),
+              }, undefined),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-left p-2", children: "Size (total)" }, void 0, false, {
                 fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-                lineNumber: 377,
+                lineNumber: 358,
                 columnNumber: 27
-              }, void 0),
+              }, undefined),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-left p-2", children: "Data" }, void 0, false, {
                 fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-                lineNumber: 378,
+                lineNumber: 359,
                 columnNumber: 27
-              }, void 0),
+              }, undefined),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-left p-2", children: "Rows (est.)" }, void 0, false, {
                 fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-                lineNumber: 379,
+                lineNumber: 360,
                 columnNumber: 27
-              }, void 0)
+              }, undefined)
             ] }, void 0, true, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 375,
+              lineNumber: 356,
               columnNumber: 25
-            }, void 0) }, void 0, false, {
+            }, undefined) }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 374,
+              lineNumber: 355,
               columnNumber: 23
-            }, void 0),
+            }, undefined),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tbody", { children: db.tables.map((t) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { className: "border-b hover:bg-muted/50", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "p-2 font-mono text-xs", children: t.table_name }, void 0, false, {
                 fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-                lineNumber: 385,
+                lineNumber: 366,
                 columnNumber: 29
-              }, void 0),
+              }, undefined),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "p-2", children: formatBytes(t.total_bytes) }, void 0, false, {
                 fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-                lineNumber: 386,
+                lineNumber: 367,
                 columnNumber: 29
-              }, void 0),
+              }, undefined),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "p-2", children: formatBytes(t.data_bytes) }, void 0, false, {
                 fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-                lineNumber: 387,
+                lineNumber: 368,
                 columnNumber: 29
-              }, void 0),
+              }, undefined),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "p-2", children: t.row_estimate.toLocaleString() }, void 0, false, {
                 fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-                lineNumber: 388,
+                lineNumber: 369,
                 columnNumber: 29
-              }, void 0)
+              }, undefined)
             ] }, t.table_name, true, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 384,
+              lineNumber: 365,
               columnNumber: 27
-            }, void 0)) }, void 0, false, {
+            }, undefined)) }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 382,
+              lineNumber: 363,
               columnNumber: 23
-            }, void 0)
+            }, undefined)
           ] }, void 0, true, {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 373,
+            lineNumber: 354,
             columnNumber: 21
-          }, void 0) }, void 0, false, {
+          }, undefined) }, void 0, false, {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 372,
+            lineNumber: 353,
             columnNumber: 19
-          }, void 0)
+          }, undefined)
         ] }, void 0, true, {
           fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-          lineNumber: 370,
+          lineNumber: 351,
           columnNumber: 17
-        }, void 0)
+        }, undefined)
       ] }, void 0, true, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 327,
+        lineNumber: 308,
         columnNumber: 13
-      }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-sm text-muted-foreground", children: "Storage data unavailable" }, void 0, false, {
+      }, undefined) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-sm text-muted-foreground", children: "Storage data unavailable" }, void 0, false, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 398,
+        lineNumber: 379,
         columnNumber: 13
-      }, void 0) }, void 0, false, {
+      }, undefined) }, void 0, false, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 323,
+        lineNumber: 304,
         columnNumber: 9
-      }, void 0)
+      }, undefined)
     ] }, void 0, true, {
       fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-      lineNumber: 316,
+      lineNumber: 297,
       columnNumber: 7
-    }, void 0),
+    }, undefined),
     db.cleanup_candidates && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Card, { className: "border-orange-500/30", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(CardHeader, { children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(CardTitle, { className: "flex items-center gap-2", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Trash2, { className: "h-5 w-5 text-orange-500" }, void 0, false, {
           fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-          lineNumber: 408,
+          lineNumber: 389,
           columnNumber: 15
-        }, void 0),
+        }, undefined),
         "Cleanup Candidates",
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm font-normal text-muted-foreground ml-1", children: "— safe rows to delete to free space" }, void 0, false, {
           fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-          lineNumber: 410,
+          lineNumber: 391,
           columnNumber: 15
-        }, void 0)
+        }, undefined)
       ] }, void 0, true, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 407,
+        lineNumber: 388,
         columnNumber: 13
-      }, void 0) }, void 0, false, {
+      }, undefined) }, void 0, false, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 406,
+        lineNumber: 387,
         columnNumber: 11
-      }, void 0),
+      }, undefined),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(CardContent, { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-2 sm:grid-cols-4 gap-3", children: [
           { action: "rejected", label: "Rejected jobs", count: db.cleanup_candidates.rejected, color: "red" },
@@ -82700,21 +82677,21 @@ const MonitoringPage = () => {
         ].map(({ action, label, count, color }) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `rounded-lg border border-${color}-500/30 bg-${color}-500/5 p-3 text-center`, children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-xs text-muted-foreground mb-1", children: label }, void 0, false, {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 422,
+            lineNumber: 403,
             columnNumber: 19
-          }, void 0),
+          }, undefined),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `font-bold text-xl text-${color}-600`, children: cleanupResult[action] !== void 0 ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-green-600 text-sm", children: [
             "Deleted ",
             cleanupResult[action]
           ] }, void 0, true, {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 425,
+            lineNumber: 406,
             columnNumber: 25
-          }, void 0) : count.toLocaleString() }, void 0, false, {
+          }, undefined) : count.toLocaleString() }, void 0, false, {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 423,
+            lineNumber: 404,
             columnNumber: 19
-          }, void 0),
+          }, undefined),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
             Button,
             {
@@ -82729,42 +82706,42 @@ const MonitoringPage = () => {
             false,
             {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 428,
+              lineNumber: 409,
               columnNumber: 19
             },
-            void 0
+            undefined
           )
         ] }, action, true, {
           fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-          lineNumber: 421,
+          lineNumber: 402,
           columnNumber: 17
-        }, void 0)) }, void 0, false, {
+        }, undefined)) }, void 0, false, {
           fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-          lineNumber: 414,
+          lineNumber: 395,
           columnNumber: 13
-        }, void 0),
+        }, undefined),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-xs text-muted-foreground mt-3", children: "Tip: deleting rejected + old unapplied jobs is safe and will free the most space." }, void 0, false, {
           fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-          lineNumber: 440,
+          lineNumber: 421,
           columnNumber: 13
-        }, void 0)
+        }, undefined)
       ] }, void 0, true, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 413,
+        lineNumber: 394,
         columnNumber: 11
-      }, void 0)
+      }, undefined)
     ] }, void 0, true, {
       fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-      lineNumber: 405,
+      lineNumber: 386,
       columnNumber: 9
-    }, void 0),
+    }, undefined),
     db.scraper_runs && db.scraper_runs.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Card, { children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(CardHeader, { children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(CardTitle, { className: "flex items-center gap-2", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Timer, { className: "h-5 w-5" }, void 0, false, {
           fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-          lineNumber: 452,
+          lineNumber: 433,
           columnNumber: 15
-        }, void 0),
+        }, undefined),
         "Scraper Run Timing",
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm font-normal text-muted-foreground ml-1", children: [
           "— last ",
@@ -82772,75 +82749,75 @@ const MonitoringPage = () => {
           " country runs"
         ] }, void 0, true, {
           fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-          lineNumber: 454,
+          lineNumber: 435,
           columnNumber: 15
-        }, void 0)
+        }, undefined)
       ] }, void 0, true, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 451,
+        lineNumber: 432,
         columnNumber: 13
-      }, void 0) }, void 0, false, {
+      }, undefined) }, void 0, false, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 450,
+        lineNumber: 431,
         columnNumber: 11
-      }, void 0),
+      }, undefined),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(CardContent, { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("table", { className: "w-full text-sm", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("thead", { children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { className: "border-b text-muted-foreground", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-left p-2", children: "Country" }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 462,
+              lineNumber: 443,
               columnNumber: 21
-            }, void 0),
+            }, undefined),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-left p-2", children: "Started" }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 463,
+              lineNumber: 444,
               columnNumber: 21
-            }, void 0),
+            }, undefined),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-left p-2", children: "Total" }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 464,
+              lineNumber: 445,
               columnNumber: 21
-            }, void 0),
+            }, undefined),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-left p-2", children: "Fetch Jobs" }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 465,
+              lineNumber: 446,
               columnNumber: 21
-            }, void 0),
+            }, undefined),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-left p-2", children: "Scraping" }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 466,
+              lineNumber: 447,
               columnNumber: 21
-            }, void 0),
+            }, undefined),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-left p-2", children: "Upload" }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 467,
+              lineNumber: 448,
               columnNumber: 21
-            }, void 0),
+            }, undefined),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-left p-2", children: "Terms" }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 468,
+              lineNumber: 449,
               columnNumber: 21
-            }, void 0),
+            }, undefined),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-left p-2", children: "New Jobs" }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 469,
+              lineNumber: 450,
               columnNumber: 21
-            }, void 0),
+            }, undefined),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-left p-2", children: "Run" }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 470,
+              lineNumber: 451,
               columnNumber: 21
-            }, void 0)
+            }, undefined)
           ] }, void 0, true, {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 461,
+            lineNumber: 442,
             columnNumber: 19
-          }, void 0) }, void 0, false, {
+          }, undefined) }, void 0, false, {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 460,
+            lineNumber: 441,
             columnNumber: 17
-          }, void 0),
+          }, undefined),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tbody", { children: db.scraper_runs.map((run, i) => {
             const total = run.duration_seconds || 0;
             const scraping = run.phases.scraping || 0;
@@ -82849,57 +82826,57 @@ const MonitoringPage = () => {
             return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { className: `border-b hover:bg-muted/50 ${hasError ? "bg-red-500/5" : ""}`, children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "p-2 font-medium", children: run.country }, void 0, false, {
                 fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-                lineNumber: 481,
+                lineNumber: 462,
                 columnNumber: 25
-              }, void 0),
+              }, undefined),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "p-2 text-muted-foreground", children: formatDate$1(run.started_at) }, void 0, false, {
                 fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-                lineNumber: 482,
+                lineNumber: 463,
                 columnNumber: 25
-              }, void 0),
+              }, undefined),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "p-2 font-mono", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: total > 900 ? "text-red-500" : total > 600 ? "text-yellow-500" : "text-green-600", children: formatDuration(run.duration_seconds) }, void 0, false, {
                 fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-                lineNumber: 484,
+                lineNumber: 465,
                 columnNumber: 27
-              }, void 0) }, void 0, false, {
+              }, undefined) }, void 0, false, {
                 fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-                lineNumber: 483,
+                lineNumber: 464,
                 columnNumber: 25
-              }, void 0),
+              }, undefined),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "p-2 font-mono text-muted-foreground", children: formatDuration(run.phases.fetch_existing) }, void 0, false, {
                 fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-                lineNumber: 488,
+                lineNumber: 469,
                 columnNumber: 25
-              }, void 0),
+              }, undefined),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "p-2", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-1", children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-mono", children: formatDuration(run.phases.scraping) }, void 0, false, {
                   fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-                  lineNumber: 491,
+                  lineNumber: 472,
                   columnNumber: 29
-                }, void 0),
+                }, undefined),
                 scrapingPct > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-xs text-muted-foreground", children: [
                   "(",
                   scrapingPct,
                   "%)"
                 ] }, void 0, true, {
                   fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-                  lineNumber: 493,
+                  lineNumber: 474,
                   columnNumber: 31
-                }, void 0)
+                }, undefined)
               ] }, void 0, true, {
                 fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-                lineNumber: 490,
+                lineNumber: 471,
                 columnNumber: 27
-              }, void 0) }, void 0, false, {
+              }, undefined) }, void 0, false, {
                 fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-                lineNumber: 489,
+                lineNumber: 470,
                 columnNumber: 25
-              }, void 0),
+              }, undefined),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "p-2 font-mono text-muted-foreground", children: formatDuration(run.phases.upload) }, void 0, false, {
                 fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-                lineNumber: 497,
+                lineNumber: 478,
                 columnNumber: 25
-              }, void 0),
+              }, undefined),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "p-2", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `${(run.failed_searches || 0) > 0 ? "text-red-500" : ""}`, children: [
                 run.successful_searches,
                 "/",
@@ -82907,21 +82884,21 @@ const MonitoringPage = () => {
                 (run.failed_searches || 0) > 0 && ` (${run.failed_searches} failed)`
               ] }, void 0, true, {
                 fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-                lineNumber: 499,
+                lineNumber: 480,
                 columnNumber: 27
-              }, void 0) }, void 0, false, {
+              }, undefined) }, void 0, false, {
                 fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-                lineNumber: 498,
+                lineNumber: 479,
                 columnNumber: 25
-              }, void 0),
+              }, undefined),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "p-2 font-medium text-green-600", children: [
                 "+",
                 run.new_jobs ?? "—"
               ] }, void 0, true, {
                 fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-                lineNumber: 504,
+                lineNumber: 485,
                 columnNumber: 25
-              }, void 0),
+              }, undefined),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "p-2", children: run.github_run_number ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
                 "a",
                 {
@@ -82935,323 +82912,323 @@ const MonitoringPage = () => {
                     " ",
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ExternalLink, { className: "h-3 w-3" }, void 0, false, {
                       fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-                      lineNumber: 513,
+                      lineNumber: 494,
                       columnNumber: 56
-                    }, void 0)
+                    }, undefined)
                   ]
                 },
                 void 0,
                 true,
                 {
                   fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-                  lineNumber: 507,
+                  lineNumber: 488,
                   columnNumber: 29
                 },
-                void 0
+                undefined
               ) : "—" }, void 0, false, {
                 fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-                lineNumber: 505,
+                lineNumber: 486,
                 columnNumber: 25
-              }, void 0)
+              }, undefined)
             ] }, i, true, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 480,
+              lineNumber: 461,
               columnNumber: 23
-            }, void 0);
+            }, undefined);
           }) }, void 0, false, {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 473,
+            lineNumber: 454,
             columnNumber: 17
-          }, void 0)
+          }, undefined)
         ] }, void 0, true, {
           fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-          lineNumber: 459,
+          lineNumber: 440,
           columnNumber: 15
-        }, void 0) }, void 0, false, {
+        }, undefined) }, void 0, false, {
           fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-          lineNumber: 458,
+          lineNumber: 439,
           columnNumber: 13
-        }, void 0),
+        }, undefined),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-xs text-muted-foreground mt-3", children: [
           "Total time colored: ",
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-green-600", children: "green" }, void 0, false, {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 524,
+            lineNumber: 505,
             columnNumber: 35
-          }, void 0),
+          }, undefined),
           " = under 10 min, ",
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-yellow-500", children: "yellow" }, void 0, false, {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 524,
+            lineNumber: 505,
             columnNumber: 97
-          }, void 0),
+          }, undefined),
           " = 10-15 min, ",
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-red-500", children: "red" }, void 0, false, {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 524,
+            lineNumber: 505,
             columnNumber: 158
-          }, void 0),
+          }, undefined),
           " = over 15 min"
         ] }, void 0, true, {
           fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-          lineNumber: 523,
+          lineNumber: 504,
           columnNumber: 13
-        }, void 0)
+        }, undefined)
       ] }, void 0, true, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 457,
+        lineNumber: 438,
         columnNumber: 11
-      }, void 0)
+      }, undefined)
     ] }, void 0, true, {
       fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-      lineNumber: 449,
+      lineNumber: 430,
       columnNumber: 9
-    }, void 0),
+    }, undefined),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Card, { children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(CardHeader, { children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(CardTitle, { children: "Job Distribution" }, void 0, false, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 533,
+        lineNumber: 514,
         columnNumber: 11
-      }, void 0) }, void 0, false, {
+      }, undefined) }, void 0, false, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 532,
+        lineNumber: 513,
         columnNumber: 9
-      }, void 0),
+      }, undefined),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(CardContent, { children: db.error ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-sm text-red-500", children: db.error }, void 0, false, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 537,
+        lineNumber: 518,
         columnNumber: 13
-      }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-6", children: [
+      }, undefined) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-6", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "font-semibold mb-2 text-sm", children: "By Country" }, void 0, false, {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 542,
+            lineNumber: 523,
             columnNumber: 17
-          }, void 0),
+          }, undefined),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("table", { className: "w-full text-sm", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("thead", { children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { className: "border-b text-muted-foreground", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-left p-2", children: "Country" }, void 0, false, {
                 fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-                lineNumber: 546,
+                lineNumber: 527,
                 columnNumber: 23
-              }, void 0),
+              }, undefined),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-left p-2", children: "Count" }, void 0, false, {
                 fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-                lineNumber: 547,
+                lineNumber: 528,
                 columnNumber: 23
-              }, void 0),
+              }, undefined),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-left p-2", children: "Last Scraped" }, void 0, false, {
                 fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-                lineNumber: 548,
+                lineNumber: 529,
                 columnNumber: 23
-              }, void 0)
+              }, undefined)
             ] }, void 0, true, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 545,
+              lineNumber: 526,
               columnNumber: 21
-            }, void 0) }, void 0, false, {
+            }, undefined) }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 544,
+              lineNumber: 525,
               columnNumber: 19
-            }, void 0),
+            }, undefined),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tbody", { children: db.by_country.map((row) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { className: "border-b hover:bg-muted/50", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "p-2", children: row.country }, void 0, false, {
                 fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-                lineNumber: 554,
+                lineNumber: 535,
                 columnNumber: 25
-              }, void 0),
+              }, undefined),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "p-2 font-medium", children: row.count.toLocaleString() }, void 0, false, {
                 fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-                lineNumber: 555,
+                lineNumber: 536,
                 columnNumber: 25
-              }, void 0),
+              }, undefined),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "p-2 text-muted-foreground", children: formatDate$1(row.last_scraped) }, void 0, false, {
                 fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-                lineNumber: 556,
+                lineNumber: 537,
                 columnNumber: 25
-              }, void 0)
+              }, undefined)
             ] }, row.country, true, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 553,
+              lineNumber: 534,
               columnNumber: 23
-            }, void 0)) }, void 0, false, {
+            }, undefined)) }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 551,
+              lineNumber: 532,
               columnNumber: 19
-            }, void 0)
+            }, undefined)
           ] }, void 0, true, {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 543,
+            lineNumber: 524,
             columnNumber: 17
-          }, void 0)
+          }, undefined)
         ] }, void 0, true, {
           fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-          lineNumber: 541,
+          lineNumber: 522,
           columnNumber: 15
-        }, void 0),
+        }, undefined),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "font-semibold mb-2 text-sm", children: "By Job Type" }, void 0, false, {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 565,
+            lineNumber: 546,
             columnNumber: 17
-          }, void 0),
+          }, undefined),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("table", { className: "w-full text-sm", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("thead", { children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { className: "border-b text-muted-foreground", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-left p-2", children: "Job Type" }, void 0, false, {
                 fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-                lineNumber: 569,
+                lineNumber: 550,
                 columnNumber: 23
-              }, void 0),
+              }, undefined),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-left p-2", children: "Count" }, void 0, false, {
                 fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-                lineNumber: 570,
+                lineNumber: 551,
                 columnNumber: 23
-              }, void 0)
+              }, undefined)
             ] }, void 0, true, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 568,
+              lineNumber: 549,
               columnNumber: 21
-            }, void 0) }, void 0, false, {
+            }, undefined) }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 567,
+              lineNumber: 548,
               columnNumber: 19
-            }, void 0),
+            }, undefined),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tbody", { children: db.by_job_type.map((row) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { className: "border-b hover:bg-muted/50", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "p-2 capitalize", children: row.job_type }, void 0, false, {
                 fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-                lineNumber: 576,
+                lineNumber: 557,
                 columnNumber: 25
-              }, void 0),
+              }, undefined),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "p-2 font-medium", children: row.count.toLocaleString() }, void 0, false, {
                 fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-                lineNumber: 577,
+                lineNumber: 558,
                 columnNumber: 25
-              }, void 0)
+              }, undefined)
             ] }, row.job_type, true, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 575,
+              lineNumber: 556,
               columnNumber: 23
-            }, void 0)) }, void 0, false, {
+            }, undefined)) }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 573,
+              lineNumber: 554,
               columnNumber: 19
-            }, void 0)
+            }, undefined)
           ] }, void 0, true, {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 566,
+            lineNumber: 547,
             columnNumber: 17
-          }, void 0)
+          }, undefined)
         ] }, void 0, true, {
           fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-          lineNumber: 564,
+          lineNumber: 545,
           columnNumber: 15
-        }, void 0)
+        }, undefined)
       ] }, void 0, true, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 539,
+        lineNumber: 520,
         columnNumber: 13
-      }, void 0) }, void 0, false, {
+      }, undefined) }, void 0, false, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 535,
+        lineNumber: 516,
         columnNumber: 9
-      }, void 0)
+      }, undefined)
     ] }, void 0, true, {
       fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-      lineNumber: 531,
+      lineNumber: 512,
       columnNumber: 7
-    }, void 0),
+    }, undefined),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Card, { children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(CardHeader, { children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(CardTitle, { className: "flex items-center gap-2", children: [
         "GitHub Actions",
         data.github.token_configured ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Badge, { className: "bg-green-500/20 text-green-600 border-green-500/50", children: "Token OK" }, void 0, false, {
           fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-          lineNumber: 594,
+          lineNumber: 575,
           columnNumber: 15
-        }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Badge, { className: "bg-red-500/20 text-red-600 border-red-500/50", children: "No Token" }, void 0, false, {
+        }, undefined) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Badge, { className: "bg-red-500/20 text-red-600 border-red-500/50", children: "No Token" }, void 0, false, {
           fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-          lineNumber: 596,
+          lineNumber: 577,
           columnNumber: 15
-        }, void 0)
+        }, undefined)
       ] }, void 0, true, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 591,
+        lineNumber: 572,
         columnNumber: 11
-      }, void 0) }, void 0, false, {
+      }, undefined) }, void 0, false, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 590,
+        lineNumber: 571,
         columnNumber: 9
-      }, void 0),
+      }, undefined),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(CardContent, { className: "space-y-6", children: data.github.workflows.map((wf) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "font-semibold mb-2 text-sm text-muted-foreground", children: wf.name }, void 0, false, {
           fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-          lineNumber: 603,
+          lineNumber: 584,
           columnNumber: 15
-        }, void 0),
+        }, undefined),
         wf.error ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-sm text-red-500", children: wf.error }, void 0, false, {
           fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-          lineNumber: 605,
+          lineNumber: 586,
           columnNumber: 17
-        }, void 0) : wf.runs.length === 0 ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-sm text-muted-foreground", children: "No runs found" }, void 0, false, {
+        }, undefined) : wf.runs.length === 0 ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-sm text-muted-foreground", children: "No runs found" }, void 0, false, {
           fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-          lineNumber: 607,
+          lineNumber: 588,
           columnNumber: 17
-        }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("table", { className: "w-full text-sm", children: [
+        }, undefined) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("table", { className: "w-full text-sm", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("thead", { children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { className: "border-b text-muted-foreground", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-left p-2", children: "Status" }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 613,
+              lineNumber: 594,
               columnNumber: 25
-            }, void 0),
+            }, undefined),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-left p-2", children: "Trigger" }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 614,
+              lineNumber: 595,
               columnNumber: 25
-            }, void 0),
+            }, undefined),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-left p-2", children: "Started" }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 615,
+              lineNumber: 596,
               columnNumber: 25
-            }, void 0),
+            }, undefined),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-left p-2", children: "Duration" }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 616,
+              lineNumber: 597,
               columnNumber: 25
-            }, void 0),
+            }, undefined),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-left p-2", children: "Link" }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 617,
+              lineNumber: 598,
               columnNumber: 25
-            }, void 0)
+            }, undefined)
           ] }, void 0, true, {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 612,
+            lineNumber: 593,
             columnNumber: 23
-          }, void 0) }, void 0, false, {
+          }, undefined) }, void 0, false, {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 611,
+            lineNumber: 592,
             columnNumber: 21
-          }, void 0),
+          }, undefined),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tbody", { children: wf.runs.map((run) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { className: "border-b hover:bg-muted/50", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "p-2", children: getStatusBadge(run) }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 623,
+              lineNumber: 604,
               columnNumber: 27
-            }, void 0),
+            }, undefined),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "p-2 capitalize", children: run.event }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 624,
+              lineNumber: 605,
               columnNumber: 27
-            }, void 0),
+            }, undefined),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "p-2", children: formatDate$1(run.run_started_at) }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 625,
+              lineNumber: 606,
               columnNumber: 27
-            }, void 0),
+            }, undefined),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "p-2", children: formatDuration(run.duration_seconds) }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 626,
+              lineNumber: 607,
               columnNumber: 27
-            }, void 0),
+            }, undefined),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "p-2", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
               "a",
               {
@@ -83265,72 +83242,72 @@ const MonitoringPage = () => {
                   " ",
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ExternalLink, { className: "h-3 w-3" }, void 0, false, {
                     fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-                    lineNumber: 634,
+                    lineNumber: 615,
                     columnNumber: 49
-                  }, void 0)
+                  }, undefined)
                 ]
               },
               void 0,
               true,
               {
                 fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-                lineNumber: 628,
+                lineNumber: 609,
                 columnNumber: 29
               },
-              void 0
+              undefined
             ) }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 627,
+              lineNumber: 608,
               columnNumber: 27
-            }, void 0)
+            }, undefined)
           ] }, run.id, true, {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 622,
+            lineNumber: 603,
             columnNumber: 25
-          }, void 0)) }, void 0, false, {
+          }, undefined)) }, void 0, false, {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 620,
+            lineNumber: 601,
             columnNumber: 21
-          }, void 0)
+          }, undefined)
         ] }, void 0, true, {
           fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-          lineNumber: 610,
+          lineNumber: 591,
           columnNumber: 19
-        }, void 0) }, void 0, false, {
+        }, undefined) }, void 0, false, {
           fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-          lineNumber: 609,
+          lineNumber: 590,
           columnNumber: 17
-        }, void 0)
+        }, undefined)
       ] }, wf.name, true, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 602,
+        lineNumber: 583,
         columnNumber: 13
-      }, void 0)) }, void 0, false, {
+      }, undefined)) }, void 0, false, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 600,
+        lineNumber: 581,
         columnNumber: 9
-      }, void 0)
+      }, undefined)
     ] }, void 0, true, {
       fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-      lineNumber: 589,
+      lineNumber: 570,
       columnNumber: 7
-    }, void 0),
+    }, undefined),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Card, { children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(CardHeader, { children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(CardTitle, { children: "Sentry Error Tracking" }, void 0, false, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 651,
+        lineNumber: 632,
         columnNumber: 11
-      }, void 0) }, void 0, false, {
+      }, undefined) }, void 0, false, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 650,
+        lineNumber: 631,
         columnNumber: 9
-      }, void 0),
+      }, undefined),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(CardContent, { children: data.sentry.configured ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-4", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Badge, { className: "bg-green-500/20 text-green-600 border-green-500/50", children: "Configured" }, void 0, false, {
           fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-          lineNumber: 656,
+          lineNumber: 637,
           columnNumber: 15
-        }, void 0),
+        }, undefined),
         data.sentry.url && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
           "a",
           {
@@ -83342,73 +83319,73 @@ const MonitoringPage = () => {
               "Open Sentry Dashboard ",
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ExternalLink, { className: "h-4 w-4" }, void 0, false, {
                 fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-                lineNumber: 664,
+                lineNumber: 645,
                 columnNumber: 41
-              }, void 0)
+              }, undefined)
             ]
           },
           void 0,
           true,
           {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 658,
+            lineNumber: 639,
             columnNumber: 17
           },
-          void 0
+          undefined
         )
       ] }, void 0, true, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 655,
+        lineNumber: 636,
         columnNumber: 13
-      }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-muted-foreground text-sm", children: "Sentry is not configured (SENTRY_DSN env var not set)" }, void 0, false, {
+      }, undefined) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-muted-foreground text-sm", children: "Sentry is not configured (SENTRY_DSN env var not set)" }, void 0, false, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 669,
+        lineNumber: 650,
         columnNumber: 13
-      }, void 0) }, void 0, false, {
+      }, undefined) }, void 0, false, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 653,
+        lineNumber: 634,
         columnNumber: 9
-      }, void 0)
+      }, undefined)
     ] }, void 0, true, {
       fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-      lineNumber: 649,
+      lineNumber: 630,
       columnNumber: 7
-    }, void 0),
+    }, undefined),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Card, { children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(CardHeader, { children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(CardTitle, { className: "flex items-center justify-between", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "flex items-center gap-2", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Zap, { className: "h-5 w-5 text-blue-500" }, void 0, false, {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 679,
+            lineNumber: 660,
             columnNumber: 15
-          }, void 0),
+          }, undefined),
           "Job Upload Queue"
         ] }, void 0, true, {
           fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-          lineNumber: 678,
+          lineNumber: 659,
           columnNumber: 13
-        }, void 0),
+        }, undefined),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Badge, { variant: "outline", className: queueConnected ? "text-green-600 border-green-500/50" : "text-muted-foreground", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `inline-block h-2 w-2 rounded-full mr-1.5 ${queueConnected ? "bg-green-500 animate-pulse" : "bg-muted-foreground"}` }, void 0, false, {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 683,
+            lineNumber: 664,
             columnNumber: 15
-          }, void 0),
-          queueConnected ? "Live" : "Connecting…"
+          }, undefined),
+          queueConnected ? "Live · 2s" : "Connecting…"
         ] }, void 0, true, {
           fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-          lineNumber: 682,
+          lineNumber: 663,
           columnNumber: 13
-        }, void 0)
+        }, undefined)
       ] }, void 0, true, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 677,
+        lineNumber: 658,
         columnNumber: 11
-      }, void 0) }, void 0, false, {
+      }, undefined) }, void 0, false, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 676,
+        lineNumber: 657,
         columnNumber: 9
-      }, void 0),
+      }, undefined),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(CardContent, { className: "space-y-4", children: queue ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-2 sm:grid-cols-4 gap-3", children: [
           { label: "Pending", value: queue.summary.pending, color: "text-yellow-600", bg: "bg-yellow-500/10" },
@@ -83418,171 +83395,171 @@ const MonitoringPage = () => {
         ].map(({ label, value, color, bg }) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `rounded-lg p-3 text-center ${bg}`, children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `text-2xl font-bold ${color}`, children: value }, void 0, false, {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 700,
+            lineNumber: 681,
             columnNumber: 21
-          }, void 0),
+          }, undefined),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-xs text-muted-foreground mt-0.5", children: label }, void 0, false, {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 701,
+            lineNumber: 682,
             columnNumber: 21
-          }, void 0)
+          }, undefined)
         ] }, label, true, {
           fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-          lineNumber: 699,
+          lineNumber: 680,
           columnNumber: 19
-        }, void 0)) }, void 0, false, {
+        }, undefined)) }, void 0, false, {
           fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-          lineNumber: 692,
+          lineNumber: 673,
           columnNumber: 15
-        }, void 0),
+        }, undefined),
         queue.items.length > 0 ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "rounded-md border overflow-x-auto", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Table, { children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(TableHeader, { children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(TableRow, { children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(TableHead, { className: "w-12", children: "ID" }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 712,
+              lineNumber: 693,
               columnNumber: 25
-            }, void 0),
+            }, undefined),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(TableHead, { children: "Status" }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 713,
+              lineNumber: 694,
               columnNumber: 25
-            }, void 0),
+            }, undefined),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(TableHead, { className: "text-right", children: "Jobs" }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 714,
+              lineNumber: 695,
               columnNumber: 25
-            }, void 0),
+            }, undefined),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(TableHead, { className: "text-right", children: "New" }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 715,
+              lineNumber: 696,
               columnNumber: 25
-            }, void 0),
+            }, undefined),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(TableHead, { className: "text-right", children: "Updated" }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 716,
+              lineNumber: 697,
               columnNumber: 25
-            }, void 0),
+            }, undefined),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(TableHead, { className: "text-right", children: "Time" }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 717,
+              lineNumber: 698,
               columnNumber: 25
-            }, void 0),
+            }, undefined),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(TableHead, { children: "Queued At" }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 718,
+              lineNumber: 699,
               columnNumber: 25
-            }, void 0),
+            }, undefined),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(TableHead, { children: "Error" }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 719,
+              lineNumber: 700,
               columnNumber: 25
-            }, void 0)
+            }, undefined)
           ] }, void 0, true, {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 711,
+            lineNumber: 692,
             columnNumber: 23
-          }, void 0) }, void 0, false, {
+          }, undefined) }, void 0, false, {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 710,
+            lineNumber: 691,
             columnNumber: 21
-          }, void 0),
+          }, undefined),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(TableBody, { children: queue.items.map((item) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(TableRow, { className: item.status === "failed" ? "bg-red-500/5" : item.status === "processing" ? "bg-blue-500/5" : "", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(TableCell, { className: "font-mono text-xs text-muted-foreground", children: item.id }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 725,
+              lineNumber: 706,
               columnNumber: 27
-            }, void 0),
+            }, undefined),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(TableCell, { children: queueStatusBadge(item.status) }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 726,
+              lineNumber: 707,
               columnNumber: 27
-            }, void 0),
+            }, undefined),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(TableCell, { className: "text-right font-medium", children: item.job_count }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 727,
+              lineNumber: 708,
               columnNumber: 27
-            }, void 0),
+            }, undefined),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(TableCell, { className: "text-right text-green-600", children: item.new_jobs > 0 ? `+${item.new_jobs}` : "—" }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 728,
+              lineNumber: 709,
               columnNumber: 27
-            }, void 0),
+            }, undefined),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(TableCell, { className: "text-right text-blue-600", children: item.updated_jobs > 0 ? item.updated_jobs : "—" }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 729,
+              lineNumber: 710,
               columnNumber: 27
-            }, void 0),
+            }, undefined),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(TableCell, { className: "text-right text-muted-foreground text-sm", children: item.processing_secs != null && item.started_at ? formatDuration(item.processing_secs) : "—" }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 730,
+              lineNumber: 711,
               columnNumber: 27
-            }, void 0),
+            }, undefined),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(TableCell, { className: "text-sm text-muted-foreground", children: formatDate$1(item.created_at) }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 733,
+              lineNumber: 714,
               columnNumber: 27
-            }, void 0),
+            }, undefined),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(TableCell, { className: "text-xs text-red-500 max-w-[200px] truncate", title: item.error_text || void 0, children: item.error_text || "" }, void 0, false, {
               fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-              lineNumber: 734,
+              lineNumber: 715,
               columnNumber: 27
-            }, void 0)
+            }, undefined)
           ] }, item.id, true, {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 724,
+            lineNumber: 705,
             columnNumber: 25
-          }, void 0)) }, void 0, false, {
+          }, undefined)) }, void 0, false, {
             fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-            lineNumber: 722,
+            lineNumber: 703,
             columnNumber: 21
-          }, void 0)
+          }, undefined)
         ] }, void 0, true, {
           fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-          lineNumber: 709,
+          lineNumber: 690,
           columnNumber: 19
-        }, void 0) }, void 0, false, {
+        }, undefined) }, void 0, false, {
           fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-          lineNumber: 708,
+          lineNumber: 689,
           columnNumber: 17
-        }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-sm text-muted-foreground text-center py-4", children: "Queue is empty" }, void 0, false, {
+        }, undefined) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-sm text-muted-foreground text-center py-4", children: "Queue is empty" }, void 0, false, {
           fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-          lineNumber: 743,
+          lineNumber: 724,
           columnNumber: 17
-        }, void 0)
+        }, undefined)
       ] }, void 0, true, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 691,
+        lineNumber: 672,
         columnNumber: 13
-      }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-2 text-muted-foreground py-4", children: [
+      }, undefined) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-2 text-muted-foreground py-4", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(LoaderCircle, { className: "h-4 w-4 animate-spin" }, void 0, false, {
           fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-          lineNumber: 748,
+          lineNumber: 729,
           columnNumber: 15
-        }, void 0),
+        }, undefined),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm", children: "Waiting for live data…" }, void 0, false, {
           fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-          lineNumber: 749,
+          lineNumber: 730,
           columnNumber: 15
-        }, void 0)
+        }, undefined)
       ] }, void 0, true, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 747,
+        lineNumber: 728,
         columnNumber: 13
-      }, void 0) }, void 0, false, {
+      }, undefined) }, void 0, false, {
         fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-        lineNumber: 688,
+        lineNumber: 669,
         columnNumber: 9
-      }, void 0)
+      }, undefined)
     ] }, void 0, true, {
       fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-      lineNumber: 675,
+      lineNumber: 656,
       columnNumber: 7
-    }, void 0)
+    }, undefined)
   ] }, void 0, true, {
     fileName: "/mnt/c/Users/nicky/OneDrive/Escritorio/Projects/python-job/job-scrapper/job-manager-ui/src/components/MonitoringPage.tsx",
-    lineNumber: 297,
+    lineNumber: 278,
     columnNumber: 5
-  }, void 0);
+  }, undefined);
 };
 
 const formatDate = (iso) => {

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -196,43 +196,24 @@ export const MonitoringPage: React.FC = () => {
   const [cleanupResult, setCleanupResult] = useState<Record<string, number>>({});
   const [queue, setQueue] = useState<QueueStatus | null>(null);
   const [queueConnected, setQueueConnected] = useState(false);
-  const esRef = useRef<EventSource | null>(null);
 
-  // SSE: open a live stream for queue status
+  // Poll queue status every 2 seconds (SSE not reliable behind Railway's proxy)
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    if (!token) return;
-
-    const baseUrl = import.meta.env.VITE_API_URL || window.location.origin;
-    const url = `${baseUrl}/api/admin/queue-status/stream?token=${encodeURIComponent(token)}`;
-    const es = new EventSource(url);
-    esRef.current = es;
-
-    es.onopen = () => setQueueConnected(true);
-    es.onmessage = (e) => {
+    let active = true;
+    const poll = async () => {
       try {
-        const parsed = JSON.parse(e.data);
-        if (!parsed.error) setQueue(parsed);
-      } catch {}
+        const result = await jobApi.getQueueStatus();
+        if (active && result?.summary) {
+          setQueue(result);
+          setQueueConnected(true);
+        }
+      } catch {
+        if (active) setQueueConnected(false);
+      }
     };
-    es.onerror = () => {
-      setQueueConnected(false);
-      es.close();
-      // Retry after 5s
-      setTimeout(() => {
-        const token2 = localStorage.getItem('access_token');
-        if (!token2) return;
-        const es2 = new EventSource(`${baseUrl}/api/admin/queue-status/stream?token=${encodeURIComponent(token2)}`);
-        esRef.current = es2;
-        es2.onopen = () => setQueueConnected(true);
-        es2.onmessage = (e2) => {
-          try { const p = JSON.parse(e2.data); if (!p.error) setQueue(p); } catch {}
-        };
-        es2.onerror = () => { setQueueConnected(false); es2.close(); };
-      }, 5000);
-    };
-
-    return () => { es.close(); esRef.current = null; };
+    poll();
+    const id = setInterval(poll, 2000);
+    return () => { active = false; clearInterval(id); };
   }, []);
 
   const load = async () => {
@@ -681,7 +662,7 @@ export const MonitoringPage: React.FC = () => {
             </span>
             <Badge variant="outline" className={queueConnected ? 'text-green-600 border-green-500/50' : 'text-muted-foreground'}>
               <span className={`inline-block h-2 w-2 rounded-full mr-1.5 ${queueConnected ? 'bg-green-500 animate-pulse' : 'bg-muted-foreground'}`} />
-              {queueConnected ? 'Live' : 'Connecting…'}
+              {queueConnected ? 'Live · 2s' : 'Connecting…'}
             </Badge>
           </CardTitle>
         </CardHeader>
