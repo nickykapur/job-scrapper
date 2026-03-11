@@ -287,6 +287,102 @@ async def startup_event():
         except Exception as e:
             print(f"⚠️  Activity events migration failed: {e}")
 
+        # Create job upload queue table
+        try:
+            conn = await db.get_connection()
+            if conn:
+                try:
+                    await conn.execute("""
+                        CREATE TABLE IF NOT EXISTS job_upload_queue (
+                            id BIGSERIAL PRIMARY KEY,
+                            jobs_data JSONB NOT NULL,
+                            status VARCHAR(20) DEFAULT 'pending',
+                            created_at TIMESTAMPTZ DEFAULT NOW(),
+                            started_at TIMESTAMPTZ,
+                            finished_at TIMESTAMPTZ,
+                            result JSONB,
+                            error_text TEXT
+                        );
+                        CREATE INDEX IF NOT EXISTS idx_job_queue_status
+                            ON job_upload_queue(status, created_at);
+                    """)
+                    print("✅ Job upload queue table ready")
+                finally:
+                    await db._release(conn)
+        except Exception as e:
+            print(f"⚠️  Job upload queue migration failed: {e}")
+
+        # Start background queue worker
+        asyncio.create_task(_queue_worker())
+        print("✅ Job upload queue worker started")
+
+async def _process_queue_once() -> bool:
+    """Claim and process one pending queue item. Returns True if something was processed."""
+    # Step 1: claim one item
+    conn = await db.get_connection()
+    if not conn:
+        return False
+    try:
+        row = await conn.fetchrow("""
+            UPDATE job_upload_queue
+            SET status = 'processing', started_at = NOW()
+            WHERE id = (
+                SELECT id FROM job_upload_queue
+                WHERE status = 'pending'
+                ORDER BY created_at
+                LIMIT 1
+                FOR UPDATE SKIP LOCKED
+            )
+            RETURNING id, jobs_data
+        """)
+    finally:
+        await db._release(conn)
+
+    if not row:
+        return False  # Queue empty
+
+    qid = row['id']
+    jobs_data = dict(row['jobs_data'])
+
+    # Step 2: process (uses its own connection from the pool)
+    try:
+        result = await db.sync_jobs_from_scraper(jobs_data)
+        conn2 = await db.get_connection()
+        if conn2:
+            try:
+                await conn2.execute(
+                    "UPDATE job_upload_queue SET status='done', finished_at=NOW(), result=$1::jsonb WHERE id=$2",
+                    json.dumps(result), qid
+                )
+            finally:
+                await db._release(conn2)
+        logger.info("Queue item %s done: %s new, %s updated", qid,
+                    result.get('new_jobs', 0), result.get('updated_jobs', 0))
+    except Exception as e:
+        logger.error("Queue item %s failed: %s", qid, e)
+        conn2 = await db.get_connection()
+        if conn2:
+            try:
+                await conn2.execute(
+                    "UPDATE job_upload_queue SET status='failed', finished_at=NOW(), error_text=$1 WHERE id=$2",
+                    str(e), qid
+                )
+            finally:
+                await db._release(conn2)
+    return True
+
+async def _queue_worker():
+    """Background task: drain job_upload_queue one batch at a time."""
+    logger.info("Queue worker started")
+    while True:
+        try:
+            processed = await _process_queue_once()
+            if not processed:
+                await asyncio.sleep(3)  # Nothing pending, poll every 3s
+        except Exception as e:
+            logger.error("Queue worker loop error: %s", e)
+            await asyncio.sleep(5)
+
 async def load_jobs():
     """Load jobs from database ONLY - no JSON fallback"""
     if not db or not DATABASE_AVAILABLE:
@@ -1303,51 +1399,37 @@ async def update_job_legacy(request: JobUpdateRequest, current_user: Optional[Di
 
 @app.post("/sync_jobs")
 async def sync_jobs(request: SyncJobsRequest):
-    """Sync jobs from local scraper to database - DATABASE ONLY"""
+    """Sync jobs from local scraper — enqueues for background processing and returns immediately."""
     if not db or not DATABASE_AVAILABLE:
         raise HTTPException(status_code=500, detail="Database not available")
 
+    job_count = sum(1 for k in request.jobs_data if not k.startswith('_'))
+
+    conn = await db.get_connection()
+    if not conn:
+        raise HTTPException(status_code=500, detail="Database connection failed")
     try:
-        logger.info("Scraper sync started: %d jobs incoming", len(request.jobs_data))
+        row = await conn.fetchrow(
+            "INSERT INTO job_upload_queue (jobs_data) VALUES ($1::jsonb) RETURNING id",
+            json.dumps(request.jobs_data)
+        )
+    finally:
+        await db._release(conn)
 
-        # Use database sync method
-        result = await db.sync_jobs_from_scraper(request.jobs_data)
-        if "error" in result:
-            raise HTTPException(status_code=500, detail=result["error"])
+    logger.info("Enqueued %d jobs for background processing (queue_id=%s)", job_count, row['id'])
 
-        new_jobs = result.get("new_jobs", 0)
-        updated_jobs = result.get("updated_jobs", 0)
-        skipped_reposts = result.get("skipped_reposts", 0)
-
-        # Metrics: track scraper output in Sentry so you can see trends over time
-        if _sentry_dsn:
-            sentry_sdk.metrics.incr("jobs.synced",   value=len(request.jobs_data))
-            sentry_sdk.metrics.incr("jobs.new",       value=new_jobs)
-            sentry_sdk.metrics.incr("jobs.updated",   value=updated_jobs)
-            sentry_sdk.metrics.incr("jobs.reposts_skipped", value=skipped_reposts)
-
-        logger.info("Scraper sync done: %d new, %d updated, %d reposts skipped",
-                    new_jobs, updated_jobs, skipped_reposts)
-
-        return {
-            "success": True,
-            "message": f"Synced jobs successfully to database",
-            "new_jobs": new_jobs,
-            "new_software": result.get("new_software", 0),
-            "new_hr": result.get("new_hr", 0),
-            "new_cybersecurity": result.get("new_cybersecurity", 0),
-            "new_sales": result.get("new_sales", 0),
-            "new_finance": result.get("new_finance", 0),
-            "new_marketing": result.get("new_marketing", 0),
-            "new_biotech": result.get("new_biotech", 0),
-            "new_engineering": result.get("new_engineering", 0),
-            "new_events": result.get("new_events", 0),
-            "updated_jobs": updated_jobs,
-            "skipped_reposts": skipped_reposts,
-        }
-    except Exception as e:
-        logger.error("Database sync failed: %s", e)
-        raise HTTPException(status_code=500, detail=f"Database sync failed: {str(e)}")
+    # Return success immediately; actual counts are 0 since processing is async.
+    # Jobs will appear in the dashboard within seconds as the background worker drains the queue.
+    return {
+        "success": True,
+        "message": f"Queued {job_count} jobs for processing (queue_id={row['id']})",
+        "queue_id": row['id'],
+        "new_jobs": 0,
+        "new_software": 0, "new_hr": 0, "new_cybersecurity": 0,
+        "new_sales": 0, "new_finance": 0, "new_marketing": 0,
+        "new_biotech": 0, "new_engineering": 0, "new_events": 0,
+        "updated_jobs": 0, "skipped_reposts": 0,
+    }
 
 @app.post("/api/jobs/bulk-reject")
 async def bulk_reject_jobs(
