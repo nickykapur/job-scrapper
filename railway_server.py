@@ -296,6 +296,7 @@ async def startup_event():
                         CREATE TABLE IF NOT EXISTS job_upload_queue (
                             id BIGSERIAL PRIMARY KEY,
                             jobs_data JSONB NOT NULL,
+                            job_count INT DEFAULT 0,
                             status VARCHAR(20) DEFAULT 'pending',
                             created_at TIMESTAMPTZ DEFAULT NOW(),
                             started_at TIMESTAMPTZ,
@@ -303,6 +304,7 @@ async def startup_event():
                             result JSONB,
                             error_text TEXT
                         );
+                        ALTER TABLE job_upload_queue ADD COLUMN IF NOT EXISTS job_count INT DEFAULT 0;
                         CREATE INDEX IF NOT EXISTS idx_job_queue_status
                             ON job_upload_queue(status, created_at);
                     """)
@@ -1410,8 +1412,8 @@ async def sync_jobs(request: SyncJobsRequest):
         raise HTTPException(status_code=500, detail="Database connection failed")
     try:
         row = await conn.fetchrow(
-            "INSERT INTO job_upload_queue (jobs_data) VALUES ($1::jsonb) RETURNING id",
-            json.dumps(request.jobs_data)
+            "INSERT INTO job_upload_queue (jobs_data, job_count) VALUES ($1::jsonb, $2) RETURNING id",
+            json.dumps(request.jobs_data), job_count
         )
     finally:
         await db._release(conn)
@@ -2615,6 +2617,110 @@ async def post_scraper_run_log(request: ScraperRunLogRequest):
     finally:
         if conn:
             await db._release(conn)
+
+async def _fetch_queue_snapshot() -> dict:
+    """Fetch current queue status from DB. Used by both REST and SSE endpoints."""
+    conn = await db.get_connection()
+    if not conn:
+        return {"error": "Database connection failed"}
+    try:
+        counts_rows = await conn.fetch(
+            "SELECT status, COUNT(*) AS count FROM job_upload_queue GROUP BY status"
+        )
+        counts = {r['status']: r['count'] for r in counts_rows}
+
+        items = await conn.fetch("""
+            SELECT id, job_count, status,
+                   created_at, started_at, finished_at,
+                   EXTRACT(EPOCH FROM (COALESCE(finished_at, NOW()) - started_at))::int AS processing_secs,
+                   result->>'new_jobs'     AS new_jobs,
+                   result->>'updated_jobs' AS updated_jobs,
+                   error_text
+            FROM job_upload_queue
+            ORDER BY created_at DESC
+            LIMIT 30
+        """)
+
+        return {
+            "summary": {
+                "pending":    counts.get("pending",    0),
+                "processing": counts.get("processing", 0),
+                "done":       counts.get("done",       0),
+                "failed":     counts.get("failed",     0),
+            },
+            "items": [
+                {
+                    "id":              r["id"],
+                    "job_count":       r["job_count"],
+                    "status":          r["status"],
+                    "created_at":      r["created_at"].isoformat() if r["created_at"] else None,
+                    "started_at":      r["started_at"].isoformat() if r["started_at"] else None,
+                    "finished_at":     r["finished_at"].isoformat() if r["finished_at"] else None,
+                    "processing_secs": r["processing_secs"],
+                    "new_jobs":        int(r["new_jobs"] or 0),
+                    "updated_jobs":    int(r["updated_jobs"] or 0),
+                    "error_text":      r["error_text"],
+                }
+                for r in items
+            ],
+        }
+    finally:
+        await db._release(conn)
+
+
+@app.get("/api/admin/queue-status")
+async def get_queue_status(current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Return job upload queue summary and recent items (single snapshot)."""
+    if not db or not DATABASE_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Database not available")
+    return await _fetch_queue_snapshot()
+
+
+@app.get("/api/admin/queue-status/stream")
+async def queue_status_stream(token: str = ""):
+    """SSE stream: pushes queue status every 2 seconds. Auth via ?token= query param."""
+    from fastapi.responses import StreamingResponse as _SR
+
+    # Validate token manually (EventSource can't send Authorization header)
+    if not token or not AUTH_AVAILABLE:
+        return _SR(iter([b"data: {\"error\": \"unauthorized\"}\n\n"]),
+                   media_type="text/event-stream", status_code=401)
+    try:
+        from auth_utils import decode_access_token
+        user = decode_access_token(token)
+        if not user or not user.get("is_admin"):
+            return _SR(iter([b"data: {\"error\": \"forbidden\"}\n\n"]),
+                       media_type="text/event-stream", status_code=403)
+    except Exception:
+        return _SR(iter([b"data: {\"error\": \"unauthorized\"}\n\n"]),
+                   media_type="text/event-stream", status_code=401)
+
+    async def event_generator():
+        try:
+            while True:
+                try:
+                    if db and DATABASE_AVAILABLE:
+                        data = await _fetch_queue_snapshot()
+                    else:
+                        data = {"error": "Database not available"}
+                    yield f"data: {json.dumps(data)}\n\n"
+                except Exception as e:
+                    yield f"data: {json.dumps({'error': str(e)})}\n\n"
+                await asyncio.sleep(2)
+        except asyncio.CancelledError:
+            pass  # Client disconnected
+
+    from fastapi.responses import StreamingResponse as _SR2
+    return _SR2(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
 
 @app.get("/api/admin/monitoring")
 async def get_monitoring(current_user: Dict[str, Any] = Depends(get_current_user)):

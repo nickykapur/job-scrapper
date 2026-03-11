@@ -174,6 +174,9 @@ export const jobApi = {
     return response.data;
   },
 
+  // Admin: Get queue status snapshot (single fetch)
+  getQueueStatus: async (): Promise<any> => (await api.get('/api/admin/queue-status')).data,
+
   // Admin: Get monitoring data (GitHub Actions, DB stats, Sentry)
   getMonitoring: async (): Promise<any> => (await api.get('/api/admin/monitoring')).data,
 

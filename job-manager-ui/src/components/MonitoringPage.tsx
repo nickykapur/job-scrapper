@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Activity, RefreshCw, ExternalLink, AlertCircle, Database, Trash2, Timer } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Activity, RefreshCw, ExternalLink, AlertCircle, Database, Trash2, Timer, Zap, CheckCircle, XCircle, Clock, Loader2 } from 'lucide-react';
 import { jobApi } from '../services/api';
 
 interface WorkflowRun {
@@ -161,12 +162,78 @@ const getStatusBadge = (run: WorkflowRun) => {
   return <Badge variant="outline">{run.conclusion || run.status}</Badge>;
 };
 
+interface QueueItem {
+  id: number;
+  job_count: number;
+  status: string;
+  created_at: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  processing_secs: number | null;
+  new_jobs: number;
+  updated_jobs: number;
+  error_text: string | null;
+}
+
+interface QueueStatus {
+  summary: { pending: number; processing: number; done: number; failed: number };
+  items: QueueItem[];
+}
+
+const queueStatusBadge = (status: string) => {
+  if (status === 'pending')    return <Badge className="bg-yellow-500/20 text-yellow-600 border-yellow-500/50"><Clock className="h-3 w-3 mr-1" />Pending</Badge>;
+  if (status === 'processing') return <Badge className="bg-blue-500/20 text-blue-600 border-blue-500/50"><Loader2 className="h-3 w-3 mr-1 animate-spin" />Processing</Badge>;
+  if (status === 'done')       return <Badge className="bg-green-500/20 text-green-600 border-green-500/50"><CheckCircle className="h-3 w-3 mr-1" />Done</Badge>;
+  if (status === 'failed')     return <Badge className="bg-red-500/20 text-red-600 border-red-500/50"><XCircle className="h-3 w-3 mr-1" />Failed</Badge>;
+  return <Badge variant="outline">{status}</Badge>;
+};
+
 export const MonitoringPage: React.FC = () => {
   const [data, setData] = useState<MonitoringData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cleaningUp, setCleaningUp] = useState<string | null>(null);
   const [cleanupResult, setCleanupResult] = useState<Record<string, number>>({});
+  const [queue, setQueue] = useState<QueueStatus | null>(null);
+  const [queueConnected, setQueueConnected] = useState(false);
+  const esRef = useRef<EventSource | null>(null);
+
+  // SSE: open a live stream for queue status
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+
+    const baseUrl = import.meta.env.VITE_API_URL || window.location.origin;
+    const url = `${baseUrl}/api/admin/queue-status/stream?token=${encodeURIComponent(token)}`;
+    const es = new EventSource(url);
+    esRef.current = es;
+
+    es.onopen = () => setQueueConnected(true);
+    es.onmessage = (e) => {
+      try {
+        const parsed = JSON.parse(e.data);
+        if (!parsed.error) setQueue(parsed);
+      } catch {}
+    };
+    es.onerror = () => {
+      setQueueConnected(false);
+      es.close();
+      // Retry after 5s
+      setTimeout(() => {
+        const token2 = localStorage.getItem('access_token');
+        if (!token2) return;
+        const es2 = new EventSource(`${baseUrl}/api/admin/queue-status/stream?token=${encodeURIComponent(token2)}`);
+        esRef.current = es2;
+        es2.onopen = () => setQueueConnected(true);
+        es2.onmessage = (e2) => {
+          try { const p = JSON.parse(e2.data); if (!p.error) setQueue(p); } catch {}
+        };
+        es2.onerror = () => { setQueueConnected(false); es2.close(); };
+      }, 5000);
+    };
+
+    return () => { es.close(); esRef.current = null; };
+  }, []);
 
   const load = async () => {
     setLoading(true);
@@ -600,6 +667,87 @@ export const MonitoringPage: React.FC = () => {
             </div>
           ) : (
             <p className="text-muted-foreground text-sm">Sentry is not configured (SENTRY_DSN env var not set)</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Upload Queue — live via SSE */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <Zap className="h-5 w-5 text-blue-500" />
+              Job Upload Queue
+            </span>
+            <Badge variant="outline" className={queueConnected ? 'text-green-600 border-green-500/50' : 'text-muted-foreground'}>
+              <span className={`inline-block h-2 w-2 rounded-full mr-1.5 ${queueConnected ? 'bg-green-500 animate-pulse' : 'bg-muted-foreground'}`} />
+              {queueConnected ? 'Live' : 'Connecting…'}
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Summary counts */}
+          {queue ? (
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                  { label: 'Pending',    value: queue.summary.pending,    color: 'text-yellow-600', bg: 'bg-yellow-500/10' },
+                  { label: 'Processing', value: queue.summary.processing, color: 'text-blue-600',   bg: 'bg-blue-500/10'   },
+                  { label: 'Done',       value: queue.summary.done,       color: 'text-green-600',  bg: 'bg-green-500/10'  },
+                  { label: 'Failed',     value: queue.summary.failed,     color: 'text-red-600',    bg: 'bg-red-500/10'    },
+                ].map(({ label, value, color, bg }) => (
+                  <div key={label} className={`rounded-lg p-3 text-center ${bg}`}>
+                    <div className={`text-2xl font-bold ${color}`}>{value}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">{label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Recent items table */}
+              {queue.items.length > 0 ? (
+                <div className="rounded-md border overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12">ID</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Jobs</TableHead>
+                        <TableHead className="text-right">New</TableHead>
+                        <TableHead className="text-right">Updated</TableHead>
+                        <TableHead className="text-right">Time</TableHead>
+                        <TableHead>Queued At</TableHead>
+                        <TableHead>Error</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {queue.items.map((item) => (
+                        <TableRow key={item.id} className={item.status === 'failed' ? 'bg-red-500/5' : item.status === 'processing' ? 'bg-blue-500/5' : ''}>
+                          <TableCell className="font-mono text-xs text-muted-foreground">{item.id}</TableCell>
+                          <TableCell>{queueStatusBadge(item.status)}</TableCell>
+                          <TableCell className="text-right font-medium">{item.job_count}</TableCell>
+                          <TableCell className="text-right text-green-600">{item.new_jobs > 0 ? `+${item.new_jobs}` : '—'}</TableCell>
+                          <TableCell className="text-right text-blue-600">{item.updated_jobs > 0 ? item.updated_jobs : '—'}</TableCell>
+                          <TableCell className="text-right text-muted-foreground text-sm">
+                            {item.processing_secs != null && item.started_at ? formatDuration(item.processing_secs) : '—'}
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{formatDate(item.created_at)}</TableCell>
+                          <TableCell className="text-xs text-red-500 max-w-[200px] truncate" title={item.error_text || undefined}>
+                            {item.error_text || ''}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">Queue is empty</p>
+              )}
+            </>
+          ) : (
+            <div className="flex items-center gap-2 text-muted-foreground py-4">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-sm">Waiting for live data…</span>
+            </div>
           )}
         </CardContent>
       </Card>
