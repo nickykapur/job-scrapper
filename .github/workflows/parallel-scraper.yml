@@ -146,6 +146,7 @@ jobs:
 
       - name: Run smart scraper for ${{ matrix.country.name }}
         id: scrape
+        timeout-minutes: 25
         run: |
           START_TIME=$(date +%s)
           echo "⏱️ [${{ matrix.country.name }}] Started at $(date -u '+%H:%M:%S UTC')"

@@ -155,7 +155,9 @@ class LinkedInJobScraper:
                 print("Using Chrome browser with downloaded chromedriver")
                 
             self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-            
+            # Prevent Chrome from hanging on slow pages — raises TimeoutException after 30s
+            self.driver.set_page_load_timeout(30)
+
         except Exception as chrome_error:
             print(f"Chrome not available: {chrome_error}")
             print("Trying Firefox...")
@@ -217,6 +219,16 @@ class LinkedInJobScraper:
         self.driver.get(url)
         time.sleep(2)
 
+        # Detect LinkedIn bot detection / login wall before trying to scrape.
+        # If LinkedIn redirects to /login, /checkpoint, or /authwall we raise
+        # immediately so the caller knows this is a scraper block, not zero results.
+        current_url = self.driver.current_url
+        if any(x in current_url for x in ('/login', '/checkpoint', '/authwall')):
+            raise Exception(f"LinkedIn bot detection — redirected to: {current_url}")
+        page_title = self.driver.title.lower()
+        if 'sign in' in page_title and 'job' not in page_title:
+            raise Exception(f"LinkedIn sign-in wall detected (title: {self.driver.title!r})")
+
         # Wait for any job listing selector to appear — single combined wait avoids
         # the 10s timeout cascade (old code: up to 5 × 10s = 50s if wrong selectors)
         combined_selector = (
@@ -228,6 +240,10 @@ class LinkedInJobScraper:
                 EC.presence_of_element_located((By.CSS_SELECTOR, combined_selector))
             )
         except Exception:
+            # Before giving up, double-check we're still on a real LinkedIn page
+            current_url = self.driver.current_url
+            if any(x in current_url for x in ('/login', '/checkpoint', '/authwall')):
+                raise Exception(f"LinkedIn bot detection after wait — redirected to: {current_url}")
             print("No job listings found or page didn't load properly")
             return []
 

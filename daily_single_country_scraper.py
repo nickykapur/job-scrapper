@@ -224,47 +224,71 @@ def upload_jobs_to_railway(railway_url, jobs_data):
           f"{totals['new_events']} events), Updated: {totals['updated_jobs']}")
     return totals
 
+MAX_SEARCH_RETRIES = 2   # Retry a failed search up to this many times
+RETRY_DELAY_SECONDS = 8  # Wait between retries (LinkedIn rate-limit cool-down)
+
+def _reset_thread_scraper(existing_jobs):
+    """Close the thread's current scraper and return a fresh one."""
+    if getattr(_thread_local, 'scraper', None):
+        try:
+            _thread_local.scraper.close()
+        except Exception:
+            pass
+        _thread_local.scraper = None
+    return _get_thread_scraper(existing_jobs)
+
 def search_single_term(term, location, country_name, existing_jobs, job_type, thread_id):
     """
     Search for jobs with a single term (runs in parallel).
     Reuses this thread's Chrome browser across calls — no startup cost after the first term.
+    Retries up to MAX_SEARCH_RETRIES times on failure before giving up.
     Returns: dict with jobs found and metadata
     """
-    try:
-        thread_scraper = _get_thread_scraper(existing_jobs)
-        print(f"   [THREAD-{thread_id}] Searching: {term}")
+    last_error = None
+    for attempt in range(1, MAX_SEARCH_RETRIES + 2):  # e.g. 3 total attempts
+        try:
+            thread_scraper = _get_thread_scraper(existing_jobs)
+            if attempt > 1:
+                print(f"   [THREAD-{thread_id}] Retry {attempt - 1}/{MAX_SEARCH_RETRIES}: {term}")
+            else:
+                print(f"   [THREAD-{thread_id}] Searching: {term}")
 
-        results = {}
+            all_results = thread_scraper.search_jobs(
+                keywords=term,
+                location=location,
+                date_filter="7d",
+                easy_apply_filter=False
+            )
 
-        # Single pass: card-level Easy Apply detection runs inside extract_job_data
-        all_results = thread_scraper.search_jobs(
-            keywords=term,
-            location=location,
-            date_filter="7d",
-            easy_apply_filter=False
-        )
+            results = {}
+            if all_results:
+                for job_id, job_data in all_results.items():
+                    job_data["country"] = country_name
+                    job_data["search_location"] = location
+                    results[job_id] = job_data
+                print(f"   [THREAD-{thread_id}] ✓ {term}: Found {len(all_results)} jobs")
+            else:
+                print(f"   [THREAD-{thread_id}] ⊗ {term}: No new jobs")
 
-        if all_results:
-            for job_id, job_data in all_results.items():
-                job_data["country"] = country_name
-                job_data["search_location"] = location
-                results[job_id] = job_data
-            print(f"   [THREAD-{thread_id}] ✓ {term}: Found {len(all_results)} jobs")
-        else:
-            print(f"   [THREAD-{thread_id}] ⊗ {term}: No new jobs")
+            return {'term': term, 'jobs': results, 'job_type': job_type, 'success': True, 'thread_id': thread_id}
 
-        return {'term': term, 'jobs': results, 'job_type': job_type, 'success': True, 'thread_id': thread_id}
+        except Exception as e:
+            last_error = str(e)
+            is_bot_detection = 'bot detection' in last_error.lower() or 'sign-in wall' in last_error.lower()
+            print(f"   [THREAD-{thread_id}] ✗ {term} (attempt {attempt}): {e}")
 
-    except Exception as e:
-        print(f"   [THREAD-{thread_id}] ✗ {term}: Search failed: {e}")
-        # If browser crashed, reset it so next task gets a fresh one
-        if getattr(_thread_local, 'scraper', None):
-            try:
-                _thread_local.scraper.close()
-            except Exception:
-                pass
-            _thread_local.scraper = None
-        return {'term': term, 'jobs': {}, 'job_type': job_type, 'success': False, 'error': str(e), 'thread_id': thread_id}
+            # Always reset the browser after any failure
+            thread_scraper = _reset_thread_scraper(existing_jobs)
+
+            if attempt <= MAX_SEARCH_RETRIES:
+                # For bot detection, wait longer before retrying
+                delay = RETRY_DELAY_SECONDS * (2 if is_bot_detection else 1)
+                print(f"   [THREAD-{thread_id}] Waiting {delay}s before retry...")
+                time.sleep(delay)
+            # else fall through and return failure
+
+    print(f"   [THREAD-{thread_id}] ✗ {term}: All {MAX_SEARCH_RETRIES + 1} attempts failed")
+    return {'term': term, 'jobs': {}, 'job_type': job_type, 'success': False, 'error': last_error, 'thread_id': thread_id}
 
 def _post_run_log(railway_url: str, payload: dict):
     """Fire-and-forget POST of scraper timing to the backend."""
@@ -571,6 +595,18 @@ def scrape_single_country(location, country_name, railway_url, dry_run=False):
     phases["scraping"] = round(time.time() - _scraping_start, 1)
     logger.info("[COMPLETE] All %d searches finished for %s in %.0fs", len(term_to_job_type), country_name, phases["scraping"])
     _close_all_scrapers()  # Release all reused Chrome instances
+
+    # Alert when too many searches fail — this is the earliest signal that LinkedIn is
+    # blocking us and users will see no new jobs.
+    total_terms = len(term_to_job_type)
+    failure_rate = (total_terms - successful_searches) / total_terms if total_terms else 0
+    if failure_rate >= 0.5 and _sentry_dsn:
+        sentry_sdk.capture_message(
+            f"High scrape failure rate for {country_name}: "
+            f"{total_terms - successful_searches}/{total_terms} searches failed ({failure_rate:.0%}) — "
+            "possible LinkedIn bot detection or Chrome crash",
+            level="error",
+        )
 
     by_type_summary = ", ".join(f"{jt}: {len(jobs)}" for jt, jobs in jobs_by_type.items())
     logger.info("[SUMMARY] %s: %d/%d searches OK, %d new jobs (%s)",
