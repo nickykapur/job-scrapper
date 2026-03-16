@@ -883,10 +883,10 @@ async def delete_jobs_by_country(country: str):
 @app.post("/api/jobs/enforce-country-limit")
 async def enforce_country_limit(max_jobs: int = 300):
     """
-    Enforce per-country, per-job-type limits with 24h protection
-    - Always keeps ALL jobs from last 24 hours (regardless of type/count)
-    - Applies per-job-type limits to older jobs
-    - Software jobs get higher limits (500 vs 50 for others)
+    Enforce per-country, per-job-type limits with 72h protection.
+    - Always keeps ALL jobs scraped within the last 72 hours (crash safety buffer)
+    - Applies per-job-type limits to older jobs only
+    - Software jobs are never auto-deleted
     """
     if not db or not DATABASE_AVAILABLE:
         raise HTTPException(status_code=500, detail="Database not available")
@@ -899,19 +899,26 @@ async def enforce_country_limit(max_jobs: int = 300):
         if not conn:
             raise HTTPException(status_code=500, detail="Database connection failed")
 
-        # Per-job-type limits for jobs older than 24 hours
+        # Per-job-type limits for jobs older than PROTECTION_HOURS.
+        # These limits only apply to *old* jobs — recent ones are always kept in full.
         JOB_TYPE_LIMITS = {
-            "software": 999999,     # UNLIMITED - Software jobs never deleted (only 24h protection applies)
-            "cybersecurity": 20,    # Limited to 20 old jobs per country
-            "hr": 20,               # Limited to 20 old jobs per country
-            "sales": 20,            # Limited to 20 old jobs per country
-            "finance": 20,          # Limited to 20 old jobs per country
-            "marketing": 50,        # Limited to 50 old jobs per country (higher limit for marketing users)
-            "other": 20             # Fallback for unknown types
+            "software":      999999,  # Unlimited — never auto-deleted
+            "cybersecurity": 40,
+            "hr":            40,
+            "sales":         40,
+            "finance":       40,
+            "marketing":     60,
+            "biotech":       40,
+            "engineering":   40,
+            "events":        40,
+            "other":         40,      # Fallback for unknown types
         }
 
-        # Calculate 24h cutoff
-        cutoff_24h = datetime.utcnow() - timedelta(hours=24)
+        # Protection window: jobs scraped within this many hours are NEVER deleted,
+        # regardless of count.  Using 72h instead of 24h so that if GitHub Actions
+        # crashes for 1–2 runs, no jobs are wiped from the board.
+        PROTECTION_HOURS = 72
+        cutoff_24h = datetime.utcnow() - timedelta(hours=PROTECTION_HOURS)
 
         # Get all jobs grouped by country and job type
         all_jobs = await load_jobs()
@@ -971,7 +978,7 @@ async def enforce_country_limit(max_jobs: int = 300):
                 recent_jobs = jobs["recent"]
                 older_jobs = jobs["older"]
 
-                # Count protected 24h jobs
+                # Count protected recent jobs
                 protected_24h_count += len(recent_jobs)
 
                 # Get limit for this job type
@@ -1006,7 +1013,7 @@ async def enforce_country_limit(max_jobs: int = 300):
 
         return {
             "success": True,
-            "message": f"Enforced per-job-type limits with 24h protection",
+            "message": f"Enforced per-job-type limits with {PROTECTION_HOURS}h protection",
             "jobs_deleted": deleted_count,
             "total_jobs_remaining": total_jobs,
             "protected_24h_jobs": protected_24h_count,

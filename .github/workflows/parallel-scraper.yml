@@ -199,8 +199,18 @@ jobs:
       - name: Check if scraping was skipped
         id: skip_check
         run: |
-          if [ "${{ needs.check-scraping-needed.outputs.should_scrape }}" == "false" ]; then
+          SHOULD_SCRAPE="${{ needs.check-scraping-needed.outputs.should_scrape }}"
+          SCRAPE_RESULT="${{ needs.scrape-country.result }}"
+
+          if [ "$SHOULD_SCRAPE" == "false" ]; then
             echo "Scraping was skipped due to no active users"
+            echo "skipped=true" >> $GITHUB_OUTPUT
+          elif [ "$SCRAPE_RESULT" == "failure" ]; then
+            # All or most scraping jobs failed — do NOT run cleanup.
+            # Running enforce-country-limit after a crash wipes all jobs >72h old,
+            # leaving users with an empty board.  Skip cleanup and let the next
+            # successful run handle it.
+            echo "Scraping failed — skipping enforce-country-limit to preserve existing jobs"
             echo "skipped=true" >> $GITHUB_OUTPUT
           else
             echo "skipped=false" >> $GITHUB_OUTPUT
