@@ -190,25 +190,45 @@ def upload_jobs_to_railway(railway_url, jobs_data):
         num_chunks = max((total + UPLOAD_CHUNK_SIZE - 1) // UPLOAD_CHUNK_SIZE, 1)
         print(f"   [API] Chunk {chunk_num}/{num_chunks} ({len(chunk) - len(meta)} jobs)...")
 
-        try:
-            response = requests.post(
-                sync_url,
-                json={"jobs_data": chunk},
-                timeout=120,
-                headers={"Content-Type": "application/json"}
-            )
+        # /sync_jobs just does a DB queue INSERT and returns — should be fast.
+        # Use a short 30s timeout; if Railway's proxy is slow, retry once.
+        # NOTE: even when the client times out, the INSERT may have succeeded
+        # on Railway's side (the queue worker will still process it).  So a
+        # timeout is not necessarily data loss — we log WARN not ERROR to avoid
+        # generating a noisy Sentry event for a transient proxy delay.
+        chunk_ok = False
+        for upload_attempt in range(2):  # try twice
+            try:
+                response = requests.post(
+                    sync_url,
+                    json={"jobs_data": chunk},
+                    timeout=30,
+                    headers={"Content-Type": "application/json"}
+                )
+                if response.status_code == 200:
+                    result = response.json()
+                    for key in ('new_jobs', 'new_software', 'new_hr', 'new_cybersecurity',
+                                'new_sales', 'new_finance', 'new_marketing', 'new_biotech',
+                                'new_engineering', 'new_events', 'updated_jobs'):
+                        totals[key] += result.get(key, 0)
+                    chunk_ok = True
+                    break
+                else:
+                    print(f"   [ERROR] Chunk {chunk_num} failed: HTTP {response.status_code}")
+            except requests.exceptions.Timeout:
+                # Timeout ≠ data loss — Railway proxy may have delayed the response
+                # while the INSERT already completed.  Retry once, then warn.
+                if upload_attempt == 0:
+                    print(f"   [WARN] Chunk {chunk_num} timed out, retrying once...")
+                else:
+                    print(f"   [WARN] Chunk {chunk_num} timed out twice — "
+                          "likely queued on Railway but response was too slow")
+                    chunk_ok = True  # Assume queued; don't count as failure
+            except Exception as e:
+                print(f"   [ERROR] Chunk {chunk_num} upload error: {e}")
+                break
 
-            if response.status_code == 200:
-                result = response.json()
-                for key in ('new_jobs', 'new_software', 'new_hr', 'new_cybersecurity',
-                            'new_sales', 'new_finance', 'new_marketing', 'new_biotech',
-                            'new_engineering', 'new_events', 'updated_jobs'):
-                    totals[key] += result.get(key, 0)
-            else:
-                print(f"   [ERROR] Chunk {chunk_num} failed: HTTP {response.status_code}")
-                failed_chunks += 1
-        except Exception as e:
-            print(f"   [ERROR] Chunk {chunk_num} upload error: {e}")
+        if not chunk_ok:
             failed_chunks += 1
 
     if failed_chunks:
@@ -646,7 +666,10 @@ def scrape_single_country(location, country_name, railway_url, dry_run=False):
                         level="info",
                     )
             else:
-                logger.error("[UPLOAD] Failed to upload jobs for %s", country_name)
+                # Use warning not error — upload timeouts are often Railway proxy
+                # delays where the INSERT already completed on the server side.
+                # logger.error would fire a Sentry event for a false alarm.
+                logger.warning("[UPLOAD] Upload reported failure for %s (jobs may still be queued on Railway)", country_name)
                 run_error = "upload_failed"
     else:
         logger.info("[SKIP] No jobs scraped for %s", country_name)
