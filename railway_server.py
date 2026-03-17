@@ -3203,7 +3203,7 @@ async def admin_cleanup_jobs(
     action: str,
     current_user: Dict[str, Any] = Depends(get_current_user),
 ):
-    """Delete jobs by category to free DB space. action: rejected|applied|older_30d|older_60d"""
+    """Delete jobs by category to free DB space. action: rejected|applied|older_30d|older_60d|stale_posted_date"""
     if not current_user.get('is_admin'):
         raise HTTPException(status_code=403, detail="Admin access required")
 
@@ -3223,6 +3223,8 @@ async def admin_cleanup_jobs(
         raise HTTPException(status_code=400, detail=f"Unknown action. Use: {list(action_where.keys())}")
 
     where = action_where[action]
+    BATCH_SIZE = 500
+    total_deleted = 0
 
     conn = None
     try:
@@ -3230,17 +3232,36 @@ async def admin_cleanup_jobs(
         if not conn:
             raise HTTPException(status_code=500, detail="Could not connect to database")
 
-        # original_job_id is a self-referential FK with no CASCADE — nullify it first to avoid constraint errors
-        await conn.execute(f"UPDATE jobs SET original_job_id = NULL WHERE original_job_id IN (SELECT id FROM jobs WHERE {where})")
-        result = await conn.execute(f"DELETE FROM jobs WHERE {where}")
-        deleted = int(result.split()[-1]) if result else 0
-        logger.info("Admin %s cleanup action '%s': deleted %d jobs", current_user.get("username"), action, deleted)
-        return {"success": True, "action": action, "deleted": deleted}
+        # Collect all IDs to delete upfront (avoids long-running DELETE scan)
+        ids_to_delete = [row['id'] for row in await conn.fetch(f"SELECT id FROM jobs WHERE {where}")]
+        logger.info("Cleanup '%s': found %d jobs to delete", action, len(ids_to_delete))
+
+        if not ids_to_delete:
+            return {"success": True, "action": action, "deleted": 0}
+
+        # Process in batches to avoid Railway proxy timeout on large deletions
+        for i in range(0, len(ids_to_delete), BATCH_SIZE):
+            batch = ids_to_delete[i:i + BATCH_SIZE]
+            # Nullify self-referential FK (original_job_id) before deleting to avoid FK constraint errors
+            await conn.execute(
+                "UPDATE jobs SET original_job_id = NULL WHERE original_job_id = ANY($1::text[])",
+                batch
+            )
+            result = await conn.execute(
+                "DELETE FROM jobs WHERE id = ANY($1::text[])",
+                batch
+            )
+            batch_deleted = int(result.split()[-1]) if result else 0
+            total_deleted += batch_deleted
+            logger.info("Cleanup '%s': batch %d-%d deleted %d", action, i, i + len(batch), batch_deleted)
+
+        logger.info("Admin %s cleanup action '%s': deleted %d jobs total", current_user.get("username"), action, total_deleted)
+        return {"success": True, "action": action, "deleted": total_deleted}
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Cleanup failed: %s", e)
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Cleanup '%s' failed after %d deleted: %s", action, total_deleted, e, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {e}")
     finally:
         if conn:
             await db._release(conn)

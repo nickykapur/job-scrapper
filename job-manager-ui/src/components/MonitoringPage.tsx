@@ -237,7 +237,10 @@ export const MonitoringPage: React.FC = () => {
       setCleanupResult(prev => ({ ...prev, [action]: result.deleted }));
       await load(); // Refresh monitoring data
     } catch (err: any) {
-      alert(err.response?.data?.detail || 'Cleanup failed');
+      const detail = err.response?.data?.detail || err.message || 'Unknown error';
+      const status = err.response?.status ? ` (HTTP ${err.response.status})` : '';
+      console.error('Cleanup error:', err);
+      alert(`Cleanup failed${status}: ${detail}`);
     } finally {
       setCleaningUp(null);
     }
