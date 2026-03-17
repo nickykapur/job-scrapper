@@ -17,9 +17,9 @@ from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from linkedin_job_scraper import LinkedInJobScraper
 
-# LinkedIn sometimes returns promoted/sponsored jobs older than the date filter.
+# Safety net: even with date_filter="24h" LinkedIn can slip sponsored jobs through.
 # Drop anything with a posted_date that indicates it's more than this many days old.
-MAX_JOB_AGE_DAYS = 7
+MAX_JOB_AGE_DAYS = 2
 
 def _posted_date_age_days(posted_date: str):
     """
@@ -310,7 +310,7 @@ def search_single_term(term, location, country_name, existing_jobs, job_type, th
             all_results = thread_scraper.search_jobs(
                 keywords=term,
                 location=location,
-                date_filter="7d",
+                date_filter="24h",  # Daily scraper → only last 24h; 7d leaked old sponsored jobs
                 easy_apply_filter=False
             )
 

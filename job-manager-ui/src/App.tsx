@@ -293,7 +293,7 @@ const App: React.FC = () => {
         if (/month|year/.test(pd)) return;
         if (pd.match(/\d+\s+week/)) return;
         const daysMatch = pd.match(/(\d+)\s+day/);
-        if (daysMatch && parseInt(daysMatch[1]) > 7) return;
+        if (daysMatch && parseInt(daysMatch[1]) > 2) return;
       }
 
       filtered[id] = job;

@@ -76,7 +76,7 @@ const CountryJobTabs: React.FC<CountryJobTabsProps> = ({
       const weeksMatch = pd.match(/(\d+)\s+week/);
       if (weeksMatch) return false; // even 1 week old = likely expired
       const daysMatch = pd.match(/(\d+)\s+day/);
-      if (daysMatch && parseInt(daysMatch[1]) > 7) return false;
+      if (daysMatch && parseInt(daysMatch[1]) > 2) return false;
     }
     // Fallback: scraped within 48 hours
     if (!job.scraped_at) return true;
