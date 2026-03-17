@@ -7,6 +7,7 @@ Uses parallelization (4 concurrent workers) for 6-8x speed improvement
 
 import argparse
 import os
+import re
 import sys
 import requests
 import time
@@ -15,6 +16,39 @@ import logging
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from linkedin_job_scraper import LinkedInJobScraper
+
+# LinkedIn sometimes returns promoted/sponsored jobs older than the date filter.
+# Drop anything with a posted_date that indicates it's more than this many days old.
+MAX_JOB_AGE_DAYS = 7
+
+def _posted_date_age_days(posted_date: str):
+    """
+    Parse LinkedIn's 'X hours/days/weeks/months ago' string.
+    Returns approximate age in days, or None if unparseable (job is kept).
+    """
+    if not posted_date:
+        return None
+    pd = re.sub(r'^posted\s+', '', posted_date.lower().strip())
+
+    if any(w in pd for w in ('just now', 'moments ago', 'today', 'seconds ago')):
+        return 0
+    m = re.search(r'(\d+)\s+minute', pd)
+    if m: return 0
+    m = re.search(r'(\d+)\s+hour', pd)
+    if m: return int(m.group(1)) / 24
+    m = re.search(r'(\d+)\s+day', pd)
+    if m: return int(m.group(1))
+    m = re.search(r'(\d+)\s+week', pd)
+    if m: return int(m.group(1)) * 7
+    m = re.search(r'(\d+)\s+month', pd)
+    if m: return int(m.group(1)) * 30
+    m = re.search(r'(\d+)\s+year', pd)
+    if m: return int(m.group(1)) * 365
+    # bare keywords without a number
+    if 'week' in pd: return 7
+    if 'month' in pd: return 30
+    if 'year' in pd: return 365
+    return None  # unknown — keep the job
 
 # ── Browser pool (thread-local) ───────────────────────────────────────────────
 # Each worker thread reuses ONE Chrome instance across all its search tasks
@@ -632,6 +666,20 @@ def scrape_single_country(location, country_name, railway_url, dry_run=False):
     logger.info("[SUMMARY] %s: %d/%d searches OK, %d new jobs (%s)",
                 country_name, successful_searches, len(term_to_job_type),
                 len(all_new_jobs), by_type_summary or "none")
+
+    # Drop stale jobs that LinkedIn slipped through despite the date filter
+    stale_count = 0
+    fresh_jobs = {}
+    for job_id, job_data in all_new_jobs.items():
+        age = _posted_date_age_days(job_data.get('posted_date', ''))
+        if age is not None and age > MAX_JOB_AGE_DAYS:
+            stale_count += 1
+        else:
+            fresh_jobs[job_id] = job_data
+    if stale_count:
+        logger.info("[FILTER] Dropped %d stale jobs (posted >%d days ago) for %s",
+                    stale_count, MAX_JOB_AGE_DAYS, country_name)
+    all_new_jobs = fresh_jobs
 
     actual_new_total = 0
 

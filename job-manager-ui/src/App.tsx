@@ -286,6 +286,16 @@ const App: React.FC = () => {
         if (isQuickApply) return;
       }
 
+      // Hide stale jobs (posted too long ago — likely expired on LinkedIn)
+      // Don't apply to applied/rejected views (those are historical records)
+      if (filters.status !== 'applied' && filters.status !== 'rejected') {
+        const pd = (job.posted_date || '').toLowerCase().replace(/^posted\s+/, '');
+        if (/month|year/.test(pd)) return;
+        if (pd.match(/\d+\s+week/)) return;
+        const daysMatch = pd.match(/(\d+)\s+day/);
+        if (daysMatch && parseInt(daysMatch[1]) > 7) return;
+      }
+
       filtered[id] = job;
     });
 

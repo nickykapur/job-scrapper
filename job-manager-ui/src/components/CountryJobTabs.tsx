@@ -66,13 +66,22 @@ const CountryJobTabs: React.FC<CountryJobTabsProps> = ({
     'Luxembourg': { flag: '🇱🇺', color: '#3F51B5' },
   };
 
-  // Returns true if the job was scraped within the last 48 hours
+  // Returns true if the job is fresh enough to show (posted within ~7 days)
   const isRecentJob = (job: any): boolean => {
-    if (!job.scraped_at) return true; // keep jobs with no timestamp
+    // Primary check: posted_date string (most reliable indicator)
+    if (job.posted_date) {
+      const pd = (job.posted_date as string).toLowerCase().trim().replace(/^posted\s+/, '');
+      // Reject month/year/week-old jobs
+      if (/month|year/.test(pd)) return false;
+      const weeksMatch = pd.match(/(\d+)\s+week/);
+      if (weeksMatch) return false; // even 1 week old = likely expired
+      const daysMatch = pd.match(/(\d+)\s+day/);
+      if (daysMatch && parseInt(daysMatch[1]) > 7) return false;
+    }
+    // Fallback: scraped within 48 hours
+    if (!job.scraped_at) return true;
     try {
-      const scrapedDate = new Date(job.scraped_at);
-      const diffHours = (Date.now() - scrapedDate.getTime()) / 3600000;
-      return diffHours <= 48;
+      return (Date.now() - new Date(job.scraped_at).getTime()) / 3600000 <= 48;
     } catch {
       return true;
     }
