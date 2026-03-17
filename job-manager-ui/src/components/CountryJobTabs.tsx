@@ -66,6 +66,18 @@ const CountryJobTabs: React.FC<CountryJobTabsProps> = ({
     'Luxembourg': { flag: '🇱🇺', color: '#3F51B5' },
   };
 
+  // Returns true if the job was scraped within the last 48 hours
+  const isRecentJob = (job: any): boolean => {
+    if (!job.scraped_at) return true; // keep jobs with no timestamp
+    try {
+      const scrapedDate = new Date(job.scraped_at);
+      const diffHours = (Date.now() - scrapedDate.getTime()) / 3600000;
+      return diffHours <= 48;
+    } catch {
+      return true;
+    }
+  };
+
   // Process jobs data
   const { countryData, appliedJobs, allActiveJobs } = useMemo(() => {
     const jobsArray = Object.values(jobs).filter((job: any) =>
@@ -74,7 +86,7 @@ const CountryJobTabs: React.FC<CountryJobTabsProps> = ({
 
     // Separate applied and active jobs
     const applied = jobsArray.filter((job: any) => job.applied && !job.rejected);
-    const active = jobsArray.filter((job: any) => !job.rejected && !job.applied);
+    const active = jobsArray.filter((job: any) => !job.rejected && !job.applied && isRecentJob(job));
 
     // Group active jobs by country
     const countryGroups: Record<string, CountryData> = {};
