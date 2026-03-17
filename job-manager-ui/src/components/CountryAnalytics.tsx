@@ -423,7 +423,7 @@ export const CountryAnalytics: React.FC = () => {
                       </div>
                       <div className="text-center">
                         <div className="text-2xl font-bold text-purple-500">
-                          {(chartData.reduce((sum, d) => sum + d.jobs, 0) / chartData.length).toFixed(1)}
+                          {chartData.length > 0 ? (chartData.reduce((sum, d) => sum + d.jobs, 0) / chartData.length).toFixed(1) : '0'}
                         </div>
                         <div className="text-xs text-muted-foreground">Avg Jobs/Day</div>
                       </div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -64,7 +64,8 @@ interface RewardsData {
 export const RewardsRevamped: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [rewards, setRewards] = useState<RewardsData | null>(null);
-  const [previousRewards, setPreviousRewards] = useState<RewardsData | null>(null);
+  // Use a ref so the polling interval always sees the latest rewards value
+  const rewardsRef = useRef<RewardsData | null>(null);
 
   useEffect(() => {
     loadRewards();
@@ -78,24 +79,7 @@ export const RewardsRevamped: React.FC = () => {
     try {
       setLoading(true);
       const data = await jobApi.getRewards();
-
-      // Check for new badges (only if we have previous data)
-      if (previousRewards && data.badges.length > previousRewards.badges.length) {
-        const newBadges = data.badges.filter(
-          newBadge => !previousRewards.badges.some(old => old.id === newBadge.id)
-        );
-
-        newBadges.forEach(badge => {
-          showAchievementToast(badge);
-        });
-      }
-
-      // Check for level up
-      if (previousRewards && data.level > previousRewards.level) {
-        showLevelUpToast(data.level, data.level_name);
-      }
-
-      setPreviousRewards(rewards);
+      rewardsRef.current = data;
       setRewards(data);
     } catch (err: any) {
       console.error('Failed to load rewards:', err);
@@ -107,22 +91,24 @@ export const RewardsRevamped: React.FC = () => {
   const checkForNewAchievements = async () => {
     try {
       const data = await jobApi.getRewards();
+      const current = rewardsRef.current;
 
-      if (!rewards) return;
+      if (!current) return;
 
       // New badge check
-      if (data.badges.length > rewards.badges.length) {
+      if (data.badges.length > current.badges.length) {
         const newBadges = data.badges.filter(
-          newBadge => !rewards.badges.some(old => old.id === newBadge.id)
+          newBadge => !current.badges.some(old => old.id === newBadge.id)
         );
         newBadges.forEach(badge => showAchievementToast(badge));
       }
 
       // Level up check
-      if (data.level > rewards.level) {
+      if (data.level > current.level) {
         showLevelUpToast(data.level, data.level_name);
       }
 
+      rewardsRef.current = data;
       setRewards(data);
     } catch (err) {
       console.error('Failed to check achievements:', err);

@@ -43,6 +43,7 @@ import { jobApi } from './services/api';
 import { useAuth } from './contexts/AuthContext';
 import { useDarkMode } from './hooks/use-dark-mode';
 import { useActivityTracker } from './hooks/useActivityTracker';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import type { Job, JobStats, FilterState } from './types';
 
 const App: React.FC = () => {
@@ -57,7 +58,7 @@ const App: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [localRejectedCount, setLocalRejectedCount] = useState(0);
-  const [currentTab, setCurrentTab] = useState<'dashboard' | 'training' | 'system-design' | 'my-analytics' | 'analytics' | 'rewards' | 'user-management' | 'interview-tracker' | 'monitoring' | 'user-behaviour'>('dashboard');
+  const [currentTab, setCurrentTab] = useState<'dashboard' | 'training' | 'system-design' | 'my-analytics' | 'analytics' | 'country-analytics' | 'rewards' | 'user-management' | 'interview-tracker' | 'monitoring' | 'user-behaviour'>('dashboard');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [timeAgo, setTimeAgo] = useState<string>('');
@@ -667,16 +668,16 @@ const App: React.FC = () => {
               </>
             )}
 
-            {currentTab === 'my-analytics' && <PersonalAnalytics />}
-            {currentTab === 'rewards' && <Rewards />}
-            {currentTab === 'interview-tracker' && <InterviewTracker />}
-            {currentTab === 'training' && hasSoftwareAccess && <Training />}
-            {currentTab === 'system-design' && hasSoftwareAccess && <SystemDesign />}
-            {currentTab === 'analytics' && hasAdminAccess && <Analytics />}
-            {currentTab === 'country-analytics' && hasAdminAccess && <CountryAnalytics />}
-            {currentTab === 'user-management' && hasAdminAccess && <UserManagement />}
-            {currentTab === 'monitoring' && hasAdminAccess && <MonitoringPage />}
-            {currentTab === 'user-behaviour' && hasAdminAccess && <UserBehaviourPage />}
+            {currentTab === 'my-analytics' && <ErrorBoundary><PersonalAnalytics /></ErrorBoundary>}
+            {currentTab === 'rewards' && <ErrorBoundary><Rewards /></ErrorBoundary>}
+            {currentTab === 'interview-tracker' && <ErrorBoundary><InterviewTracker /></ErrorBoundary>}
+            {currentTab === 'training' && hasSoftwareAccess && <ErrorBoundary><Training /></ErrorBoundary>}
+            {currentTab === 'system-design' && hasSoftwareAccess && <ErrorBoundary><SystemDesign /></ErrorBoundary>}
+            {currentTab === 'analytics' && hasAdminAccess && <ErrorBoundary><Analytics /></ErrorBoundary>}
+            {currentTab === 'country-analytics' && hasAdminAccess && <ErrorBoundary><CountryAnalytics /></ErrorBoundary>}
+            {currentTab === 'user-management' && hasAdminAccess && <ErrorBoundary><UserManagement /></ErrorBoundary>}
+            {currentTab === 'monitoring' && hasAdminAccess && <ErrorBoundary><MonitoringPage /></ErrorBoundary>}
+            {currentTab === 'user-behaviour' && hasAdminAccess && <ErrorBoundary><UserBehaviourPage /></ErrorBoundary>}
           </div>
         </main>
       </div>

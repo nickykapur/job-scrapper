@@ -124,15 +124,15 @@ export const PersonalAnalytics: React.FC = () => {
 
   const { summary, hourly_pattern, daily_pattern, countries, velocity, job_types, experience_levels } = analytics;
 
-  // Find peak hour
-  const peakHour = hourly_pattern.reduce((max, curr) =>
-    curr.applications > (max?.applications || 0) ? curr : max, hourly_pattern[0]
-  );
+  // Find peak hour (guard against empty array)
+  const peakHour = hourly_pattern.length > 0
+    ? hourly_pattern.reduce((max, curr) => curr.applications > max.applications ? curr : max)
+    : null;
 
-  // Find peak day
-  const peakDay = daily_pattern.reduce((max, curr) =>
-    curr.applications > (max?.applications || 0) ? curr : max, daily_pattern[0]
-  );
+  // Find peak day (guard against empty array)
+  const peakDay = daily_pattern.length > 0
+    ? daily_pattern.reduce((max, curr) => curr.applications > max.applications ? curr : max)
+    : null;
 
   // Get max values for progress bars
   const maxHourlyApps = Math.max(...hourly_pattern.map(h => h.applications), 1);
@@ -196,7 +196,7 @@ export const PersonalAnalytics: React.FC = () => {
               <CardTitle>Application Time Pattern</CardTitle>
             </div>
             <p className="text-sm text-muted-foreground">
-              Most active at {peakHour?.hour}:00 ({peakHour?.applications} applications)
+              {peakHour ? `Most active at ${peakHour.hour}:00 (${peakHour.applications} applications)` : 'No data yet'}
             </p>
           </CardHeader>
           <CardContent>
@@ -234,7 +234,7 @@ export const PersonalAnalytics: React.FC = () => {
               <CardTitle>Weekly Pattern</CardTitle>
             </div>
             <p className="text-sm text-muted-foreground">
-              Most active on {peakDay?.day} ({peakDay?.applications} applications)
+              {peakDay ? `Most active on ${peakDay.day} (${peakDay.applications} applications)` : 'No data yet'}
             </p>
           </CardHeader>
           <CardContent>
