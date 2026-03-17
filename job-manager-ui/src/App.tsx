@@ -286,9 +286,15 @@ const App: React.FC = () => {
         if (isQuickApply) return;
       }
 
-      // Hide stale jobs (posted too long ago — likely expired on LinkedIn)
-      // Don't apply to applied/rejected views (those are historical records)
+      // Hide stale jobs — don't apply to applied/rejected views (historical records)
       if (filters.status !== 'applied' && filters.status !== 'rejected') {
+        // Primary: hide jobs scraped more than 72h ago (scraped_at is updated each scrape run,
+        // so this reliably reflects how recently the job was seen by our scraper)
+        if (job.scraped_at) {
+          const diffHours = (Date.now() - new Date(job.scraped_at).getTime()) / 3600000;
+          if (diffHours > 72) return;
+        }
+        // Secondary: posted_date text patterns as extra safety net
         const pd = (job.posted_date || '').toLowerCase().replace(/^posted\s+/, '');
         if (/month|year/.test(pd)) return;
         if (pd.match(/\d+\s+week/)) return;

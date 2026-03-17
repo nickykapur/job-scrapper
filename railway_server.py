@@ -2876,12 +2876,9 @@ async def get_monitoring(current_user: Dict[str, Any] = Depends(get_current_user
                     SELECT
                         COUNT(*) FILTER (WHERE rejected = TRUE) AS rejected_count,
                         COUNT(*) FILTER (WHERE applied = TRUE) AS applied_count,
-                        COUNT(*) FILTER (WHERE scraped_at < NOW() - INTERVAL '30 days') AS older_than_30d,
-                        COUNT(*) FILTER (WHERE scraped_at < NOW() - INTERVAL '60 days') AS older_than_60d,
-                        COUNT(*) FILTER (WHERE applied = FALSE AND rejected = FALSE AND (
-                            posted_date ILIKE '%month%' OR posted_date ILIKE '%year%'
-                            OR posted_date ~ '\d+\s+week'
-                        )) AS stale_posted_date
+                        COUNT(*) FILTER (WHERE first_seen < NOW() - INTERVAL '30 days' AND rejected = FALSE AND applied = FALSE) AS older_than_30d,
+                        COUNT(*) FILTER (WHERE first_seen < NOW() - INTERVAL '60 days' AND rejected = FALSE AND applied = FALSE) AS older_than_60d,
+                        COUNT(*) FILTER (WHERE applied = FALSE AND rejected = FALSE AND first_seen < NOW() - INTERVAL '7 days') AS stale_posted_date
                     FROM jobs
                 """)
                 if cleanup_row:
@@ -3213,22 +3210,19 @@ async def admin_cleanup_jobs(
     if not db or not DATABASE_AVAILABLE or not db.use_postgres:
         raise HTTPException(status_code=500, detail="Database not available")
 
-    action_sql = {
-        "rejected":   "WHERE rejected = TRUE",
-        "applied":    "WHERE applied = TRUE AND rejected = FALSE",
-        "older_30d":  "WHERE scraped_at < NOW() - INTERVAL '30 days' AND rejected = FALSE AND applied = FALSE",
-        "older_60d":  "WHERE scraped_at < NOW() - INTERVAL '60 days' AND rejected = FALSE AND applied = FALSE",
-        # Purge jobs that LinkedIn returned outside the date filter (1 month/year/week old)
-        # These show up as expired when users click them. Keep applied jobs as historical records.
-        "stale_posted_date": (
-            "WHERE applied = FALSE AND rejected = FALSE AND ("
-            "  posted_date ILIKE '%month%' OR posted_date ILIKE '%year%'"
-            "  OR posted_date ~ '\\d+\\s+week'"
-            ")"
-        ),
+    # WHERE clause for each action — used to nullify FK refs then delete
+    action_where = {
+        "rejected":          "rejected = TRUE",
+        "applied":           "applied = TRUE AND rejected = FALSE",
+        "older_30d":         "first_seen < NOW() - INTERVAL '30 days' AND rejected = FALSE AND applied = FALSE",
+        "older_60d":         "first_seen < NOW() - INTERVAL '60 days' AND rejected = FALSE AND applied = FALSE",
+        # first_seen > 7 days = job has been in DB for a week and is almost certainly expired
+        "stale_posted_date": "applied = FALSE AND rejected = FALSE AND first_seen < NOW() - INTERVAL '7 days'",
     }
-    if action not in action_sql:
-        raise HTTPException(status_code=400, detail=f"Unknown action. Use: {list(action_sql.keys())}")
+    if action not in action_where:
+        raise HTTPException(status_code=400, detail=f"Unknown action. Use: {list(action_where.keys())}")
+
+    where = action_where[action]
 
     conn = None
     try:
@@ -3236,7 +3230,9 @@ async def admin_cleanup_jobs(
         if not conn:
             raise HTTPException(status_code=500, detail="Could not connect to database")
 
-        result = await conn.execute(f"DELETE FROM jobs {action_sql[action]}")
+        # original_job_id is a self-referential FK with no CASCADE — nullify it first to avoid constraint errors
+        await conn.execute(f"UPDATE jobs SET original_job_id = NULL WHERE original_job_id IN (SELECT id FROM jobs WHERE {where})")
+        result = await conn.execute(f"DELETE FROM jobs WHERE {where}")
         deleted = int(result.split()[-1]) if result else 0
         logger.info("Admin %s cleanup action '%s': deleted %d jobs", current_user.get("username"), action, deleted)
         return {"success": True, "action": action, "deleted": deleted}

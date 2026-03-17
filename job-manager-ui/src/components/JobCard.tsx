@@ -129,11 +129,6 @@ export const JobCard: React.FC<JobCardProps> = ({
               <p className="text-sm text-muted-foreground">
                 {job.posted_date}
               </p>
-              {scrapedAgo && (
-                <p className="text-xs text-muted-foreground/70">
-                  Scraped {scrapedAgo}
-                </p>
-              )}
             </div>
             <div className="flex gap-1 items-center">
               {job.job_type && job.job_type !== 'other' && (
