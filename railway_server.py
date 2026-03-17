@@ -2877,7 +2877,11 @@ async def get_monitoring(current_user: Dict[str, Any] = Depends(get_current_user
                         COUNT(*) FILTER (WHERE rejected = TRUE) AS rejected_count,
                         COUNT(*) FILTER (WHERE applied = TRUE) AS applied_count,
                         COUNT(*) FILTER (WHERE scraped_at < NOW() - INTERVAL '30 days') AS older_than_30d,
-                        COUNT(*) FILTER (WHERE scraped_at < NOW() - INTERVAL '60 days') AS older_than_60d
+                        COUNT(*) FILTER (WHERE scraped_at < NOW() - INTERVAL '60 days') AS older_than_60d,
+                        COUNT(*) FILTER (WHERE applied = FALSE AND rejected = FALSE AND (
+                            posted_date ILIKE '%month%' OR posted_date ILIKE '%year%'
+                            OR posted_date ~ '\d+\s+week'
+                        )) AS stale_posted_date
                     FROM jobs
                 """)
                 if cleanup_row:
@@ -2886,6 +2890,7 @@ async def get_monitoring(current_user: Dict[str, Any] = Depends(get_current_user
                         "applied": cleanup_row["applied_count"],
                         "older_than_30d": cleanup_row["older_than_30d"],
                         "older_than_60d": cleanup_row["older_than_60d"],
+                        "stale_posted_date": cleanup_row["stale_posted_date"],
                     }
 
                 # Recent scraper run logs (last 50 rows grouped by github_run_id)
@@ -3213,6 +3218,14 @@ async def admin_cleanup_jobs(
         "applied":    "WHERE applied = TRUE AND rejected = FALSE",
         "older_30d":  "WHERE scraped_at < NOW() - INTERVAL '30 days' AND rejected = FALSE AND applied = FALSE",
         "older_60d":  "WHERE scraped_at < NOW() - INTERVAL '60 days' AND rejected = FALSE AND applied = FALSE",
+        # Purge jobs that LinkedIn returned outside the date filter (1 month/year/week old)
+        # These show up as expired when users click them. Keep applied jobs as historical records.
+        "stale_posted_date": (
+            "WHERE applied = FALSE AND rejected = FALSE AND ("
+            "  posted_date ILIKE '%month%' OR posted_date ILIKE '%year%'"
+            "  OR posted_date ~ '\\d+\\s+week'"
+            ")"
+        ),
     }
     if action not in action_sql:
         raise HTTPException(status_code=400, detail=f"Unknown action. Use: {list(action_sql.keys())}")

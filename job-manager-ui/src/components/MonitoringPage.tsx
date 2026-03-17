@@ -229,7 +229,7 @@ export const MonitoringPage: React.FC = () => {
     }
   };
 
-  const handleCleanup = async (action: 'rejected' | 'applied' | 'older_30d' | 'older_60d') => {
+  const handleCleanup = async (action: 'rejected' | 'applied' | 'older_30d' | 'older_60d' | 'stale_posted_date') => {
     if (!window.confirm(`Delete all ${action.replace('_', ' ')} jobs? This cannot be undone.`)) return;
     setCleaningUp(action);
     try {
@@ -392,8 +392,9 @@ export const MonitoringPage: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
               {[
+                { action: 'stale_posted_date' as const, label: 'Expired (old posted date)', count: (db.cleanup_candidates as any).stale_posted_date ?? 0, color: 'purple' },
                 { action: 'rejected' as const, label: 'Rejected jobs', count: db.cleanup_candidates.rejected, color: 'red' },
                 { action: 'applied' as const, label: 'Applied jobs', count: db.cleanup_candidates.applied, color: 'green' },
                 { action: 'older_30d' as const, label: 'Older than 30 days', count: db.cleanup_candidates.older_than_30d, color: 'yellow' },

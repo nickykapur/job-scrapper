@@ -192,7 +192,7 @@ export const jobApi = {
     (await api.post(`/api/admin/users/${userId}/job-types`, { job_types: jobTypes })).data,
 
   // Admin: Cleanup jobs by category
-  cleanupJobs: async (action: 'rejected' | 'applied' | 'older_30d' | 'older_60d'): Promise<any> =>
+  cleanupJobs: async (action: 'rejected' | 'applied' | 'older_30d' | 'older_60d' | 'stale_posted_date'): Promise<any> =>
     (await api.post(`/api/admin/cleanup?action=${action}`)).data,
 
   // Admin: Permanently delete a user and all their data
