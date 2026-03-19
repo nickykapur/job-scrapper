@@ -127,11 +127,20 @@ const App: React.FC = () => {
 
   const toggleDrawer = () => setDrawerOpen(!drawerOpen);
 
+  const JOBS_CACHE_KEY = 'job_tracker_jobs_cache';
+  const JOBS_CACHE_TS_KEY = 'job_tracker_jobs_cache_ts';
+
   const loadJobs = useCallback(async (silent = false) => {
     if (!silent) setIsRefreshing(true);
     try {
       const jobsData = await jobApi.getJobs();
       setJobs(jobsData);
+
+      // Persist to localStorage so users can still see jobs if backend goes down
+      try {
+        localStorage.setItem(JOBS_CACHE_KEY, JSON.stringify(jobsData));
+        localStorage.setItem(JOBS_CACHE_TS_KEY, new Date().toISOString());
+      } catch { /* storage full — ignore */ }
 
       const rejectedJobs = Object.entries(jobsData).filter(([key, job]) =>
         !key.startsWith('_') && job.rejected === true
@@ -144,7 +153,26 @@ const App: React.FC = () => {
       if (!silent) showNotification('Jobs refreshed successfully', 'success');
     } catch (error) {
       console.error('Failed to load jobs:', error);
-      showNotification('Failed to load jobs', 'error');
+
+      // Fall back to cached jobs so users aren't left with an empty board
+      try {
+        const cached = localStorage.getItem(JOBS_CACHE_KEY);
+        const cachedTs = localStorage.getItem(JOBS_CACHE_TS_KEY);
+        if (cached) {
+          const cachedData = JSON.parse(cached);
+          setJobs(cachedData);
+          const rejectedJobs = Object.entries(cachedData).filter(([key, job]: [string, any]) =>
+            !key.startsWith('_') && job.rejected === true
+          );
+          setLocalRejectedCount(rejectedJobs.length);
+          if (cachedTs) setLastUpdated(new Date(cachedTs));
+          showNotification('Backend unreachable — showing cached jobs', 'info');
+        } else {
+          showNotification('Failed to load jobs', 'error');
+        }
+      } catch {
+        showNotification('Failed to load jobs', 'error');
+      }
     } finally {
       if (!silent) setIsRefreshing(false);
     }
@@ -288,18 +316,17 @@ const App: React.FC = () => {
 
       // Hide stale jobs — don't apply to applied/rejected views (historical records)
       if (filters.status !== 'applied' && filters.status !== 'rejected') {
-        // Primary: hide jobs scraped more than 72h ago (scraped_at is updated each scrape run,
-        // so this reliably reflects how recently the job was seen by our scraper)
+        // Hide jobs scraped more than 7 days ago.
+        // Using 7 days (not 72h) so jobs survive multiple scraper crashes — the backend
+        // enforce-country-limit is the real authority on when jobs get purged.
         if (job.scraped_at) {
           const diffHours = (Date.now() - new Date(job.scraped_at).getTime()) / 3600000;
-          if (diffHours > 72) return;
+          if (diffHours > 168) return;
         }
-        // Secondary: posted_date text patterns as extra safety net
+        // Only hide jobs with definitively old posted_date (months/years/weeks old)
         const pd = (job.posted_date || '').toLowerCase().replace(/^posted\s+/, '');
         if (/month|year/.test(pd)) return;
         if (pd.match(/\d+\s+week/)) return;
-        const daysMatch = pd.match(/(\d+)\s+day/);
-        if (daysMatch && parseInt(daysMatch[1]) > 2) return;
       }
 
       filtered[id] = job;
