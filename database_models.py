@@ -266,13 +266,16 @@ class JobDatabase:
             return self._get_jobs_from_json()
         
         try:
-            # Get jobs
+            # Get jobs — only return jobs scraped within the last 7 days.
+            # This keeps the response small (was 39MB with 50k+ all-time jobs).
+            # The backend enforce-country-limit handles permanent deletion of older jobs.
             jobs_query = """
                 SELECT id, title, company, location, posted_date, job_url,
                        scraped_at, applied, rejected, is_new, easy_apply, category, notes,
                        first_seen, last_seen_24h, excluded, country, job_type, experience_level,
                        easy_apply_status, easy_apply_verified_at, easy_apply_verification_method
                 FROM jobs
+                WHERE scraped_at > NOW() - INTERVAL '7 days'
                 ORDER BY scraped_at DESC
             """
             rows = await conn.fetch(jobs_query)

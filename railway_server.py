@@ -899,10 +899,20 @@ async def enforce_country_limit(max_jobs: int = 300):
         if not conn:
             raise HTTPException(status_code=500, detail="Database connection failed")
 
+        # --- Step 1: Hard purge jobs older than 14 days (absolute max age) ---
+        # Software jobs were previously unlimited and have accumulated 34k+ old records.
+        # This direct SQL delete is fast and removes bloat before per-type limits run.
+        ABSOLUTE_MAX_AGE_DAYS = 14
+        purged = await conn.fetchval(
+            "WITH deleted AS (DELETE FROM jobs WHERE scraped_at < NOW() - ($1 * INTERVAL '1 day') RETURNING 1) SELECT COUNT(*) FROM deleted",
+            ABSOLUTE_MAX_AGE_DAYS
+        )
+        print(f"🗑️  Purged {purged} jobs older than {ABSOLUTE_MAX_AGE_DAYS} days")
+
         # Per-job-type limits for jobs older than PROTECTION_HOURS.
         # These limits only apply to *old* jobs — recent ones are always kept in full.
         JOB_TYPE_LIMITS = {
-            "software":      999999,  # Unlimited — never auto-deleted
+            "software":      1000,  # Per-country cap — prevents unbounded accumulation
             "cybersecurity": 40,
             "hr":            40,
             "sales":         40,
