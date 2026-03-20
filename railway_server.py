@@ -944,7 +944,6 @@ async def enforce_country_limit(max_jobs: int = 300):
             "total_jobs_remaining": total_jobs,
             "protected_24h_jobs": protected_count,
             "countries_processed": -1,  # not tracked in SQL approach
-            "job_type_limits": JOB_TYPE_LIMITS
         }
     except Exception as e:
         print(f"❌ Enforce limit failed: {e}")
