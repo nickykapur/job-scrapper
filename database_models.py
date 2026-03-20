@@ -266,16 +266,17 @@ class JobDatabase:
             return self._get_jobs_from_json()
         
         try:
-            # Get jobs — only return jobs scraped within the last 7 days.
-            # This keeps the response small (was 39MB with 50k+ all-time jobs).
-            # The backend enforce-country-limit handles permanent deletion of older jobs.
+            # Get jobs scraped within the last 14 days (matches DB retention window).
+            # 14 days instead of 7 so niche country/type combos (e.g. Panama software,
+            # Ireland marketing) have enough jobs to show even in slow scraping weeks.
+            # The enforce-country-limit caps per-type counts so this stays manageable.
             jobs_query = """
                 SELECT id, title, company, location, posted_date, job_url,
                        scraped_at, applied, rejected, is_new, easy_apply, category, notes,
                        first_seen, last_seen_24h, excluded, country, job_type, experience_level,
                        easy_apply_status, easy_apply_verified_at, easy_apply_verification_method
                 FROM jobs
-                WHERE scraped_at > NOW() - INTERVAL '7 days'
+                WHERE scraped_at > NOW() - INTERVAL '14 days'
                 ORDER BY scraped_at DESC
             """
             rows = await conn.fetch(jobs_query)

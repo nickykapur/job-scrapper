@@ -892,132 +892,58 @@ async def enforce_country_limit(max_jobs: int = 300):
         raise HTTPException(status_code=500, detail="Database not available")
 
     try:
-        from datetime import datetime, timedelta
-
-        # Get connection
         conn = await db.get_connection()
         if not conn:
             raise HTTPException(status_code=500, detail="Database connection failed")
 
-        # Per-job-type limits for jobs older than PROTECTION_HOURS.
-        # These limits only apply to *old* jobs — recent ones are always kept in full.
-        JOB_TYPE_LIMITS = {
-            "software":      1000,  # Per-country cap — prevents unbounded accumulation
-            "cybersecurity": 40,
-            "hr":            40,
-            "sales":         40,
-            "finance":       40,
-            "marketing":     60,
-            "biotech":       40,
-            "engineering":   40,
-            "events":        40,
-            "other":         40,      # Fallback for unknown types
-        }
+        # Pure-SQL enforce: uses window functions so no Python iteration over rows.
+        # Jobs scraped within the last 72h are ALWAYS protected (crash safety buffer).
+        # For older jobs, keep the N most-recent per (country, job_type).
+        #
+        # Limits per job type (applied only to jobs older than 72h):
+        #   software      → 1000  (prevents unbounded accumulation)
+        #   marketing     → 100
+        #   everything else → 60  (covers account_management, communications, hr, etc.)
 
-        # Protection window: jobs scraped within this many hours are NEVER deleted,
-        # regardless of count.  Using 72h instead of 24h so that if GitHub Actions
-        # crashes for 1–2 runs, no jobs are wiped from the board.
-        PROTECTION_HOURS = 72
-        cutoff_24h = datetime.utcnow() - timedelta(hours=PROTECTION_HOURS)
+        deleted_result = await conn.execute("""
+            DELETE FROM jobs
+            WHERE id IN (
+                SELECT id FROM (
+                    SELECT id,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY country, COALESCE(job_type, 'other')
+                               ORDER BY scraped_at DESC
+                           ) AS rn,
+                           job_type
+                    FROM jobs
+                    WHERE scraped_at < NOW() - INTERVAL '72 hours'
+                ) ranked
+                WHERE (job_type = 'software'  AND rn > 1000)
+                   OR (job_type = 'marketing' AND rn > 100)
+                   OR (job_type NOT IN ('software', 'marketing') AND rn > 60)
+                   OR (job_type IS NULL AND rn > 60)
+            )
+        """)
 
-        # Get all jobs grouped by country and job type
-        all_jobs = await load_jobs()
+        # asyncpg returns "DELETE N" — parse the count
+        deleted_count = int(deleted_result.split()[-1]) if deleted_result else 0
 
-        jobs_by_country = {}
-        deleted_count = 0
-        protected_24h_count = 0
-
-        # Group jobs by country and job type
-        for job_id, job_data in all_jobs.items():
-            if job_id.startswith("_"):
-                continue
-
-            country = job_data.get("country", "Unknown")
-            job_type = job_data.get("job_type", "other")
-            scraped_at_str = job_data.get("scraped_at", "")
-
-            # Parse scraped_at timestamp
-            try:
-                if scraped_at_str:
-                    scraped_at = datetime.fromisoformat(scraped_at_str.replace('Z', '+00:00'))
-                    if scraped_at.tzinfo is not None:
-                        scraped_at = scraped_at.replace(tzinfo=None)
-                else:
-                    scraped_at = datetime.min
-            except:
-                scraped_at = datetime.min
-
-            # Initialize country structure
-            if country not in jobs_by_country:
-                jobs_by_country[country] = {}
-
-            if job_type not in jobs_by_country[country]:
-                jobs_by_country[country][job_type] = {
-                    "recent": [],  # Jobs from last 24h (protected)
-                    "older": []    # Jobs older than 24h (subject to limits)
-                }
-
-            job_entry = {
-                "id": job_id,
-                "scraped_at": scraped_at,
-                "scraped_at_str": scraped_at_str,
-                "data": job_data
-            }
-
-            # Separate recent vs older jobs
-            if scraped_at >= cutoff_24h:
-                jobs_by_country[country][job_type]["recent"].append(job_entry)
-            else:
-                jobs_by_country[country][job_type]["older"].append(job_entry)
-
-        # Process each country
-        for country, job_types in jobs_by_country.items():
-            print(f"\n🌍 Processing {country}:")
-
-            for job_type, jobs in job_types.items():
-                recent_jobs = jobs["recent"]
-                older_jobs = jobs["older"]
-
-                # Count protected recent jobs
-                protected_24h_count += len(recent_jobs)
-
-                # Get limit for this job type
-                limit = JOB_TYPE_LIMITS.get(job_type, JOB_TYPE_LIMITS["other"])
-
-                print(f"   📊 {job_type}: {len(recent_jobs)} recent (protected), {len(older_jobs)} older")
-
-                # Apply limit to older jobs only
-                if len(older_jobs) > limit:
-                    # Sort older jobs by scraped_at (most recent first)
-                    older_jobs.sort(key=lambda x: x["scraped_at"], reverse=True)
-
-                    # Keep only the first 'limit' older jobs
-                    jobs_to_delete = older_jobs[limit:]
-
-                    print(f"      ✂️  Deleting {len(jobs_to_delete)} old {job_type} jobs (keeping {limit})")
-
-                    # Delete excess older jobs
-                    for job in jobs_to_delete:
-                        await conn.execute(
-                            "DELETE FROM jobs WHERE id = $1",
-                            job["id"]
-                        )
-                        deleted_count += 1
-                else:
-                    print(f"      ✅ {job_type}: Within limit ({len(older_jobs)}/{limit})")
-
-        # Get final count
         total_jobs = await conn.fetchval("SELECT COUNT(*) FROM jobs")
+        protected_count = await conn.fetchval(
+            "SELECT COUNT(*) FROM jobs WHERE scraped_at >= NOW() - INTERVAL '72 hours'"
+        )
 
         await conn.close()
 
+        print(f"✅ enforce-country-limit: deleted {deleted_count}, remaining {total_jobs}, protected {protected_count}")
+
         return {
             "success": True,
-            "message": f"Enforced per-job-type limits with {PROTECTION_HOURS}h protection",
+            "message": "Enforced per-job-type limits with 72h protection (SQL window functions)",
             "jobs_deleted": deleted_count,
             "total_jobs_remaining": total_jobs,
-            "protected_24h_jobs": protected_24h_count,
-            "countries_processed": len(jobs_by_country),
+            "protected_24h_jobs": protected_count,
+            "countries_processed": -1,  # not tracked in SQL approach
             "job_type_limits": JOB_TYPE_LIMITS
         }
     except Exception as e:

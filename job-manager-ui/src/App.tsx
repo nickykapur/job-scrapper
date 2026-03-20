@@ -316,12 +316,10 @@ const App: React.FC = () => {
 
       // Hide stale jobs — don't apply to applied/rejected views (historical records)
       if (filters.status !== 'applied' && filters.status !== 'rejected') {
-        // Hide jobs scraped more than 7 days ago.
-        // Using 7 days (not 72h) so jobs survive multiple scraper crashes — the backend
-        // enforce-country-limit is the real authority on when jobs get purged.
+        // Hide jobs scraped more than 14 days ago (matches DB retention window).
         if (job.scraped_at) {
           const diffHours = (Date.now() - new Date(job.scraped_at).getTime()) / 3600000;
-          if (diffHours > 168) return;
+          if (diffHours > 336) return;
         }
         // Only hide jobs with definitively old posted_date (months/years/weeks old)
         const pd = (job.posted_date || '').toLowerCase().replace(/^posted\s+/, '');
