@@ -220,21 +220,21 @@ jobs:
         if: steps.skip_check.outputs.skipped == 'false'
         id: cleanup
         run: |
-          # Run both API calls in parallel
-          curl -s -X POST https://web-production-110bb.up.railway.app/api/jobs/enforce-country-limit \
+          # Run both API calls in parallel (150s max — server-side statement_timeout is 120s)
+          curl -s --max-time 150 -X POST https://web-production-110bb.up.railway.app/api/jobs/enforce-country-limit \
             -H "Content-Type: application/json" \
             -d '{"max_jobs": 300}' > /tmp/cleanup.json &
-          curl -s "https://web-production-110bb.up.railway.app/api/admin/user-activity" > /tmp/activity.json &
+          curl -s --max-time 30 "https://web-production-110bb.up.railway.app/api/admin/user-activity" > /tmp/activity.json &
           wait  # Wait for both to finish
 
           RESPONSE=$(cat /tmp/cleanup.json)
           USER_ACTIVITY=$(cat /tmp/activity.json)
 
-          echo "$RESPONSE" | python3 -m json.tool
+          echo "$RESPONSE" | python3 -m json.tool || echo "⚠️ enforce-country-limit returned non-JSON (timeout or error)"
 
-          # Extract cleanup stats
-          JOBS_DELETED=$(echo "$RESPONSE" | python3 -c "import sys, json; print(json.load(sys.stdin).get('jobs_deleted', 0))")
-          TOTAL_JOBS=$(echo "$RESPONSE" | python3 -c "import sys, json; print(json.load(sys.stdin).get('total_jobs_remaining', 0))")
+          # Extract cleanup stats (default to 0 if enforce failed/timed out)
+          JOBS_DELETED=$(echo "$RESPONSE" | python3 -c "import sys, json; print(json.load(sys.stdin).get('jobs_deleted', 0))" 2>/dev/null || echo "0")
+          TOTAL_JOBS=$(echo "$RESPONSE" | python3 -c "import sys, json; print(json.load(sys.stdin).get('total_jobs_remaining', 0))" 2>/dev/null || echo "0")
           echo "jobs_deleted=$JOBS_DELETED" >> $GITHUB_OUTPUT
           echo "total_jobs=$TOTAL_JOBS" >> $GITHUB_OUTPUT
 

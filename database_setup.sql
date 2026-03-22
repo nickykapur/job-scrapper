@@ -30,6 +30,8 @@ CREATE INDEX IF NOT EXISTS idx_jobs_category ON jobs(category);
 CREATE INDEX IF NOT EXISTS idx_jobs_location ON jobs(location);
 CREATE INDEX IF NOT EXISTS idx_jobs_posted_date ON jobs(posted_date);
 CREATE INDEX IF NOT EXISTS idx_jobs_scraped_at ON jobs(scraped_at);
+-- Composite index for enforce-country-limit window function (PARTITION BY country, job_type ORDER BY scraped_at)
+CREATE INDEX IF NOT EXISTS idx_jobs_enforce ON jobs(country, job_type, scraped_at DESC);
 
 -- Create metadata table for tracking scraping sessions
 CREATE TABLE IF NOT EXISTS scraping_sessions (

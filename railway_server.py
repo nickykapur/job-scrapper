@@ -891,10 +891,16 @@ async def enforce_country_limit(max_jobs: int = 300):
     if not db or not DATABASE_AVAILABLE:
         raise HTTPException(status_code=500, detail="Database not available")
 
+    conn = await db.get_connection()
+    if not conn:
+        raise HTTPException(status_code=500, detail="Database connection failed")
+
     try:
-        conn = await db.get_connection()
-        if not conn:
-            raise HTTPException(status_code=500, detail="Database connection failed")
+        # Hard 2-minute cap so a slow DELETE never holds a pool connection until
+        # Railway's 900-second request timeout kills the HTTP connection (which
+        # previously caused a leaked pool connection and eventually made the
+        # server completely unresponsive).
+        await conn.execute("SET statement_timeout = '120000'")
 
         # Pure-SQL enforce: uses window functions so no Python iteration over rows.
         # Jobs scraped within the last 72h are ALWAYS protected (crash safety buffer).
@@ -904,7 +910,6 @@ async def enforce_country_limit(max_jobs: int = 300):
         #   software      → 1000  (prevents unbounded accumulation)
         #   marketing     → 100
         #   everything else → 60  (covers account_management, communications, hr, etc.)
-
         deleted_result = await conn.execute("""
             DELETE FROM jobs
             WHERE id IN (
@@ -933,23 +938,24 @@ async def enforce_country_limit(max_jobs: int = 300):
             "SELECT COUNT(*) FROM jobs WHERE scraped_at >= NOW() - INTERVAL '72 hours'"
         )
 
-        await conn.close()
-
-        print(f"✅ enforce-country-limit: deleted {deleted_count}, remaining {total_jobs}, protected {protected_count}")
-
-        return {
-            "success": True,
-            "message": "Enforced per-job-type limits with 72h protection (SQL window functions)",
-            "jobs_deleted": deleted_count,
-            "total_jobs_remaining": total_jobs,
-            "protected_24h_jobs": protected_count,
-            "countries_processed": -1,  # not tracked in SQL approach
-        }
     except Exception as e:
         print(f"❌ Enforce limit failed: {e}")
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to enforce limit: {str(e)}")
+    finally:
+        await db._release(conn)
+
+    print(f"✅ enforce-country-limit: deleted {deleted_count}, remaining {total_jobs}, protected {protected_count}")
+
+    return {
+        "success": True,
+        "message": "Enforced per-job-type limits with 72h protection (SQL window functions)",
+        "jobs_deleted": deleted_count,
+        "total_jobs_remaining": total_jobs,
+        "protected_24h_jobs": protected_count,
+        "countries_processed": -1,  # not tracked in SQL approach
+    }
 
 @app.post("/api/migrate-schema")
 async def migrate_database_schema():
