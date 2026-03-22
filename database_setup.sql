@@ -129,6 +129,35 @@ CREATE INDEX IF NOT EXISTS idx_user_badges_user_id ON user_badges(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_badges_earned_at ON user_badges(earned_at);
 CREATE INDEX IF NOT EXISTS idx_user_countries_user_id ON user_countries(user_id);
 
+-- Interview tracker (per-user application pipeline)
+CREATE TABLE IF NOT EXISTS interview_tracker (
+    id VARCHAR(100) PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    company VARCHAR(300) NOT NULL,
+    position VARCHAR(300) NOT NULL,
+    location VARCHAR(300),
+    stage VARCHAR(50) DEFAULT 'applied',
+    application_date DATE,
+    recruiter_date DATE,
+    technical_date DATE,
+    final_date DATE,
+    expected_response_date DATE,
+    salary_range VARCHAR(200),
+    recruiter_contact VARCHAR(200),
+    recruiter_email VARCHAR(200),
+    notes TEXT,
+    stage_notes JSONB DEFAULT '{}',
+    last_updated TIMESTAMPTZ DEFAULT NOW(),
+    archived BOOLEAN DEFAULT FALSE,
+    archive_outcome VARCHAR(100),
+    archive_date TIMESTAMPTZ,
+    archive_notes TEXT,
+    rejection_stage VARCHAR(100),
+    rejection_reasons JSONB DEFAULT '[]',
+    rejection_details TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_interview_tracker_user ON interview_tracker(user_id);
+
 -- Useful queries for your reference:
 
 -- Get all jobs from last 24 hours

@@ -543,7 +543,7 @@ async def get_jobs_api(current_user: Optional[Dict[str, Any]] = Depends(get_curr
                     import traceback
                     traceback.print_exc()
                 finally:
-                    await conn.close()
+                    await db._release(conn)
 
             if preferences:
                 filtered_jobs = {}
@@ -821,7 +821,7 @@ async def clear_all_jobs():
         # Count after deletion
         total_after = await conn.fetchval("SELECT COUNT(*) FROM jobs")
 
-        await conn.close()
+        await db._release(conn)
 
         return {
             "success": True,
@@ -866,7 +866,7 @@ async def delete_jobs_by_country(country: str):
         # Get total jobs remaining
         total_jobs = await conn.fetchval("SELECT COUNT(*) FROM jobs")
 
-        await conn.close()
+        await db._release(conn)
 
         return {
             "success": True,
@@ -1014,7 +1014,7 @@ async def migrate_database_schema():
         except Exception as e:
             migrations.append(f"Experience_level index: {str(e)}")
 
-        await conn.close()
+        await db._release(conn)
 
         return {
             "success": True,
@@ -1090,7 +1090,7 @@ async def backfill_job_fields():
             ORDER BY count DESC
         """)
 
-        await conn.close()
+        await db._release(conn)
         scraper.close()
 
         return {
@@ -1445,7 +1445,7 @@ async def bulk_reject_jobs(
             """, user_id, job['id'])
             rejected_count += 1
 
-        await conn.close()
+        await db._release(conn)
 
         filter_desc = []
         if request.company:
@@ -1518,7 +1518,7 @@ async def clear_user_job_interactions(
             """, user_id, job['id'])
             cleared_count += 1
 
-        await conn.close()
+        await db._release(conn)
 
         filter_desc = []
         if request.company:
@@ -1561,7 +1561,7 @@ async def clear_user_interactions():
 
         after_count = await conn.fetchval("SELECT COUNT(*) FROM user_job_interactions")
 
-        await conn.close()
+        await db._release(conn)
 
         return {
             "success": True,
@@ -1666,7 +1666,7 @@ async def fix_analytics_api():
         # Get final count
         final_count = await conn.fetchval("SELECT COUNT(*) FROM user_job_interactions")
 
-        await conn.close()
+        await db._release(conn)
 
         return {
             "success": True,
@@ -1735,7 +1735,7 @@ async def update_all_user_countries():
 
                 print(f"✅ Updated {username} to include all {len(all_countries)} countries")
 
-        await conn.close()
+        await db._release(conn)
 
         return {
             "success": True,
@@ -3246,7 +3246,7 @@ async def backfill_rejected_signatures():
                 errors += 1
                 continue
 
-        await conn.close()
+        await db._release(conn)
 
         print(f"✅ Backfilled {backfilled} job signatures for rejected jobs")
 
@@ -3334,7 +3334,7 @@ async def run_deduplication_migration():
                 errors += 1
                 continue
 
-        await conn.close()
+        await db._release(conn)
 
         print(f"✅ Backfilled {backfilled} job signatures")
         print("✅ Migration completed successfully!")
@@ -3446,7 +3446,7 @@ async def get_analytics():
             ORDER BY date ASC
         """)
 
-        await conn.close()
+        await db._release(conn)
 
         # Format results
         users = []
@@ -3623,7 +3623,7 @@ async def get_personal_analytics(current_user: Dict[str, Any] = Depends(get_curr
             ORDER BY applied_count DESC
         """, user_id)
 
-        await conn.close()
+        await db._release(conn)
 
         # Calculate success rate
         total_applied = overall_stats['total_applied'] or 0
@@ -3808,7 +3808,7 @@ async def get_country_analytics(
             ORDER BY week_start DESC, country
         """.replace('$1', str(days)))
 
-        await conn.close()
+        await db._release(conn)
 
         # Format response
         return {
@@ -4082,7 +4082,7 @@ async def get_user_rewards(current_user: Dict[str, Any] = Depends(get_current_us
                 'remaining': max(0, badge_def['threshold'] - current_value)
             })
 
-        await conn.close()
+        await db._release(conn)
 
         return {
             'points': calculated_points,
@@ -4319,7 +4319,7 @@ async def get_job_search_insights(current_user: Dict[str, Any] = Depends(get_cur
             }
             insights.append(insight)
 
-        await conn.close()
+        await db._release(conn)
 
         return {
             'insights': insights,
@@ -4385,7 +4385,7 @@ async def get_interview_tracker(current_user: dict = Depends(get_current_user)):
         print(f"❌ Error getting interview tracker: {e}")
         raise HTTPException(status_code=500, detail=str(e))
     finally:
-        await conn.close()
+        await db._release(conn)
 
 @app.post("/api/interview-tracker")
 async def save_interview_tracker(
@@ -4465,7 +4465,7 @@ async def save_interview_tracker(
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
     finally:
-        await conn.close()
+        await db._release(conn)
 
 # Catch-all route for React Router (SPA routing)
 @app.get("/{full_path:path}")
