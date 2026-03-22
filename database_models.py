@@ -200,8 +200,12 @@ class JobDatabase:
                 min_size=2,   # Keep 2 connections always ready
                 max_size=10,  # Max 10 concurrent connections
                 command_timeout=60,
+                # DB-level safety net: any query running >2 min is cancelled by
+                # PostgreSQL itself, so a slow query can never hold a connection
+                # until Railway's 900s HTTP timeout kills the request and leaks it.
+                server_settings={"statement_timeout": "120000"},
             )
-            print("🔗 PostgreSQL connection pool created (min=2, max=10)")
+            print("🔗 PostgreSQL connection pool created (min=2, max=10, statement_timeout=120s)")
         except Exception as e:
             print(f"❌ Failed to create connection pool: {e}")
             self.use_postgres = False

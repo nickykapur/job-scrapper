@@ -126,7 +126,9 @@ class LinkedInJobScraper:
             chrome_options.add_argument("--disable-plugins")
             chrome_options.add_argument("--disable-default-apps")
             chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-            chrome_options.add_argument("--remote-debugging-port=9222")
+            # Port 0 = let OS pick a free port; avoids conflicts when multiple
+            # Chrome instances start in parallel threads
+            chrome_options.add_argument("--remote-debugging-port=0")
             chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
             chrome_options.add_experimental_option('useAutomationExtension', False)
 

@@ -648,7 +648,7 @@ def scrape_single_country(location, country_name, railway_url, dry_run=False):
 
     phases["scraping"] = round(time.time() - _scraping_start, 1)
     logger.info("[COMPLETE] All %d searches finished for %s in %.0fs", len(term_to_job_type), country_name, phases["scraping"])
-    _close_all_scrapers()  # Release all reused Chrome instances
+    _close_all_scrapers()  # Release all reused Chrome instances — also called in finally below
 
     # Alert when too many searches fail — this is the earliest signal that LinkedIn is
     # blocking us and users will see no new jobs.
@@ -787,6 +787,8 @@ if __name__ == "__main__":
         if _sentry_dsn:
             sentry_sdk.capture_exception(e)
         sys.exit(1)
+    finally:
+        _close_all_scrapers()  # Always quit Chrome even if scrape_single_country raised
 
     if not success:
         logger.error("Scraping failed for %s (no exception, returned False)", args.country)
