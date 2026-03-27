@@ -270,18 +270,20 @@ class JobDatabase:
             return self._get_jobs_from_json()
         
         try:
-            # Get jobs scraped within the last 14 days (matches DB retention window).
-            # 14 days instead of 7 so niche country/type combos (e.g. Panama software,
-            # Ireland marketing) have enough jobs to show even in slow scraping weeks.
-            # The enforce-country-limit caps per-type counts so this stays manageable.
+            # 7-day window keeps the query fast by capping result size.
+            # enforce-country-limit runs every 2h and keeps per-type counts
+            # manageable (1000 software, 100 marketing, 60 others per country)
+            # so there should never be more than ~17k rows in this window.
+            # Previously 14 days — caused 60s+ timeouts when enforce was down.
             jobs_query = """
                 SELECT id, title, company, location, posted_date, job_url,
                        scraped_at, applied, rejected, is_new, easy_apply, category, notes,
                        first_seen, last_seen_24h, excluded, country, job_type, experience_level,
                        easy_apply_status, easy_apply_verified_at, easy_apply_verification_method
                 FROM jobs
-                WHERE scraped_at > NOW() - INTERVAL '14 days'
+                WHERE scraped_at > NOW() - INTERVAL '7 days'
                 ORDER BY scraped_at DESC
+                LIMIT 20000
             """
             rows = await conn.fetch(jobs_query)
 
@@ -344,7 +346,9 @@ class JobDatabase:
             
         except Exception as e:
             print(f"❌ Error fetching jobs from PostgreSQL: {e}")
-            return self._get_jobs_from_json()
+            # Re-raise so the API returns a 500 instead of silently returning
+            # 0 jobs (the JSON fallback file doesn't exist in production).
+            raise
         finally:
             await self._release(conn)
 
