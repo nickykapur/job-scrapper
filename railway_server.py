@@ -442,13 +442,15 @@ async def health():
     """Health check — lightweight ping, does not load all jobs"""
     db_ok = False
     if db and db.use_postgres and db._pool:
-        try:
-            conn = await db.get_connection()
-            await conn.fetchval("SELECT 1")
-            await db._release(conn)
-            db_ok = True
-        except Exception:
-            pass
+        conn = await db.get_connection()
+        if conn:
+            try:
+                await conn.fetchval("SELECT 1")
+                db_ok = True
+            except Exception:
+                pass
+            finally:
+                await db._release(conn)
     return {
         "status": "healthy",
         "database": "postgresql" if db_ok else ("json_fallback" if db else "unavailable"),
@@ -806,12 +808,10 @@ async def clear_all_jobs():
     if not db or not DATABASE_AVAILABLE:
         raise HTTPException(status_code=500, detail="Database not available")
 
+    conn = await db.get_connection()
+    if not conn:
+        raise HTTPException(status_code=500, detail="Database connection failed")
     try:
-        # Get connection
-        conn = await db.get_connection()
-        if not conn:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
         # Count before deletion
         total_before = await conn.fetchval("SELECT COUNT(*) FROM jobs")
 
@@ -820,8 +820,6 @@ async def clear_all_jobs():
 
         # Count after deletion
         total_after = await conn.fetchval("SELECT COUNT(*) FROM jobs")
-
-        await db._release(conn)
 
         return {
             "success": True,
@@ -832,6 +830,8 @@ async def clear_all_jobs():
     except Exception as e:
         print(f"❌ Database clear failed: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to clear database: {str(e)}")
+    finally:
+        await db._release(conn)
 
 @app.delete("/api/jobs/by-country/{country}")
 async def delete_jobs_by_country(country: str):
@@ -839,12 +839,10 @@ async def delete_jobs_by_country(country: str):
     if not db or not DATABASE_AVAILABLE:
         raise HTTPException(status_code=500, detail="Database not available")
 
+    conn = await db.get_connection()
+    if not conn:
+        raise HTTPException(status_code=500, detail="Database connection failed")
     try:
-        # Get connection
-        conn = await db.get_connection()
-        if not conn:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
         # Count before deletion
         total_before = await conn.fetchval(
             "SELECT COUNT(*) FROM jobs WHERE country = $1",
@@ -866,8 +864,6 @@ async def delete_jobs_by_country(country: str):
         # Get total jobs remaining
         total_jobs = await conn.fetchval("SELECT COUNT(*) FROM jobs")
 
-        await db._release(conn)
-
         return {
             "success": True,
             "message": f"Deleted all jobs from {country}",
@@ -879,6 +875,8 @@ async def delete_jobs_by_country(country: str):
     except Exception as e:
         print(f"❌ Delete by country failed: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to delete jobs: {str(e)}")
+    finally:
+        await db._release(conn)
 
 @app.post("/api/jobs/enforce-country-limit")
 async def enforce_country_limit(max_jobs: int = 300):
@@ -963,11 +961,10 @@ async def migrate_database_schema():
     if not db or not DATABASE_AVAILABLE:
         raise HTTPException(status_code=500, detail="Database not available")
 
+    conn = await db.get_connection()
+    if not conn:
+        raise HTTPException(status_code=500, detail="Database connection failed")
     try:
-        conn = await db.get_connection()
-        if not conn:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
         migrations = []
 
         # Add missing columns
@@ -1014,8 +1011,6 @@ async def migrate_database_schema():
         except Exception as e:
             migrations.append(f"Experience_level index: {str(e)}")
 
-        await db._release(conn)
-
         return {
             "success": True,
             "message": "Database schema migrated successfully",
@@ -1024,6 +1019,8 @@ async def migrate_database_schema():
     except Exception as e:
         print(f"❌ Migration failed: {e}")
         raise HTTPException(status_code=500, detail=f"Migration failed: {str(e)}")
+    finally:
+        await db._release(conn)
 
 @app.post("/api/backfill-job-fields")
 async def backfill_job_fields():
@@ -1038,70 +1035,73 @@ async def backfill_job_fields():
         if not conn:
             raise HTTPException(status_code=500, detail="Database connection failed")
 
-        # Get all jobs without country
-        jobs = await conn.fetch("SELECT id, title, location FROM jobs WHERE country IS NULL OR job_type IS NULL")
-
-        print(f"📊 Backfilling {len(jobs)} jobs...")
-
         scraper = LinkedInJobScraper(headless=False)  # Don't need browser
-        updated = 0
+        try:
+            # Get all jobs without country
+            jobs = await conn.fetch("SELECT id, title, location FROM jobs WHERE country IS NULL OR job_type IS NULL")
 
-        for job in jobs:
-            try:
-                job_id = job['id']
-                title = job['title']
-                location = job['location'] or ""
+            print(f"📊 Backfilling {len(jobs)} jobs...")
 
-                # Extract fields
-                country = scraper.get_country_from_location(location)
-                job_type = scraper.detect_job_type(title)
-                experience_level = scraper.detect_experience_level(title)
+            updated = 0
 
-                # Update
-                await conn.execute("""
-                    UPDATE jobs
-                    SET country = $2, job_type = $3, experience_level = $4
-                    WHERE id = $1
-                """, job_id, country, job_type, experience_level)
+            for job in jobs:
+                try:
+                    job_id = job['id']
+                    title = job['title']
+                    location = job['location'] or ""
 
-                updated += 1
+                    # Extract fields
+                    country = scraper.get_country_from_location(location)
+                    job_type = scraper.detect_job_type(title)
+                    experience_level = scraper.detect_experience_level(title)
 
-                if updated % 50 == 0:
-                    print(f"   ✅ Updated {updated}/{len(jobs)} jobs...")
+                    # Update
+                    await conn.execute("""
+                        UPDATE jobs
+                        SET country = $2, job_type = $3, experience_level = $4
+                        WHERE id = $1
+                    """, job_id, country, job_type, experience_level)
 
-            except Exception as e:
-                print(f"   ⚠️ Error updating job {job_id}: {e}")
-                continue
+                    updated += 1
 
-        # Get distribution
-        country_counts = await conn.fetch("""
-            SELECT country, COUNT(*) as count
-            FROM jobs
-            WHERE country IS NOT NULL
-            GROUP BY country
-            ORDER BY count DESC
-        """)
+                    if updated % 50 == 0:
+                        print(f"   ✅ Updated {updated}/{len(jobs)} jobs...")
 
-        type_counts = await conn.fetch("""
-            SELECT job_type, COUNT(*) as count
-            FROM jobs
-            WHERE job_type IS NOT NULL
-            GROUP BY job_type
-            ORDER BY count DESC
-        """)
+                except Exception as e:
+                    print(f"   ⚠️ Error updating job {job_id}: {e}")
+                    continue
 
-        await db._release(conn)
-        scraper.close()
+            # Get distribution
+            country_counts = await conn.fetch("""
+                SELECT country, COUNT(*) as count
+                FROM jobs
+                WHERE country IS NOT NULL
+                GROUP BY country
+                ORDER BY count DESC
+            """)
 
-        return {
-            "success": True,
-            "message": f"Backfilled {updated} jobs",
-            "jobs_updated": updated,
-            "jobs_total": len(jobs),
-            "country_distribution": [{"country": r['country'], "count": r['count']} for r in country_counts],
-            "type_distribution": [{"type": r['job_type'], "count": r['count']} for r in type_counts]
-        }
+            type_counts = await conn.fetch("""
+                SELECT job_type, COUNT(*) as count
+                FROM jobs
+                WHERE job_type IS NOT NULL
+                GROUP BY job_type
+                ORDER BY count DESC
+            """)
 
+            return {
+                "success": True,
+                "message": f"Backfilled {updated} jobs",
+                "jobs_updated": updated,
+                "jobs_total": len(jobs),
+                "country_distribution": [{"country": r['country'], "count": r['count']} for r in country_counts],
+                "type_distribution": [{"type": r['job_type'], "count": r['count']} for r in type_counts]
+            }
+        finally:
+            await db._release(conn)
+            scraper.close()
+
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"❌ Backfill failed: {e}")
         raise HTTPException(status_code=500, detail=f"Backfill failed: {str(e)}")
@@ -1406,11 +1406,10 @@ async def bulk_reject_jobs(
     if not request.company and not request.country:
         raise HTTPException(status_code=400, detail="Must specify company or country")
 
+    conn = await db.get_connection()
+    if not conn:
+        raise HTTPException(status_code=500, detail="Database connection failed")
     try:
-        conn = await db.get_connection()
-        if not conn:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
         user_id = current_user['user_id']
 
         # Build query based on filters
@@ -1445,8 +1444,6 @@ async def bulk_reject_jobs(
             """, user_id, job['id'])
             rejected_count += 1
 
-        await db._release(conn)
-
         filter_desc = []
         if request.company:
             filter_desc.append(f"company '{request.company}'")
@@ -1464,6 +1461,8 @@ async def bulk_reject_jobs(
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Bulk reject failed: {str(e)}")
+    finally:
+        await db._release(conn)
 
 @app.post("/api/jobs/clear-interactions")
 async def clear_user_job_interactions(
@@ -1480,11 +1479,13 @@ async def clear_user_job_interactions(
     if not db or not DATABASE_AVAILABLE:
         raise HTTPException(status_code=500, detail="Database not available")
 
-    try:
-        conn = await db.get_connection()
-        if not conn:
-            raise HTTPException(status_code=500, detail="Database connection failed")
+    if not request.company and not request.country:
+        raise HTTPException(status_code=400, detail="Must specify company or country")
 
+    conn = await db.get_connection()
+    if not conn:
+        raise HTTPException(status_code=500, detail="Database connection failed")
+    try:
         user_id = current_user['user_id']
 
         # Build query to find job IDs matching the filters
@@ -1500,25 +1501,21 @@ async def clear_user_job_interactions(
                 SELECT id FROM jobs
                 WHERE company = $1
             """, request.company)
-        elif request.country:
+        else:
             # Country only
             job_ids = await conn.fetch("""
                 SELECT id FROM jobs
                 WHERE country = $1
             """, request.country)
-        else:
-            raise HTTPException(status_code=400, detail="Must specify company or country")
 
         # Delete interactions for these jobs for this user
         cleared_count = 0
         for job in job_ids:
-            result = await conn.execute("""
+            await conn.execute("""
                 DELETE FROM user_job_interactions
                 WHERE user_id = $1 AND job_id = $2
             """, user_id, job['id'])
             cleared_count += 1
-
-        await db._release(conn)
 
         filter_desc = []
         if request.company:
@@ -1538,6 +1535,8 @@ async def clear_user_job_interactions(
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Clear interactions failed: {str(e)}")
+    finally:
+        await db._release(conn)
 
 @app.post("/api/admin/clear-user-interactions")
 async def clear_user_interactions():
@@ -1548,11 +1547,10 @@ async def clear_user_interactions():
     if not db.use_postgres:
         raise HTTPException(status_code=500, detail="PostgreSQL database required")
 
+    conn = await db.get_connection()
+    if not conn:
+        raise HTTPException(status_code=500, detail="Could not connect to database")
     try:
-        conn = await db.get_connection()
-        if not conn:
-            raise HTTPException(status_code=500, detail="Could not connect to database")
-
         # Get count before clearing
         before_count = await conn.fetchval("SELECT COUNT(*) FROM user_job_interactions")
 
@@ -1560,8 +1558,6 @@ async def clear_user_interactions():
         await conn.execute("DELETE FROM user_job_interactions")
 
         after_count = await conn.fetchval("SELECT COUNT(*) FROM user_job_interactions")
-
-        await db._release(conn)
 
         return {
             "success": True,
@@ -1576,6 +1572,8 @@ async def clear_user_interactions():
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to clear interactions: {str(e)}")
+    finally:
+        await db._release(conn)
 
 @app.post("/api/admin/fix-analytics")
 async def fix_analytics_api():
@@ -1586,11 +1584,10 @@ async def fix_analytics_api():
     if not db.use_postgres:
         raise HTTPException(status_code=500, detail="PostgreSQL database required")
 
+    conn = await db.get_connection()
+    if not conn:
+        raise HTTPException(status_code=500, detail="Could not connect to database")
     try:
-        conn = await db.get_connection()
-        if not conn:
-            raise HTTPException(status_code=500, detail="Could not connect to database")
-
         print("🔍 Checking user_job_interactions table...")
 
         # Check if table exists
@@ -1666,8 +1663,6 @@ async def fix_analytics_api():
         # Get final count
         final_count = await conn.fetchval("SELECT COUNT(*) FROM user_job_interactions")
 
-        await db._release(conn)
-
         return {
             "success": True,
             "message": "Analytics fixed successfully",
@@ -1683,6 +1678,8 @@ async def fix_analytics_api():
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to fix analytics: {str(e)}")
+    finally:
+        await db._release(conn)
 
 @app.post("/api/admin/update-all-user-countries")
 async def update_all_user_countries():
@@ -1710,8 +1707,10 @@ async def update_all_user_countries():
         conn = await db.get_connection()
         if not conn:
             raise HTTPException(status_code=500, detail="Could not connect to database")
-
-        users = await conn.fetch("SELECT id, username FROM users")
+        try:
+            users = await conn.fetch("SELECT id, username FROM users")
+        finally:
+            await db._release(conn)
 
         for user in users:
             user_id = user['id']
@@ -1734,8 +1733,6 @@ async def update_all_user_countries():
                 })
 
                 print(f"✅ Updated {username} to include all {len(all_countries)} countries")
-
-        await db._release(conn)
 
         return {
             "success": True,
@@ -2077,11 +2074,10 @@ async def get_user_activity():
     if not db.use_postgres:
         raise HTTPException(status_code=500, detail="PostgreSQL database required")
 
+    conn = await db.get_connection()
+    if not conn:
+        raise HTTPException(status_code=500, detail="Could not connect to database")
     try:
-        conn = await db.get_connection()
-        if not conn:
-            raise HTTPException(status_code=500, detail="Could not connect to database")
-
         # Get recent activity (last 24 hours) - ONLY ACTIVE USERS
         recent_activity = await conn.fetch("""
             SELECT
@@ -2124,6 +2120,8 @@ async def get_user_activity():
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to get user activity: {str(e)}")
+    finally:
+        await db._release(conn)
 
 @app.get("/api/admin/users")
 async def get_all_users(current_user: Dict[str, Any] = Depends(get_current_user)):
@@ -2137,11 +2135,10 @@ async def get_all_users(current_user: Dict[str, Any] = Depends(get_current_user)
     if not db.use_postgres:
         raise HTTPException(status_code=500, detail="PostgreSQL database required")
 
+    conn = await db.get_connection()
+    if not conn:
+        raise HTTPException(status_code=500, detail="Could not connect to database")
     try:
-        conn = await db.get_connection()
-        if not conn:
-            raise HTTPException(status_code=500, detail="Could not connect to database")
-
         # Get all users with their stats and preferences
         users = await conn.fetch("""
             SELECT
@@ -2165,41 +2162,40 @@ async def get_all_users(current_user: Dict[str, Any] = Depends(get_current_user)
             GROUP BY u.id, u.username, u.email, u.full_name, u.is_active, u.is_admin, u.created_at, u.last_login, up.job_types, up.preferred_countries
             ORDER BY u.created_at DESC
         """)
-
-        await db._release(conn)
-
-        user_list = []
-        for row in users:
-            user_list.append({
-                'id': row['id'],
-                'username': row['username'],
-                'email': row['email'],
-                'full_name': row['full_name'],
-                'is_active': row['is_active'],
-                'is_admin': row['is_admin'],
-                'created_at': row['created_at'].isoformat() if row['created_at'] else None,
-                'last_login': row['last_login'].isoformat() if row['last_login'] else None,
-                'job_types': row['job_types'],
-                'countries': row['countries'],
-                'stats': {
-                    'total_applied': row['total_applied'],
-                    'total_rejected': row['total_rejected'],
-                    'total_saved': row['total_saved'],
-                    'last_interaction': row['last_interaction'].isoformat() if row['last_interaction'] else None
-                }
-            })
-
-        return {
-            'success': True,
-            'users': user_list,
-            'total': len(user_list)
-        }
-
     except Exception as e:
         print(f"❌ Failed to get users: {e}")
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to get users: {str(e)}")
+    finally:
+        await db._release(conn)
+
+    user_list = []
+    for row in users:
+        user_list.append({
+            'id': row['id'],
+            'username': row['username'],
+            'email': row['email'],
+            'full_name': row['full_name'],
+            'is_active': row['is_active'],
+            'is_admin': row['is_admin'],
+            'created_at': row['created_at'].isoformat() if row['created_at'] else None,
+            'last_login': row['last_login'].isoformat() if row['last_login'] else None,
+            'job_types': row['job_types'],
+            'countries': row['countries'],
+            'stats': {
+                'total_applied': row['total_applied'],
+                'total_rejected': row['total_rejected'],
+                'total_saved': row['total_saved'],
+                'last_interaction': row['last_interaction'].isoformat() if row['last_interaction'] else None
+            }
+        })
+
+    return {
+        'success': True,
+        'users': user_list,
+        'total': len(user_list)
+    }
 
 @app.post("/api/admin/users/{user_id}/deactivate")
 async def deactivate_user(user_id: int, current_user: Dict[str, Any] = Depends(get_current_user)):
@@ -2217,19 +2213,16 @@ async def deactivate_user(user_id: int, current_user: Dict[str, Any] = Depends(g
     if current_user.get('user_id') == user_id:
         raise HTTPException(status_code=400, detail="Cannot deactivate your own account")
 
+    conn = await db.get_connection()
+    if not conn:
+        raise HTTPException(status_code=500, detail="Could not connect to database")
     try:
-        conn = await db.get_connection()
-        if not conn:
-            raise HTTPException(status_code=500, detail="Could not connect to database")
-
         # Check if user exists
         user = await conn.fetchrow("SELECT id, username, is_active FROM users WHERE id = $1", user_id)
         if not user:
-            await db._release(conn)
             raise HTTPException(status_code=404, detail="User not found")
 
         if not user['is_active']:
-            await db._release(conn)
             return {
                 'success': True,
                 'message': 'User is already deactivated',
@@ -2243,8 +2236,6 @@ async def deactivate_user(user_id: int, current_user: Dict[str, Any] = Depends(g
             SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP
             WHERE id = $1
         """, user_id)
-
-        await db._release(conn)
 
         logger.info("User %s (ID: %d) deactivated by admin %s", user['username'], user_id, current_user.get('username'))
 
@@ -2262,6 +2253,8 @@ async def deactivate_user(user_id: int, current_user: Dict[str, Any] = Depends(g
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to deactivate user: {str(e)}")
+    finally:
+        await db._release(conn)
 
 @app.post("/api/admin/users/{user_id}/activate")
 async def activate_user(user_id: int, current_user: Dict[str, Any] = Depends(get_current_user)):
@@ -2275,19 +2268,16 @@ async def activate_user(user_id: int, current_user: Dict[str, Any] = Depends(get
     if not db.use_postgres:
         raise HTTPException(status_code=500, detail="PostgreSQL database required")
 
+    conn = await db.get_connection()
+    if not conn:
+        raise HTTPException(status_code=500, detail="Could not connect to database")
     try:
-        conn = await db.get_connection()
-        if not conn:
-            raise HTTPException(status_code=500, detail="Could not connect to database")
-
         # Check if user exists
         user = await conn.fetchrow("SELECT id, username, is_active FROM users WHERE id = $1", user_id)
         if not user:
-            await db._release(conn)
             raise HTTPException(status_code=404, detail="User not found")
 
         if user['is_active']:
-            await db._release(conn)
             return {
                 'success': True,
                 'message': 'User is already active',
@@ -2301,8 +2291,6 @@ async def activate_user(user_id: int, current_user: Dict[str, Any] = Depends(get
             SET is_active = TRUE, updated_at = CURRENT_TIMESTAMP
             WHERE id = $1
         """, user_id)
-
-        await db._release(conn)
 
         logger.info("User %s (ID: %d) reactivated by admin %s", user['username'], user_id, current_user.get('username'))
 
@@ -2320,6 +2308,8 @@ async def activate_user(user_id: int, current_user: Dict[str, Any] = Depends(get
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to activate user: {str(e)}")
+    finally:
+        await db._release(conn)
 
 @app.delete("/api/admin/users/{user_id}")
 async def delete_user_permanently(user_id: int, current_user: Dict[str, Any] = Depends(get_current_user)):
@@ -2445,11 +2435,10 @@ async def get_scraping_targets():
     if not db.use_postgres:
         raise HTTPException(status_code=500, detail="PostgreSQL database required")
 
+    conn = await db.get_connection()
+    if not conn:
+        raise HTTPException(status_code=500, detail="Could not connect to database")
     try:
-        conn = await db.get_connection()
-        if not conn:
-            raise HTTPException(status_code=500, detail="Could not connect to database")
-
         # Get all active users with their preferences including custom keywords
         users = await conn.fetch("""
             SELECT DISTINCT
@@ -2462,9 +2451,10 @@ async def get_scraping_targets():
             LEFT JOIN user_preferences up ON u.id = up.user_id
             WHERE u.is_active = TRUE
         """)
-
+    finally:
         await db._release(conn)
 
+    try:
         # Aggregate job types, countries, and custom keywords across all active users
         all_job_types = set()
         all_countries = set()
@@ -3207,14 +3197,12 @@ async def backfill_rejected_signatures():
     if not db.use_postgres:
         raise HTTPException(status_code=500, detail="PostgreSQL database required")
 
+    print("🚀 Backfilling job signatures for rejected jobs...")
+
+    conn = await db.get_connection()
+    if not conn:
+        raise HTTPException(status_code=500, detail="Could not connect to database")
     try:
-        print("🚀 Backfilling job signatures for rejected jobs...")
-
-        # Connect to database
-        conn = await db.get_connection()
-        if not conn:
-            raise HTTPException(status_code=500, detail="Could not connect to database")
-
         # Get all rejected jobs
         rejected_jobs = await conn.fetch("""
             SELECT id, title, company, country
@@ -3230,23 +3218,18 @@ async def backfill_rejected_signatures():
 
         for job in rejected_jobs:
             try:
-                # Add job signature
                 success = await db.add_job_signature(
                     company=job['company'],
                     title=job['title'],
                     country=job['country'],
                     job_id=job['id']
                 )
-
                 if success:
                     backfilled += 1
-
             except Exception as e:
                 print(f"⚠️  Error backfilling signature for job {job['id']}: {e}")
                 errors += 1
                 continue
-
-        await db._release(conn)
 
         print(f"✅ Backfilled {backfilled} job signatures for rejected jobs")
 
@@ -3269,6 +3252,8 @@ async def backfill_rejected_signatures():
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Backfill failed: {str(e)}")
+    finally:
+        await db._release(conn)
 
 @app.post("/api/admin/run-deduplication-migration")
 async def run_deduplication_migration():
@@ -3279,20 +3264,16 @@ async def run_deduplication_migration():
     if not db.use_postgres:
         raise HTTPException(status_code=500, detail="PostgreSQL database required for migration")
 
+    print("🚀 Starting job deduplication migration...")
+
+    migration_file = 'database_migrations/002_add_job_deduplication.sql'
+    if not os.path.exists(migration_file):
+        raise HTTPException(status_code=404, detail=f"Migration file not found: {migration_file}")
+
+    conn = await db.get_connection()
+    if not conn:
+        raise HTTPException(status_code=500, detail="Could not connect to database")
     try:
-        print("🚀 Starting job deduplication migration...")
-
-        # Connect to database
-        conn = await db.get_connection()
-        if not conn:
-            raise HTTPException(status_code=500, detail="Could not connect to database")
-
-        # Read and execute migration SQL
-        migration_file = 'database_migrations/002_add_job_deduplication.sql'
-
-        if not os.path.exists(migration_file):
-            raise HTTPException(status_code=404, detail=f"Migration file not found: {migration_file}")
-
         print(f"📄 Reading migration file: {migration_file}")
         with open(migration_file, 'r') as f:
             migration_sql = f.read()
@@ -3301,7 +3282,6 @@ async def run_deduplication_migration():
         await conn.execute(migration_sql)
         print("✅ Migration SQL executed successfully")
 
-        # Backfill job signatures for existing applied jobs
         print("\n🔄 Backfilling job signatures for existing applied jobs...")
 
         applied_jobs = await conn.fetch("""
@@ -3318,23 +3298,18 @@ async def run_deduplication_migration():
 
         for job in applied_jobs:
             try:
-                # Add job signature
                 success = await db.add_job_signature(
                     company=job['company'],
                     title=job['title'],
                     country=job['country'],
                     job_id=job['id']
                 )
-
                 if success:
                     backfilled += 1
-
             except Exception as e:
                 print(f"⚠️  Error backfilling signature for job {job['id']}: {e}")
                 errors += 1
                 continue
-
-        await db._release(conn)
 
         print(f"✅ Backfilled {backfilled} job signatures")
         print("✅ Migration completed successfully!")
@@ -3363,6 +3338,8 @@ async def run_deduplication_migration():
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Migration failed: {str(e)}")
+    finally:
+        await db._release(conn)
 
 @app.get("/api/admin/analytics")
 async def get_analytics():
@@ -3373,14 +3350,13 @@ async def get_analytics():
     if not db.use_postgres:
         raise HTTPException(status_code=500, detail="PostgreSQL database required")
 
+    from user_database import UserDatabase
+    user_db = UserDatabase()
+
+    conn = await db.get_connection()
+    if not conn:
+        raise HTTPException(status_code=500, detail="Could not connect to database")
     try:
-        from user_database import UserDatabase
-        user_db = UserDatabase()
-
-        conn = await db.get_connection()
-        if not conn:
-            raise HTTPException(status_code=500, detail="Could not connect to database")
-
         # Get all users with their analytics
         users_analytics = await conn.fetch("""
             SELECT
@@ -3446,80 +3422,80 @@ async def get_analytics():
             ORDER BY date ASC
         """)
 
-        await db._release(conn)
-
-        # Format results
-        users = []
-        for user in users_analytics:
-            users.append({
-                "id": user['id'],
-                "username": user['username'],
-                "email": user['email'],
-                "full_name": user['full_name'],
-                "created_at": user['created_at'].isoformat() if user['created_at'] else None,
-                "last_login": user['last_login'].isoformat() if user['last_login'] else None,
-                "is_admin": user['is_admin'],
-                "job_types": user['job_types'] or [],
-                "preferred_countries": user['preferred_countries'] or [],
-                "experience_levels": user['experience_levels'] or [],
-                "stats": {
-                    "jobs_applied": user['jobs_applied'],
-                    "jobs_rejected": user['jobs_rejected'],
-                    "jobs_saved": user['jobs_saved'],
-                    "last_application_date": user['last_application_date'].isoformat() if user['last_application_date'] else None,
-                    "applications_last_7_days": user['applications_last_7_days'],
-                    "applications_last_30_days": user['applications_last_30_days']
-                }
-            })
-
-        job_types = [
-            {
-                "job_type": row['job_type'],
-                "total_jobs": row['total_jobs'],
-                "applied_jobs": row['applied_jobs'],
-                "rejected_jobs": row['rejected_jobs'],
-                "available_jobs": row['available_jobs']
-            }
-            for row in job_type_stats
-        ]
-
-        countries = [
-            {
-                "country": row['country'],
-                "total_jobs": row['total_jobs'],
-                "applied_jobs": row['applied_jobs'],
-                "rejected_jobs": row['rejected_jobs']
-            }
-            for row in country_stats
-        ]
-
-        timeline = [
-            {
-                "date": row['date'].isoformat(),
-                "applications": row['applications']
-            }
-            for row in timeline_stats
-        ]
-
-        return {
-            "users": users,
-            "job_types": job_types,
-            "countries": countries,
-            "application_timeline": timeline,
-            "summary": {
-                "total_users": len(users),
-                "total_applications": sum(u['stats']['jobs_applied'] for u in users),
-                "total_rejections": sum(u['stats']['jobs_rejected'] for u in users),
-                "applications_last_7_days": sum(u['stats']['applications_last_7_days'] for u in users),
-                "applications_last_30_days": sum(u['stats']['applications_last_30_days'] for u in users)
-            }
-        }
-
     except Exception as e:
         print(f"❌ Error getting analytics: {e}")
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to get analytics: {str(e)}")
+    finally:
+        await db._release(conn)
+
+    # Format results
+    users = []
+    for user in users_analytics:
+        users.append({
+            "id": user['id'],
+            "username": user['username'],
+            "email": user['email'],
+            "full_name": user['full_name'],
+            "created_at": user['created_at'].isoformat() if user['created_at'] else None,
+            "last_login": user['last_login'].isoformat() if user['last_login'] else None,
+            "is_admin": user['is_admin'],
+            "job_types": user['job_types'] or [],
+            "preferred_countries": user['preferred_countries'] or [],
+            "experience_levels": user['experience_levels'] or [],
+            "stats": {
+                "jobs_applied": user['jobs_applied'],
+                "jobs_rejected": user['jobs_rejected'],
+                "jobs_saved": user['jobs_saved'],
+                "last_application_date": user['last_application_date'].isoformat() if user['last_application_date'] else None,
+                "applications_last_7_days": user['applications_last_7_days'],
+                "applications_last_30_days": user['applications_last_30_days']
+            }
+        })
+
+    job_types = [
+        {
+            "job_type": row['job_type'],
+            "total_jobs": row['total_jobs'],
+            "applied_jobs": row['applied_jobs'],
+            "rejected_jobs": row['rejected_jobs'],
+            "available_jobs": row['available_jobs']
+        }
+        for row in job_type_stats
+    ]
+
+    countries = [
+        {
+            "country": row['country'],
+            "total_jobs": row['total_jobs'],
+            "applied_jobs": row['applied_jobs'],
+            "rejected_jobs": row['rejected_jobs']
+        }
+        for row in country_stats
+    ]
+
+    timeline = [
+        {
+            "date": row['date'].isoformat(),
+            "applications": row['applications']
+        }
+        for row in timeline_stats
+    ]
+
+    return {
+        "users": users,
+        "job_types": job_types,
+        "countries": countries,
+        "application_timeline": timeline,
+        "summary": {
+            "total_users": len(users),
+            "total_applications": sum(u['stats']['jobs_applied'] for u in users),
+            "total_rejections": sum(u['stats']['jobs_rejected'] for u in users),
+            "applications_last_7_days": sum(u['stats']['applications_last_7_days'] for u in users),
+            "applications_last_30_days": sum(u['stats']['applications_last_30_days'] for u in users)
+        }
+    }
 
 @app.get("/api/analytics/personal")
 async def get_personal_analytics(current_user: Dict[str, Any] = Depends(get_current_user)):
@@ -3527,11 +3503,10 @@ async def get_personal_analytics(current_user: Dict[str, Any] = Depends(get_curr
     if not db or not DATABASE_AVAILABLE:
         raise HTTPException(status_code=500, detail="Database not available")
 
+    conn = await db.get_connection()
+    if not conn:
+        raise HTTPException(status_code=500, detail="Could not connect to database")
     try:
-        conn = await db.get_connection()
-        if not conn:
-            raise HTTPException(status_code=500, detail="Could not connect to database")
-
         user_id = current_user['user_id']
 
         # 1. Time-based patterns - Hour of day when user applies most
@@ -3623,78 +3598,78 @@ async def get_personal_analytics(current_user: Dict[str, Any] = Depends(get_curr
             ORDER BY applied_count DESC
         """, user_id)
 
-        await db._release(conn)
-
-        # Calculate success rate
-        total_applied = overall_stats['total_applied'] or 0
-        total_rejected = overall_stats['total_rejected'] or 0
-        total_interactions = total_applied + total_rejected
-        success_rate = (total_applied / total_interactions * 100) if total_interactions > 0 else 0
-
-        # Calculate average applications per day (only counting days with activity)
-        days_active = len(velocity_stats)
-        avg_per_active_day = (total_applied / days_active) if days_active > 0 else 0
-
-        # Format day of week names
-        day_names = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-
-        return {
-            "hourly_pattern": [
-                {"hour": int(row['hour']), "applications": row['applications']}
-                for row in hourly_pattern
-            ],
-            "daily_pattern": [
-                {"day": day_names[int(row['day_of_week'])], "day_number": int(row['day_of_week']), "applications": row['applications']}
-                for row in daily_pattern
-            ],
-            "countries": [
-                {
-                    "country": row['country'],
-                    "applied": row['applied_count'],
-                    "rejected": row['rejected_count'],
-                    "saved": row['saved_count']
-                }
-                for row in country_stats
-            ],
-            "velocity": [
-                {"date": row['date'].isoformat(), "applications": row['applications']}
-                for row in velocity_stats
-            ],
-            "job_types": [
-                {
-                    "job_type": row['job_type'],
-                    "applied": row['applied_count'],
-                    "rejected": row['rejected_count']
-                }
-                for row in job_type_stats
-            ],
-            "experience_levels": [
-                {
-                    "level": row['experience_level'],
-                    "applied": row['applied_count'],
-                    "rejected": row['rejected_count']
-                }
-                for row in experience_stats
-            ],
-            "summary": {
-                "total_applied": total_applied,
-                "total_rejected": total_rejected,
-                "total_saved": overall_stats['total_saved'] or 0,
-                "applied_last_7_days": overall_stats['applied_last_7_days'] or 0,
-                "applied_last_30_days": overall_stats['applied_last_30_days'] or 0,
-                "first_application": overall_stats['first_application'].isoformat() if overall_stats['first_application'] else None,
-                "last_application": overall_stats['last_application'].isoformat() if overall_stats['last_application'] else None,
-                "success_rate": round(success_rate, 1),
-                "avg_per_active_day": round(avg_per_active_day, 1),
-                "days_active": days_active
-            }
-        }
-
     except Exception as e:
         print(f"❌ Error getting personal analytics: {e}")
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to get personal analytics: {str(e)}")
+    finally:
+        await db._release(conn)
+
+    # Calculate success rate
+    total_applied = overall_stats['total_applied'] or 0
+    total_rejected = overall_stats['total_rejected'] or 0
+    total_interactions = total_applied + total_rejected
+    success_rate = (total_applied / total_interactions * 100) if total_interactions > 0 else 0
+
+    # Calculate average applications per day (only counting days with activity)
+    days_active = len(velocity_stats)
+    avg_per_active_day = (total_applied / days_active) if days_active > 0 else 0
+
+    # Format day of week names
+    day_names = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+    return {
+        "hourly_pattern": [
+            {"hour": int(row['hour']), "applications": row['applications']}
+            for row in hourly_pattern
+        ],
+        "daily_pattern": [
+            {"day": day_names[int(row['day_of_week'])], "day_number": int(row['day_of_week']), "applications": row['applications']}
+            for row in daily_pattern
+        ],
+        "countries": [
+            {
+                "country": row['country'],
+                "applied": row['applied_count'],
+                "rejected": row['rejected_count'],
+                "saved": row['saved_count']
+            }
+            for row in country_stats
+        ],
+        "velocity": [
+            {"date": row['date'].isoformat(), "applications": row['applications']}
+            for row in velocity_stats
+        ],
+        "job_types": [
+            {
+                "job_type": row['job_type'],
+                "applied": row['applied_count'],
+                "rejected": row['rejected_count']
+            }
+            for row in job_type_stats
+        ],
+        "experience_levels": [
+            {
+                "level": row['experience_level'],
+                "applied": row['applied_count'],
+                "rejected": row['rejected_count']
+            }
+            for row in experience_stats
+        ],
+        "summary": {
+            "total_applied": total_applied,
+            "total_rejected": total_rejected,
+            "total_saved": overall_stats['total_saved'] or 0,
+            "applied_last_7_days": overall_stats['applied_last_7_days'] or 0,
+            "applied_last_30_days": overall_stats['applied_last_30_days'] or 0,
+            "first_application": overall_stats['first_application'].isoformat() if overall_stats['first_application'] else None,
+            "last_application": overall_stats['last_application'].isoformat() if overall_stats['last_application'] else None,
+            "success_rate": round(success_rate, 1),
+            "avg_per_active_day": round(avg_per_active_day, 1),
+            "days_active": days_active
+        }
+    }
 
 @app.get("/api/admin/country-analytics")
 async def get_country_analytics(
@@ -3714,11 +3689,10 @@ async def get_country_analytics(
     if not db or not DATABASE_AVAILABLE:
         raise HTTPException(status_code=500, detail="Database not available")
 
+    conn = await db.get_connection()
+    if not conn:
+        raise HTTPException(status_code=500, detail="Could not connect to database")
     try:
-        conn = await db.get_connection()
-        if not conn:
-            raise HTTPException(status_code=500, detail="Could not connect to database")
-
         # 1. Jobs posted per country per day (time series)
         jobs_by_country_date = await conn.fetch("""
             SELECT
@@ -3808,8 +3782,6 @@ async def get_country_analytics(
             ORDER BY week_start DESC, country
         """.replace('$1', str(days)))
 
-        await db._release(conn)
-
         # Format response
         return {
             "time_range_days": days,
@@ -3886,6 +3858,8 @@ async def get_country_analytics(
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to get country analytics: {str(e)}")
+    finally:
+        await db._release(conn)
 
 @app.get("/api/rewards")
 async def get_user_rewards(current_user: Dict[str, Any] = Depends(get_current_user)):
@@ -3893,11 +3867,10 @@ async def get_user_rewards(current_user: Dict[str, Any] = Depends(get_current_us
     if not db or not DATABASE_AVAILABLE:
         raise HTTPException(status_code=500, detail="Database not available")
 
+    conn = await db.get_connection()
+    if not conn:
+        raise HTTPException(status_code=500, detail="Could not connect to database")
     try:
-        conn = await db.get_connection()
-        if not conn:
-            raise HTTPException(status_code=500, detail="Could not connect to database")
-
         user_id = current_user['user_id']
 
         # Ensure user has a rewards record
@@ -4082,8 +4055,6 @@ async def get_user_rewards(current_user: Dict[str, Any] = Depends(get_current_us
                 'remaining': max(0, badge_def['threshold'] - current_value)
             })
 
-        await db._release(conn)
-
         return {
             'points': calculated_points,
             'level': current_level,
@@ -4118,20 +4089,21 @@ async def get_user_rewards(current_user: Dict[str, Any] = Depends(get_current_us
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to get rewards: {str(e)}")
+    finally:
+        await db._release(conn)
 
 @app.get("/api/insights")
 async def get_job_search_insights(current_user: Dict[str, Any] = Depends(get_current_user)):
     """Get personalized job search insights and recommendations"""
 
+    user_id = current_user.get('user_id')
+    if not user_id:
+        raise HTTPException(status_code=401, detail="User ID not found")
+
+    conn = await db.get_connection()
+    if not conn:
+        raise HTTPException(status_code=500, detail="Database connection failed")
     try:
-        user_id = current_user.get('user_id')
-        if not user_id:
-            raise HTTPException(status_code=401, detail="User ID not found")
-
-        conn = await db.get_connection()
-        if not conn:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
         insights = []
 
         # Get country application distribution
@@ -4319,8 +4291,6 @@ async def get_job_search_insights(current_user: Dict[str, Any] = Depends(get_cur
             }
             insights.append(insight)
 
-        await db._release(conn)
-
         return {
             'insights': insights,
             'total_insights': len(insights),
@@ -4332,6 +4302,8 @@ async def get_job_search_insights(current_user: Dict[str, Any] = Depends(get_cur
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to get insights: {str(e)}")
+    finally:
+        await db._release(conn)
 
 # ==================== Interview Tracker Endpoints ====================
 
