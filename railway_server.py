@@ -20,7 +20,10 @@ import asyncio
 from dotenv import load_dotenv
 load_dotenv()
 
-import slack_notify
+try:
+    import slack_notify
+except ImportError:
+    slack_notify = None
 
 # ── Logging setup ────────────────────────────────────────────────────────────
 # Use Python logging instead of print() so Sentry and Railway can filter by level
@@ -3033,7 +3036,7 @@ async def _store_activity_event(user_id: int, event_type: str, event_data: dict)
             )
 
             # Slack notification for job applied
-            if event_type == "job_action" and event_data.get("action") == "applied":
+            if slack_notify and event_type == "job_action" and event_data.get("action") == "applied":
                 try:
                     user_row = await conn.fetchrow(
                         "SELECT username, COALESCE(full_name, username) AS display_name FROM users WHERE id = $1",

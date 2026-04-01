@@ -17,7 +17,10 @@ from auth_utils import (
     get_current_admin_user
 )
 from user_database import UserDatabase
-import slack_notify
+try:
+    import slack_notify
+except ImportError:
+    slack_notify = None
 
 # Create router
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
@@ -115,11 +118,12 @@ async def register(request: RegisterRequest):
         "is_admin": user['is_admin']
     }
 
-    asyncio.create_task(slack_notify.notify_register(
-        username=user['username'],
-        email=user['email'],
-        display_name=user.get('full_name') or '',
-    ))
+    if slack_notify:
+        asyncio.create_task(slack_notify.notify_register(
+            username=user['username'],
+            email=user['email'],
+            display_name=user.get('full_name') or '',
+        ))
 
     return generate_token_response(user_data)
 
@@ -152,10 +156,11 @@ async def login(request: LoginRequest):
         "is_admin": user['is_admin']
     }
 
-    asyncio.create_task(slack_notify.notify_login(
-        username=user['username'],
-        display_name=user.get('full_name') or '',
-    ))
+    if slack_notify:
+        asyncio.create_task(slack_notify.notify_login(
+            username=user['username'],
+            display_name=user.get('full_name') or '',
+        ))
 
     return generate_token_response(user_data)
 
