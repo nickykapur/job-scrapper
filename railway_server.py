@@ -20,13 +20,6 @@ import asyncio
 from dotenv import load_dotenv
 load_dotenv()
 
-try:
-    import slack_notify
-    logger.info("slack_notify loaded OK")
-except ImportError as e:
-    logger.warning("slack_notify import failed: %s — Slack notifications disabled", e)
-    slack_notify = None
-
 # ── Logging setup ────────────────────────────────────────────────────────────
 # Use Python logging instead of print() so Sentry and Railway can filter by level
 import logging
@@ -36,6 +29,12 @@ logging.basicConfig(
     format="%(levelname)s %(name)s: %(message)s",
 )
 logger = logging.getLogger("job_scraper")
+
+try:
+    import slack_notify
+except ImportError as e:
+    logger.warning("slack_notify import failed: %s — Slack notifications disabled", e)
+    slack_notify = None
 
 # ── Sentry: errors + tracing + logs ─────────────────────────────────────────
 import sentry_sdk
@@ -3039,7 +3038,6 @@ async def _store_activity_event(user_id: int, event_type: str, event_data: dict)
 
             # Slack notification for job applied
             if slack_notify and event_type == "job_action" and event_data.get("action") == "applied":
-                logger.info("Slack: firing notify_job_applied_async for user_id=%s", user_id)
                 try:
                     user_row = await conn.fetchrow(
                         "SELECT username, COALESCE(full_name, username) AS display_name FROM users WHERE id = $1",
