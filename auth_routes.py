@@ -4,6 +4,7 @@ Authentication API routes for LinkedIn Job Manager
 Handles user registration, login, and profile management
 """
 
+import asyncio
 from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, Dict, Any, List
@@ -16,6 +17,7 @@ from auth_utils import (
     get_current_admin_user
 )
 from user_database import UserDatabase
+import slack_notify
 
 # Create router
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
@@ -113,6 +115,12 @@ async def register(request: RegisterRequest):
         "is_admin": user['is_admin']
     }
 
+    asyncio.create_task(slack_notify.notify_register(
+        username=user['username'],
+        email=user['email'],
+        display_name=user.get('full_name') or '',
+    ))
+
     return generate_token_response(user_data)
 
 
@@ -143,6 +151,11 @@ async def login(request: LoginRequest):
         "full_name": user.get('full_name'),
         "is_admin": user['is_admin']
     }
+
+    asyncio.create_task(slack_notify.notify_login(
+        username=user['username'],
+        display_name=user.get('full_name') or '',
+    ))
 
     return generate_token_response(user_data)
 

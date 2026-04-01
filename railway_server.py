@@ -20,6 +20,8 @@ import asyncio
 from dotenv import load_dotenv
 load_dotenv()
 
+import slack_notify
+
 # ── Logging setup ────────────────────────────────────────────────────────────
 # Use Python logging instead of print() so Sentry and Railway can filter by level
 import logging
@@ -3029,6 +3031,30 @@ async def _store_activity_event(user_id: int, event_type: str, event_data: dict)
                 "INSERT INTO user_activity_events (user_id, event_type, event_data) VALUES ($1, $2, $3::jsonb)",
                 user_id, event_type, json.dumps(event_data)
             )
+
+            # Slack notification for job applied
+            if event_type == "job_action" and event_data.get("action") == "applied":
+                try:
+                    user_row = await conn.fetchrow(
+                        "SELECT username, COALESCE(full_name, username) AS display_name FROM users WHERE id = $1",
+                        user_id,
+                    )
+                    job_id = event_data.get("job_id")
+                    job_row = None
+                    if job_id:
+                        job_row = await conn.fetchrow(
+                            "SELECT title, company, country FROM jobs WHERE id = $1", job_id
+                        )
+                    await slack_notify.notify_job_applied(
+                        username=user_row["username"] if user_row else f"user#{user_id}",
+                        display_name=user_row["display_name"] if user_row else "",
+                        job_title=job_row["title"] if job_row else "Unknown role",
+                        company=job_row["company"] if job_row else "Unknown company",
+                        country=job_row["country"] if job_row else "Unknown country",
+                    )
+                except Exception as slack_err:
+                    logger.warning("Slack job-applied notification failed: %s", slack_err)
+
         finally:
             await db._release(conn)
     except Exception as e:
