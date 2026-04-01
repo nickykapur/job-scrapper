@@ -22,7 +22,9 @@ load_dotenv()
 
 try:
     import slack_notify
-except ImportError:
+    logger.info("slack_notify loaded OK")
+except ImportError as e:
+    logger.warning("slack_notify import failed: %s — Slack notifications disabled", e)
     slack_notify = None
 
 # ── Logging setup ────────────────────────────────────────────────────────────
@@ -3037,6 +3039,7 @@ async def _store_activity_event(user_id: int, event_type: str, event_data: dict)
 
             # Slack notification for job applied
             if slack_notify and event_type == "job_action" and event_data.get("action") == "applied":
+                logger.info("Slack: firing notify_job_applied_async for user_id=%s", user_id)
                 try:
                     user_row = await conn.fetchrow(
                         "SELECT username, COALESCE(full_name, username) AS display_name FROM users WHERE id = $1",
