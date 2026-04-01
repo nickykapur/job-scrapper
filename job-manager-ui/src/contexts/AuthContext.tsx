@@ -14,6 +14,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (username: string, password: string) => Promise<void>;
   register: (username: string, email: string, password: string, fullName?: string) => Promise<void>;
+  finalizeAuth: () => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   refreshPreferences: () => Promise<void>;
@@ -90,18 +91,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const register = async (username: string, email: string, password: string, fullName?: string) => {
     try {
-      const response = await authService.register(username, email, password, fullName);
-      setUser(response.user);
-
-      // Load preferences after registration
-      const prefs = await authService.getPreferences();
-      setPreferences(prefs);
-
-      toast.success(`Welcome, ${response.user.username}!`);
+      // Store token but do NOT set user state yet — the RegisterPage needs to show
+      // step 2 (onboarding) before AppRouter redirects away.
+      await authService.register(username, email, password, fullName);
     } catch (error: any) {
       const message = error.response?.data?.detail || 'Registration failed';
       toast.error(message);
       throw error;
+    }
+  };
+
+  // Called by RegisterPage after onboarding step 2 is complete.
+  // Sets user state which triggers AppRouter to redirect to the dashboard.
+  const finalizeAuth = async () => {
+    try {
+      const currentUser = await authService.getCurrentUser();
+      setUser(currentUser);
+      const prefs = await authService.getPreferences();
+      setPreferences(prefs);
+      toast.success(`Welcome, ${currentUser.username}!`);
+    } catch (error) {
+      console.error('finalizeAuth failed:', error);
     }
   };
 
@@ -159,6 +169,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading,
     login,
     register,
+    finalizeAuth,
     logout,
     refreshUser,
     refreshPreferences,

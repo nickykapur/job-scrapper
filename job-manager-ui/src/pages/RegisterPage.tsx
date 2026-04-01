@@ -103,7 +103,7 @@ const fadeUp = (delay = 0) => ({
 
 const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
-  const { register, isLoading, refreshPreferences, user } = useAuth();
+  const { register, finalizeAuth, isLoading, refreshPreferences, user } = useAuth();
 
   // Step 1 state
   const [step, setStep] = useState<1 | 2>(1);
@@ -196,22 +196,22 @@ const RegisterPage: React.FC = () => {
   ].filter(kw => !selectedKeywords.includes(kw));
 
   const handleFinish = async () => {
-    if (selectedTypes.length > 0 || selectedKeywords.length > 0 || selectedLevels.length > 0) {
-      setIsSavingPrefs(true);
-      try {
+    setIsSavingPrefs(true);
+    try {
+      if (selectedTypes.length > 0 || selectedKeywords.length > 0 || selectedLevels.length > 0) {
         await authService.updatePreferences({
           ...(selectedTypes.length    > 0 && { job_types:         selectedTypes }),
           ...(selectedKeywords.length > 0 && { keywords:          selectedKeywords }),
           ...(selectedLevels.length   > 0 && { experience_levels: selectedLevels }),
         });
-        await refreshPreferences();
-      } catch {
-        // silently ignore — user can set prefs later in settings
-      } finally {
-        setIsSavingPrefs(false);
       }
+    } catch {
+      // silently ignore — user can set prefs later in settings
+    } finally {
+      setIsSavingPrefs(false);
     }
-    navigate('/');
+    // Set user state now — AppRouter will redirect to dashboard
+    await finalizeAuth();
   };
 
   // ── Loading screen ───────────────────────────────────────────────────────
@@ -592,7 +592,7 @@ const RegisterPage: React.FC = () => {
                 </Button>
                 <button
                   type="button"
-                  onClick={() => navigate('/')}
+                  onClick={finalizeAuth}
                   className="text-sm text-muted-foreground hover:text-foreground text-center py-1 transition-colors"
                 >
                   Skip for now — I'll set this up later
