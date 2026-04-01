@@ -10,6 +10,7 @@ import { Loader2 } from 'lucide-react';
 import App from './App';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import LandingPage from './pages/LandingPage';
 // import SettingsPage from './pages/SettingsPage'; // Temporarily disabled - MUI migration pending
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -37,13 +38,15 @@ const AppRouter: React.FC = () => {
         element={isAuthenticated ? <Navigate to="/" replace /> : <RegisterPage />}
       />
 
-      {/* Protected routes */}
+      {/* Home: landing page for guests, dashboard for authenticated users */}
       <Route
         path="/"
         element={
-          <ProtectedRoute>
-            <App />
-          </ProtectedRoute>
+          isAuthenticated ? (
+            <ProtectedRoute><App /></ProtectedRoute>
+          ) : (
+            <LandingPage />
+          )
         }
       />
       {/* Temporarily disabled - MUI migration pending
