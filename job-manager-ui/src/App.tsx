@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import {
-  Menu,
   Moon,
   Sun,
   RefreshCw,
@@ -18,7 +17,6 @@ import {
   LogOut,
   User,
   BarChart3,
-  X,
   Trophy,
   Users,
   Activity,
@@ -56,7 +54,6 @@ const App: React.FC = () => {
   const [jobs, setJobs] = useState<Record<string, Job>>({});
   const [updatingJobs, setUpdatingJobs] = useState<Set<string>>(new Set());
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const [localRejectedCount, setLocalRejectedCount] = useState(0);
   const [currentTab, setCurrentTab] = useState<'dashboard' | 'training' | 'system-design' | 'my-analytics' | 'analytics' | 'country-analytics' | 'rewards' | 'user-management' | 'interview-tracker' | 'monitoring' | 'user-behaviour'>('dashboard');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -125,7 +122,6 @@ const App: React.FC = () => {
     }
   };
 
-  const toggleDrawer = () => setDrawerOpen(!drawerOpen);
 
   const JOBS_CACHE_KEY = 'job_tracker_jobs_cache';
   const JOBS_CACHE_TS_KEY = 'job_tracker_jobs_cache_ts';
@@ -247,7 +243,6 @@ const App: React.FC = () => {
   const handleTabChange = useCallback((tab: typeof currentTab) => {
     setCurrentTab(tab);
     track('page_view', { page: tab });
-    if (isMobile) setDrawerOpen(false);
   }, [track, isMobile]);
 
   const handleLogout = async () => {
@@ -549,35 +544,46 @@ const App: React.FC = () => {
         </aside>
       )}
 
-      {/* Sidebar - Mobile */}
-      {isMobile && drawerOpen && (
-        <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setDrawerOpen(false)} />
-          <aside className="absolute left-0 top-0 bottom-0 w-64 bg-card border-r">
-            <div className="absolute right-4 top-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setDrawerOpen(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            {sidebarContent}
-          </aside>
-        </div>
-      )}
+      {/* Mobile Bottom Navigation — Instagram style */}
+      {isMobile && (() => {
+        const navItems: Array<{ tab: typeof currentTab | '_settings'; label: string; icon: React.ElementType; adminOnly?: boolean; softwareOnly?: boolean }> = [
+          { tab: 'dashboard',         label: 'Jobs',       icon: LayoutDashboard },
+          { tab: 'my-analytics',      label: 'Analytics',  icon: BarChart3 },
+          { tab: 'rewards',           label: 'Rewards',    icon: Trophy },
+          { tab: 'interview-tracker', label: 'Interviews', icon: Bookmark },
+          ...(hasSoftwareAccess ? [{ tab: 'training' as typeof currentTab, label: 'Training', icon: GraduationCap, softwareOnly: true }] : []),
+          ...(hasAdminAccess ? [
+            { tab: 'user-management' as typeof currentTab, label: 'Users',   icon: Users,    adminOnly: true },
+            { tab: 'monitoring'      as typeof currentTab, label: 'Monitor', icon: Activity, adminOnly: true },
+          ] : []),
+          { tab: '_settings', label: 'Settings', icon: Settings },
+        ];
+
+        return (
+          <nav className="fixed bottom-0 left-0 right-0 z-40 bg-card border-t flex items-stretch h-16 overflow-x-auto">
+            {navItems.map(({ tab, label, icon: Icon }) => {
+              const active = tab !== '_settings' && currentTab === tab;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => tab === '_settings' ? navigate('/settings') : handleTabChange(tab as typeof currentTab)}
+                  className={`flex-1 min-w-[60px] flex flex-col items-center justify-center gap-0.5 transition-colors
+                    ${active ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  <Icon className={`h-5 w-5 ${active ? 'stroke-[2.5px]' : 'stroke-[1.5px]'}`} />
+                  <span className="text-[10px] font-medium leading-none">{label}</span>
+                </button>
+              );
+            })}
+          </nav>
+        );
+      })()}
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <header className="border-b bg-card px-6 py-4">
           <div className="flex items-center justify-between">
-            {isMobile && (
-              <Button variant="ghost" size="icon" onClick={toggleDrawer}>
-                <Menu className="h-5 w-5" />
-              </Button>
-            )}
 
             <div className="flex-1">
               <h2 className="text-lg font-bold">
@@ -631,7 +637,7 @@ const App: React.FC = () => {
 
         {/* Content Area */}
         <main className="flex-1 overflow-auto">
-          <div className="container mx-auto px-6 py-6">
+          <div className={`container mx-auto px-6 py-6 ${isMobile ? 'pb-20' : ''}`}>
             {currentTab === 'dashboard' && (
               <>
                 <StatsCards stats={stats} />

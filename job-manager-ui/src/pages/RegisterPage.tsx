@@ -11,6 +11,16 @@ import { Input } from '@/components/ui/input';
 import { useAuth } from '../contexts/AuthContext';
 import authService from '../services/authService';
 
+// ── Experience levels (mirrors SettingsPage + DB values) ─────────────────────
+
+const EXPERIENCE_LEVELS = [
+  { id: 'entry',     label: 'Entry',     desc: 'Internships, graduate roles' },
+  { id: 'junior',    label: 'Junior',    desc: '0–2 years' },
+  { id: 'mid',       label: 'Mid',       desc: '2–5 years' },
+  { id: 'senior',    label: 'Senior',    desc: '5+ years' },
+  { id: 'executive', label: 'Executive', desc: 'Director / VP / C-suite' },
+] as const;
+
 // ── Job type definitions ─────────────────────────────────────────────────────
 
 const JOB_TYPES = [
@@ -106,6 +116,7 @@ const RegisterPage: React.FC = () => {
 
   // Step 2 state
   const [selectedTypes, setSelectedTypes]       = useState<string[]>([]);
+  const [selectedLevels, setSelectedLevels]     = useState<string[]>([]);
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
   const [customInput, setCustomInput]           = useState('');
   const [isSavingPrefs, setIsSavingPrefs]       = useState(false);
@@ -155,6 +166,12 @@ const RegisterPage: React.FC = () => {
     );
   };
 
+  const toggleLevel = (id: string) => {
+    setSelectedLevels(prev =>
+      prev.includes(id) ? prev.filter(l => l !== id) : [...prev, id]
+    );
+  };
+
   const toggleKeyword = (kw: string) => {
     setSelectedKeywords(prev =>
       prev.includes(kw) ? prev.filter(k => k !== kw) : [...prev, kw]
@@ -179,12 +196,13 @@ const RegisterPage: React.FC = () => {
   ].filter(kw => !selectedKeywords.includes(kw));
 
   const handleFinish = async () => {
-    if (selectedTypes.length > 0 || selectedKeywords.length > 0) {
+    if (selectedTypes.length > 0 || selectedKeywords.length > 0 || selectedLevels.length > 0) {
       setIsSavingPrefs(true);
       try {
         await authService.updatePreferences({
-          ...(selectedTypes.length    > 0 && { job_types: selectedTypes }),
-          ...(selectedKeywords.length > 0 && { keywords:  selectedKeywords }),
+          ...(selectedTypes.length    > 0 && { job_types:         selectedTypes }),
+          ...(selectedKeywords.length > 0 && { keywords:          selectedKeywords }),
+          ...(selectedLevels.length   > 0 && { experience_levels: selectedLevels }),
         });
         await refreshPreferences();
       } catch {
@@ -438,6 +456,36 @@ const RegisterPage: React.FC = () => {
                 })}
               </div>
 
+              {/* Experience level chips */}
+              <div className="mb-6">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                  Experience level
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {EXPERIENCE_LEVELS.map(({ id, label, desc }) => {
+                    const selected = selectedLevels.includes(id);
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => toggleLevel(id)}
+                        className={`flex flex-col rounded-xl border px-3 py-2 text-left transition-all
+                          ${selected
+                            ? 'bg-primary/10 border-primary text-primary shadow-sm'
+                            : 'bg-muted/30 border-border text-muted-foreground hover:border-primary/50 hover:text-foreground'
+                          }`}
+                      >
+                        <span className="text-xs font-semibold flex items-center gap-1">
+                          {label}
+                          {selected && <Check className="h-3 w-3" />}
+                        </span>
+                        <span className="text-[10px] opacity-60 mt-0.5">{desc}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* Keyword suggestions (appear when types selected) */}
               <AnimatePresence>
                 {suggestions.length > 0 && (
@@ -538,7 +586,7 @@ const RegisterPage: React.FC = () => {
                 >
                   {isSavingPrefs
                     ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</>
-                    : selectedTypes.length > 0 || selectedKeywords.length > 0
+                    : selectedTypes.length > 0 || selectedKeywords.length > 0 || selectedLevels.length > 0
                       ? 'Get started →'
                       : 'Go to dashboard →'}
                 </Button>

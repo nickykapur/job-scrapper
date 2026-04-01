@@ -2673,6 +2673,33 @@ async def queue_status_stream(token: str = ""):
     )
 
 
+@app.post("/api/admin/test-slack")
+async def test_slack(current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Fire a test Slack message and return the result synchronously (admin only)"""
+    if not current_user.get('is_admin'):
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    import requests as req_lib
+    webhook_url = os.environ.get("SLACK_WEBHOOK_URL", "")
+    if not webhook_url:
+        return {"ok": False, "error": "SLACK_WEBHOOK_URL env var is not set on Railway"}
+
+    try:
+        resp = req_lib.post(
+            webhook_url,
+            json={"text": "🔔 Test notification from JobHunt — Slack is working!"},
+            timeout=8,
+        )
+        return {
+            "ok": resp.status_code == 200,
+            "status_code": resp.status_code,
+            "slack_response": resp.text[:300],
+            "webhook_url_set": True,
+        }
+    except Exception as exc:
+        return {"ok": False, "error": str(exc), "webhook_url_set": True}
+
+
 @app.get("/api/admin/monitoring")
 async def get_monitoring(current_user: Dict[str, Any] = Depends(get_current_user)):
     """Get GitHub Actions pipeline status, DB stats, and Sentry info"""
