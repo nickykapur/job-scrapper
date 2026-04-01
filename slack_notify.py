@@ -1,12 +1,9 @@
 """
 Slack notifications for JobHunt admin monitoring.
-
-Usage: set SLACK_WEBHOOK_URL env var to your Slack Incoming Webhook URL.
-All functions are fire-and-forget — errors are logged but never raised.
+Set SLACK_WEBHOOK_URL env var to your Slack Incoming Webhook URL.
 """
 
 import os
-import asyncio
 import logging
 import requests
 from datetime import datetime, timezone
@@ -20,50 +17,40 @@ def _now_str() -> str:
     return datetime.now(timezone.utc).strftime("%d %b %Y · %H:%M UTC")
 
 
-async def _send(payload: dict) -> None:
-    """Post payload to Slack webhook in a thread — does not block the event loop."""
-    if not SLACK_WEBHOOK_URL:
+def _send(payload: dict) -> None:
+    """Post payload to Slack webhook synchronously. Errors are logged, never raised."""
+    url = os.environ.get("SLACK_WEBHOOK_URL", "")
+    if not url:
+        logger.warning("SLACK_WEBHOOK_URL not set — skipping notification")
         return
     try:
-        await asyncio.to_thread(
-            requests.post,
-            SLACK_WEBHOOK_URL,
-            json=payload,
-            timeout=5,
-        )
+        response = requests.post(url, json=payload, timeout=5)
+        if response.status_code != 200:
+            logger.warning("Slack returned %s: %s", response.status_code, response.text)
     except Exception as exc:
         logger.warning("Slack notification failed: %s", exc)
 
 
-# ── Public notification functions ────────────────────────────────────────────
-
-async def notify_login(username: str, display_name: str = "") -> None:
-    """Send a login alert to Slack."""
+def notify_login(username: str, display_name: str = "") -> None:
     name = display_name or username
-    await _send({
+    _send({
         "blocks": [
             {
                 "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": f"👋  *{name}* just logged in",
-                },
+                "text": {"type": "mrkdwn", "text": f"👋  *{name}* just logged in"},
             },
             {
                 "type": "context",
-                "elements": [
-                    {"type": "mrkdwn", "text": f"🕐  {_now_str()}  ·  `{username}`"},
-                ],
+                "elements": [{"type": "mrkdwn", "text": f"🕐  {_now_str()}  ·  `{username}`"}],
             },
             {"type": "divider"},
         ]
     })
 
 
-async def notify_register(username: str, email: str, display_name: str = "") -> None:
-    """Send a new-user registration alert to Slack."""
+def notify_register(username: str, email: str, display_name: str = "") -> None:
     name = display_name or username
-    await _send({
+    _send({
         "blocks": [
             {
                 "type": "header",
@@ -79,32 +66,26 @@ async def notify_register(username: str, email: str, display_name: str = "") -> 
             },
             {
                 "type": "context",
-                "elements": [
-                    {"type": "mrkdwn", "text": f"🕐  {_now_str()}"},
-                ],
+                "elements": [{"type": "mrkdwn", "text": f"🕐  {_now_str()}"}],
             },
             {"type": "divider"},
         ]
     })
 
 
-async def notify_job_applied(
+def notify_job_applied(
     username: str,
     display_name: str,
     job_title: str,
     company: str,
     country: str,
 ) -> None:
-    """Send a job-applied alert to Slack."""
     name = display_name or username
-    await _send({
+    _send({
         "blocks": [
             {
                 "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": f"✅  *{name}* applied to a job!",
-                },
+                "text": {"type": "mrkdwn", "text": f"✅  *{name}* applied to a job!"},
             },
             {
                 "type": "section",
@@ -116,9 +97,7 @@ async def notify_job_applied(
             },
             {
                 "type": "context",
-                "elements": [
-                    {"type": "mrkdwn", "text": f"🕐  {_now_str()}  ·  `{username}`"},
-                ],
+                "elements": [{"type": "mrkdwn", "text": f"🕐  {_now_str()}  ·  `{username}`"}],
             },
             {"type": "divider"},
         ]

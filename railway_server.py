@@ -3048,7 +3048,7 @@ async def _store_activity_event(user_id: int, event_type: str, event_data: dict)
                         job_row = await conn.fetchrow(
                             "SELECT title, company, country FROM jobs WHERE id = $1", job_id
                         )
-                    await slack_notify.notify_job_applied(
+                    slack_notify.notify_job_applied(
                         username=user_row["username"] if user_row else f"user#{user_id}",
                         display_name=user_row["display_name"] if user_row else "",
                         job_title=job_row["title"] if job_row else "Unknown role",
