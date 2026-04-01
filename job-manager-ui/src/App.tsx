@@ -55,6 +55,7 @@ const App: React.FC = () => {
   const [updatingJobs, setUpdatingJobs] = useState<Set<string>>(new Set());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [localRejectedCount, setLocalRejectedCount] = useState(0);
+  const [showMobileProfile, setShowMobileProfile] = useState(false);
   const [currentTab, setCurrentTab] = useState<'dashboard' | 'training' | 'system-design' | 'my-analytics' | 'analytics' | 'country-analytics' | 'rewards' | 'user-management' | 'interview-tracker' | 'monitoring' | 'user-behaviour'>('dashboard');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -546,27 +547,28 @@ const App: React.FC = () => {
 
       {/* Mobile Bottom Navigation — Instagram style */}
       {isMobile && (() => {
-        const navItems: Array<{ tab: typeof currentTab | '_settings'; label: string; icon: React.ElementType; adminOnly?: boolean; softwareOnly?: boolean }> = [
+        const navItems: Array<{ tab: typeof currentTab | '_profile'; label: string; icon: React.ElementType }> = [
           { tab: 'dashboard',         label: 'Jobs',       icon: LayoutDashboard },
           { tab: 'my-analytics',      label: 'Analytics',  icon: BarChart3 },
           { tab: 'rewards',           label: 'Rewards',    icon: Trophy },
           { tab: 'interview-tracker', label: 'Interviews', icon: Bookmark },
-          ...(hasSoftwareAccess ? [{ tab: 'training' as typeof currentTab, label: 'Training', icon: GraduationCap, softwareOnly: true }] : []),
+          ...(hasSoftwareAccess ? [{ tab: 'training' as typeof currentTab, label: 'Training', icon: GraduationCap }] : []),
           ...(hasAdminAccess ? [
-            { tab: 'user-management' as typeof currentTab, label: 'Users',   icon: Users,    adminOnly: true },
-            { tab: 'monitoring'      as typeof currentTab, label: 'Monitor', icon: Activity, adminOnly: true },
+            { tab: 'user-management' as typeof currentTab, label: 'Users',   icon: Users },
+            { tab: 'monitoring'      as typeof currentTab, label: 'Monitor', icon: Activity },
           ] : []),
-          { tab: '_settings', label: 'Settings', icon: Settings },
+          { tab: '_profile', label: 'Profile', icon: User },
         ];
 
         return (
           <nav className="fixed bottom-0 left-0 right-0 z-40 bg-card border-t flex items-stretch h-16 overflow-x-auto">
             {navItems.map(({ tab, label, icon: Icon }) => {
-              const active = tab !== '_settings' && currentTab === tab;
+              const active = tab !== '_profile' && currentTab === tab;
+              const isProfile = tab === '_profile';
               return (
                 <button
                   key={tab}
-                  onClick={() => tab === '_settings' ? navigate('/settings') : handleTabChange(tab as typeof currentTab)}
+                  onClick={() => isProfile ? setShowMobileProfile(true) : handleTabChange(tab as typeof currentTab)}
                   className={`flex-1 min-w-[60px] flex flex-col items-center justify-center gap-0.5 transition-colors
                     ${active ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
                 >
@@ -578,6 +580,61 @@ const App: React.FC = () => {
           </nav>
         );
       })()}
+
+      {/* Mobile Profile Sheet */}
+      {isMobile && showMobileProfile && (
+        <div className="fixed inset-0 z-50 flex flex-col justify-end">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowMobileProfile(false)}
+          />
+          {/* Sheet */}
+          <div className="relative bg-card rounded-t-2xl border-t border-border pb-safe overflow-hidden">
+            {/* Handle */}
+            <div className="flex justify-center pt-3 pb-1">
+              <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+            </div>
+
+            {/* User info */}
+            <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
+              <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center shrink-0">
+                <User className="w-6 h-6 text-primary-foreground" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-semibold truncate">{user?.full_name || user?.username}</p>
+                <p className="text-sm text-muted-foreground truncate">{user?.email}</p>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="px-4 py-3 space-y-1">
+              <button
+                onClick={toggleDarkMode}
+                className="w-full flex items-center justify-between px-3 py-3 rounded-xl hover:bg-muted/60 transition-colors"
+              >
+                <span className="flex items-center gap-3 text-sm font-medium">
+                  {darkMode
+                    ? <Sun className="h-4 w-4 text-muted-foreground" />
+                    : <Moon className="h-4 w-4 text-muted-foreground" />}
+                  {darkMode ? 'Light mode' : 'Dark mode'}
+                </span>
+              </button>
+
+              <button
+                onClick={async () => { setShowMobileProfile(false); await handleLogout(); }}
+                className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-destructive hover:bg-destructive/10 transition-colors text-sm font-medium"
+              >
+                <LogOut className="h-4 w-4" />
+                Log out
+              </button>
+            </div>
+
+            {/* Safe area spacer for phones with home indicator */}
+            <div className="h-6" />
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
