@@ -179,6 +179,7 @@ export const jobApi = {
 
   // Admin: Get monitoring data (GitHub Actions, DB stats, Sentry)
   getMonitoring: async (): Promise<any> => (await api.get('/api/admin/monitoring')).data,
+  testSlack: async (): Promise<any> => (await api.post('/api/admin/test-slack')).data,
 
   // Admin: Get all users with country breakdown
   getUserCountries: async (): Promise<any> => (await api.get('/api/admin/user-countries')).data,

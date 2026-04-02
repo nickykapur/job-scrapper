@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Activity, RefreshCw, ExternalLink, AlertCircle, Database, Trash2, Timer, Zap, CheckCircle, XCircle, Clock, Loader2 } from 'lucide-react';
+import { Activity, RefreshCw, ExternalLink, AlertCircle, Database, Trash2, Timer, Zap, CheckCircle, XCircle, Clock, Loader2, Bell } from 'lucide-react';
 import { jobApi } from '../services/api';
 
 interface WorkflowRun {
@@ -194,6 +194,8 @@ export const MonitoringPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [cleaningUp, setCleaningUp] = useState<string | null>(null);
   const [cleanupResult, setCleanupResult] = useState<Record<string, number>>({});
+  const [slackTesting, setSlackTesting] = useState(false);
+  const [slackResult, setSlackResult] = useState<{ ok: boolean; status_code?: number; slack_response?: string; error?: string; webhook_url_set?: boolean } | null>(null);
   const [queue, setQueue] = useState<QueueStatus | null>(null);
   const [queueConnected, setQueueConnected] = useState(false);
 
@@ -243,6 +245,19 @@ export const MonitoringPage: React.FC = () => {
       alert(`Cleanup failed${status}: ${detail}`);
     } finally {
       setCleaningUp(null);
+    }
+  };
+
+  const handleTestSlack = async () => {
+    setSlackTesting(true);
+    setSlackResult(null);
+    try {
+      const result = await jobApi.testSlack();
+      setSlackResult(result);
+    } catch (err: any) {
+      setSlackResult({ ok: false, error: err.response?.data?.detail || err.message || 'Request failed' });
+    } finally {
+      setSlackTesting(false);
     }
   };
 
@@ -736,6 +751,63 @@ export const MonitoringPage: React.FC = () => {
           )}
         </CardContent>
       </Card>
+      {/* Slack diagnostics */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bell className="h-5 w-5" />
+            Slack Notifications
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Fires a real test message to your Slack webhook and shows the exact response.
+            Use this to confirm <code className="text-xs bg-muted px-1 py-0.5 rounded">SLACK_WEBHOOK_URL</code> is set and working on Railway.
+          </p>
+
+          <Button
+            onClick={handleTestSlack}
+            disabled={slackTesting}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            {slackTesting
+              ? <><Loader2 className="h-4 w-4 animate-spin" />Sending…</>
+              : <><Bell className="h-4 w-4" />Send test notification</>}
+          </Button>
+
+          {slackResult && (
+            <div className={`rounded-lg border p-4 text-sm space-y-2 ${slackResult.ok ? 'border-green-500/40 bg-green-500/5' : 'border-red-500/40 bg-red-500/5'}`}>
+              <div className="flex items-center gap-2 font-medium">
+                {slackResult.ok
+                  ? <><CheckCircle className="h-4 w-4 text-green-500" /><span className="text-green-600">Notification sent — check your Slack channel</span></>
+                  : <><XCircle className="h-4 w-4 text-red-500" /><span className="text-red-600">Notification failed</span></>}
+              </div>
+
+              {!slackResult.ok && !slackResult.webhook_url_set && (
+                <p className="text-muted-foreground">
+                  <strong>SLACK_WEBHOOK_URL</strong> is not set as a Railway environment variable.
+                  Add it in Railway → your service → Variables.
+                </p>
+              )}
+
+              {slackResult.status_code && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">HTTP {slackResult.status_code}</span>
+                  {slackResult.slack_response && (
+                    <span className="font-mono text-xs">{slackResult.slack_response}</span>
+                  )}
+                </div>
+              )}
+
+              {slackResult.error && (
+                <p className="text-red-500 text-xs font-mono">{slackResult.error}</p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
     </div>
   );
 };
