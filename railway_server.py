@@ -4,7 +4,7 @@ Ultra-minimal LinkedIn Job Manager for Railway
 Just serves existing job database - no React build needed
 """
 
-from fastapi import FastAPI, HTTPException, Header, Depends
+from fastapi import FastAPI, HTTPException, Header, Depends, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import HTMLResponse, FileResponse
@@ -3120,14 +3120,16 @@ async def _store_activity_event(user_id: int, event_type: str, event_data: dict)
 @app.post("/api/activity", status_code=202)
 async def track_activity(
     request: ActivityEventRequest,
+    background_tasks: BackgroundTasks,
     current_user: Dict[str, Any] = Depends(get_current_user),
 ):
     """Track a user activity event — fire and forget (202 Accepted)"""
-    asyncio.create_task(_store_activity_event(
+    background_tasks.add_task(
+        _store_activity_event,
         current_user.get('user_id'),
         request.event_type,
         request.event_data or {}
-    ))
+    )
     return {"accepted": True}
 
 @app.get("/api/admin/activity")
