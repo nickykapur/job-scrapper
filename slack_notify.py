@@ -22,31 +22,32 @@ def _now_str() -> str:
     return datetime.now(timezone.utc).strftime("%d %b %Y · %H:%M UTC")
 
 
-def _send_sync(payload: dict) -> None:
+def _send_sync(payload: dict, label: str = "") -> None:
     """Blocking HTTP POST to Slack. Never raises."""
     url = os.environ.get("SLACK_WEBHOOK_URL", "")
     if not url:
-        logger.warning("SLACK_WEBHOOK_URL not set — skipping Slack notification")
+        logger.warning("SLACK_WEBHOOK_URL not set — skipping %s notification", label or "Slack")
         return
     try:
         resp = requests.post(url, json=payload, timeout=5)
         if resp.status_code != 200:
-            logger.warning("Slack returned %s: %s", resp.status_code, resp.text[:200])
+            logger.warning("Slack %s returned %s: %s", label, resp.status_code, resp.text[:300])
         else:
-            logger.info("Slack notification sent OK")
+            logger.info("Slack %s notification sent OK", label)
     except Exception as exc:
-        logger.warning("Slack notification failed: %s", exc)
+        logger.warning("Slack %s notification failed: %s", label, exc)
 
 
-def _send_in_thread(payload: dict) -> None:
+def _send_in_thread(payload: dict, label: str = "") -> None:
     """Fire-and-forget: runs _send_sync in a daemon thread so it never blocks callers."""
-    t = threading.Thread(target=_send_sync, args=(payload,), daemon=True)
+    t = threading.Thread(target=_send_sync, args=(payload, label), daemon=True)
     t.start()
 
 
-async def _send_async(payload: dict) -> None:
+async def _send_async(payload: dict, label: str = "") -> None:
     """Awaitable wrapper — runs _send_sync in the default thread-pool executor."""
-    await asyncio.get_event_loop().run_in_executor(None, _send_sync, payload)
+    loop = asyncio.get_running_loop()
+    await loop.run_in_executor(None, _send_sync, payload, label)
 
 
 # ── Sync helpers (login / register — called from sync context) ───────────────
@@ -54,6 +55,7 @@ async def _send_async(payload: dict) -> None:
 def notify_login(username: str, display_name: str = "") -> None:
     name = display_name or username
     _send_in_thread({
+        "text": f"👋 *{name}* just logged in  ·  `{username}`  ·  {_now_str()}",
         "blocks": [
             {
                 "type": "section",
@@ -65,12 +67,13 @@ def notify_login(username: str, display_name: str = "") -> None:
             },
             {"type": "divider"},
         ]
-    })
+    }, label="login")
 
 
 def notify_register(username: str, email: str, display_name: str = "") -> None:
     name = display_name or username
     _send_in_thread({
+        "text": f"🎉 New user registered: *{name}* (`{username}`)  ·  {email}  ·  {_now_str()}",
         "blocks": [
             {
                 "type": "header",
@@ -90,7 +93,7 @@ def notify_register(username: str, email: str, display_name: str = "") -> None:
             },
             {"type": "divider"},
         ]
-    })
+    }, label="register")
 
 
 # ── Async helper (job applied — called from async context) ───────────────────
@@ -104,6 +107,7 @@ async def notify_job_applied_async(
 ) -> None:
     name = display_name or username
     await _send_async({
+        "text": f"✅ *{name}* applied to *{job_title}* at {company} ({country})  ·  {_now_str()}",
         "blocks": [
             {
                 "type": "section",
@@ -123,4 +127,34 @@ async def notify_job_applied_async(
             },
             {"type": "divider"},
         ]
-    })
+    }, label="job-applied")
+
+
+async def notify_job_rejected_async(
+    username: str,
+    display_name: str,
+    job_title: str,
+    company: str,
+) -> None:
+    name = display_name or username
+    await _send_async({
+        "text": f"❌ *{name}* rejected *{job_title}* at {company}  ·  {_now_str()}",
+        "blocks": [
+            {
+                "type": "section",
+                "text": {"type": "mrkdwn", "text": f"❌  *{name}* skipped a job"},
+            },
+            {
+                "type": "section",
+                "fields": [
+                    {"type": "mrkdwn", "text": f"*Role*\n{job_title}"},
+                    {"type": "mrkdwn", "text": f"*Company*\n{company}"},
+                ],
+            },
+            {
+                "type": "context",
+                "elements": [{"type": "mrkdwn", "text": f"🕐  {_now_str()}  ·  `{username}`"}],
+            },
+            {"type": "divider"},
+        ]
+    }, label="job-rejected")

@@ -118,11 +118,14 @@ async def register(request: RegisterRequest):
     }
 
     if slack_notify:
-        slack_notify.notify_register(
-            username=user['username'],
-            email=user['email'],
-            display_name=user.get('full_name') or '',
-        )
+        try:
+            slack_notify.notify_register(
+                username=user['username'],
+                email=user['email'],
+                display_name=user.get('full_name') or '',
+            )
+        except Exception as e:
+            print(f"[slack] notify_register failed: {e}")
 
     return generate_token_response(user_data)
 
@@ -156,10 +159,13 @@ async def login(request: LoginRequest):
     }
 
     if slack_notify:
-        slack_notify.notify_login(
-            username=user['username'],
-            display_name=user.get('full_name') or '',
-        )
+        try:
+            slack_notify.notify_login(
+                username=user['username'],
+                display_name=user.get('full_name') or '',
+            )
+        except Exception as e:
+            print(f"[slack] notify_login failed: {e}")
 
     return generate_token_response(user_data)
 

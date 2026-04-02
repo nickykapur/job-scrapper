@@ -3055,45 +3055,67 @@ async def update_user_job_types(
 
 async def _store_activity_event(user_id: int, event_type: str, event_data: dict):
     """Background task to store activity event without blocking the response"""
+    action = event_data.get("action") if event_type == "job_action" else None
+
+    # ── 1. Persist to DB (best-effort — never blocks Slack) ──────────────────
+    user_row = None
+    job_row = None
     try:
         conn = await db.get_connection()
-        try:
-            await conn.execute(
-                "INSERT INTO user_activity_events (user_id, event_type, event_data) VALUES ($1, $2, $3::jsonb)",
-                user_id, event_type, json.dumps(event_data)
-            )
-
-            # Slack notification for job applied
-            if slack_notify and event_type == "job_action" and event_data.get("action") == "applied":
-                try:
+        if conn:
+            try:
+                await conn.execute(
+                    "INSERT INTO user_activity_events (user_id, event_type, event_data) VALUES ($1, $2, $3::jsonb)",
+                    user_id, event_type, json.dumps(event_data)
+                )
+                # Fetch user + job info for Slack (while connection is open)
+                if slack_notify and action in ("applied", "rejected"):
                     user_row = await conn.fetchrow(
                         "SELECT username, COALESCE(full_name, username) AS display_name FROM users WHERE id = $1",
                         user_id,
                     )
                     job_id = event_data.get("job_id")
-                    job_row = None
                     if job_id:
                         try:
-                            job_id = int(job_id)  # frontend sends string IDs
+                            job_id = int(job_id)
                         except (TypeError, ValueError):
                             pass
                         job_row = await conn.fetchrow(
                             "SELECT title, company, country FROM jobs WHERE id = $1", job_id
                         )
-                    await slack_notify.notify_job_applied_async(
-                        username=user_row["username"] if user_row else f"user#{user_id}",
-                        display_name=user_row["display_name"] if user_row else "",
-                        job_title=job_row["title"] if job_row else "Unknown role",
-                        company=job_row["company"] if job_row else "Unknown company",
-                        country=job_row["country"] if job_row else "Unknown country",
-                    )
-                except Exception as slack_err:
-                    logger.warning("Slack job-applied notification failed: %s", slack_err)
-
-        finally:
-            await db._release(conn)
+            finally:
+                await db._release(conn)
     except Exception as e:
         logger.warning("Failed to store activity event: %s", e)
+
+    # ── 2. Slack notifications (independent of DB success) ───────────────────
+    if not slack_notify or action not in ("applied", "rejected"):
+        return
+
+    username = user_row["username"] if user_row else f"user#{user_id}"
+    display_name = user_row["display_name"] if user_row else username
+    job_title = job_row["title"] if job_row else "Unknown role"
+    company   = job_row["company"] if job_row else "Unknown company"
+    country   = job_row["country"] if job_row else "Unknown country"
+
+    try:
+        if action == "applied":
+            await slack_notify.notify_job_applied_async(
+                username=username,
+                display_name=display_name,
+                job_title=job_title,
+                company=company,
+                country=country,
+            )
+        else:
+            await slack_notify.notify_job_rejected_async(
+                username=username,
+                display_name=display_name,
+                job_title=job_title,
+                company=company,
+            )
+    except Exception as slack_err:
+        logger.warning("Slack job-%s notification failed: %s", action, slack_err)
 
 @app.post("/api/activity", status_code=202)
 async def track_activity(
