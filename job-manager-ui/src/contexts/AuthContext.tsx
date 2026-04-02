@@ -49,24 +49,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const token = authService.getToken();
 
       if (storedUser && token) {
-        try {
-          // Verify token is still valid by fetching user
-          const currentUser = await authService.getCurrentUser();
-          setUser(currentUser);
+        // Show the app immediately using cached data — no spinner for returning users
+        setUser(storedUser);
+        setIsLoading(false);
 
-          // Load preferences
-          const prefs = await authService.getPreferences();
+        // Verify token + refresh data in the background
+        try {
+          const [currentUser, prefs] = await Promise.all([
+            authService.getCurrentUser(),
+            authService.getPreferences(),
+          ]);
+          setUser(currentUser);
           setPreferences(prefs);
         } catch (error) {
-          console.error('Token expired or invalid:', error);
-          // Clear invalid token
+          // Token expired — clear and send to landing page
           localStorage.removeItem('access_token');
           localStorage.removeItem('user');
           setUser(null);
         }
+      } else {
+        setIsLoading(false);
       }
-
-      setIsLoading(false);
     };
 
     initAuth();
