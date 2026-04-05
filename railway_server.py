@@ -2684,20 +2684,43 @@ async def test_slack(current_user: Dict[str, Any] = Depends(get_current_user)):
     if not webhook_url:
         return {"ok": False, "error": "SLACK_WEBHOOK_URL env var is not set on Railway"}
 
+    result = {
+        "webhook_url_set": True,
+        "slack_notify_loaded": slack_notify is not None,
+        "direct_test": None,
+        "notify_async_test": None,
+    }
+
+    # Test 1: direct webhook call
     try:
         resp = req_lib.post(
             webhook_url,
             json={"text": "🔔 Test notification from JobHunt — Slack is working!"},
             timeout=8,
         )
-        return {
-            "ok": resp.status_code == 200,
-            "status_code": resp.status_code,
-            "slack_response": resp.text[:300],
-            "webhook_url_set": True,
-        }
+        result["direct_test"] = {"ok": resp.status_code == 200, "status_code": resp.status_code, "slack_response": resp.text[:200]}
+        result["ok"] = resp.status_code == 200
     except Exception as exc:
-        return {"ok": False, "error": str(exc), "webhook_url_set": True}
+        result["direct_test"] = {"ok": False, "error": str(exc)}
+        result["ok"] = False
+
+    # Test 2: call notify_job_applied_async (the actual job notification path)
+    if slack_notify:
+        try:
+            await slack_notify.notify_job_applied_async(
+                username="test_user",
+                display_name="Test User",
+                job_title="Test Role",
+                company="Test Co",
+                country="Ireland",
+            )
+            result["notify_async_test"] = {"ok": True}
+        except Exception as exc:
+            result["notify_async_test"] = {"ok": False, "error": str(exc)}
+    else:
+        result["notify_async_test"] = {"ok": False, "error": "slack_notify module is None"}
+
+    return result
 
 
 @app.get("/api/admin/monitoring")

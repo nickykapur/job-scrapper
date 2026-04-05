@@ -96,6 +96,70 @@ def notify_register(username: str, email: str, display_name: str = "") -> None:
     }, label="register")
 
 
+# ── Sync helpers (job applied/rejected — called from background tasks) ────────
+
+def notify_job_applied(
+    username: str,
+    display_name: str,
+    job_title: str,
+    company: str,
+    country: str,
+) -> None:
+    name = display_name or username
+    _send_in_thread({
+        "text": f"✅ *{name}* applied to *{job_title}* at {company} ({country})  ·  {_now_str()}",
+        "blocks": [
+            {
+                "type": "section",
+                "text": {"type": "mrkdwn", "text": f"✅  *{name}* applied to a job!"},
+            },
+            {
+                "type": "section",
+                "fields": [
+                    {"type": "mrkdwn", "text": f"*Role*\n{job_title}"},
+                    {"type": "mrkdwn", "text": f"*Company*\n{company}"},
+                    {"type": "mrkdwn", "text": f"*Country*\n{country}"},
+                ],
+            },
+            {
+                "type": "context",
+                "elements": [{"type": "mrkdwn", "text": f"🕐  {_now_str()}  ·  `{username}`"}],
+            },
+            {"type": "divider"},
+        ]
+    }, label="job-applied")
+
+
+def notify_job_rejected(
+    username: str,
+    display_name: str,
+    job_title: str,
+    company: str,
+) -> None:
+    name = display_name or username
+    _send_in_thread({
+        "text": f"❌ *{name}* rejected *{job_title}* at {company}  ·  {_now_str()}",
+        "blocks": [
+            {
+                "type": "section",
+                "text": {"type": "mrkdwn", "text": f"❌  *{name}* skipped a job"},
+            },
+            {
+                "type": "section",
+                "fields": [
+                    {"type": "mrkdwn", "text": f"*Role*\n{job_title}"},
+                    {"type": "mrkdwn", "text": f"*Company*\n{company}"},
+                ],
+            },
+            {
+                "type": "context",
+                "elements": [{"type": "mrkdwn", "text": f"🕐  {_now_str()}  ·  `{username}`"}],
+            },
+            {"type": "divider"},
+        ]
+    }, label="job-rejected")
+
+
 # ── Async helper (job applied — called from async context) ───────────────────
 
 async def notify_job_applied_async(
