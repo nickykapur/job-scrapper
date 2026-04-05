@@ -2682,45 +2682,78 @@ async def test_slack(current_user: Dict[str, Any] = Depends(get_current_user)):
     import requests as req_lib
     webhook_url = os.environ.get("SLACK_WEBHOOK_URL", "")
     if not webhook_url:
-        return {"ok": False, "error": "SLACK_WEBHOOK_URL env var is not set on Railway"}
+        return {"ok": False, "error": "SLACK_WEBHOOK_URL env var is not set on Railway", "webhook_url_set": False}
 
-    result = {
-        "webhook_url_set": True,
-        "slack_notify_loaded": slack_notify is not None,
-        "direct_test": None,
-        "notify_async_test": None,
-    }
+    diag_parts = [f"module_loaded={slack_notify is not None}"]
 
-    # Test 1: direct webhook call
+    # Test 1: direct webhook call (simple text)
+    direct_ok = False
+    direct_status = None
+    direct_response = ""
     try:
         resp = req_lib.post(
             webhook_url,
             json={"text": "🔔 Test notification from JobHunt — Slack is working!"},
             timeout=8,
         )
-        result["direct_test"] = {"ok": resp.status_code == 200, "status_code": resp.status_code, "slack_response": resp.text[:200]}
-        result["ok"] = resp.status_code == 200
+        direct_ok = resp.status_code == 200
+        direct_status = resp.status_code
+        direct_response = resp.text[:100]
+        diag_parts.append(f"direct={direct_status}")
     except Exception as exc:
-        result["direct_test"] = {"ok": False, "error": str(exc)}
-        result["ok"] = False
+        diag_parts.append(f"direct=ERR:{exc}")
 
-    # Test 2: call notify_job_applied_async (the actual job notification path)
-    if slack_notify:
+    # Test 2: direct webhook call with blocks payload (same format as job notifications)
+    blocks_ok = False
+    try:
+        blocks_resp = req_lib.post(
+            webhook_url,
+            json={
+                "text": "✅ Test User applied to Test Role at Test Co (Ireland)",
+                "blocks": [
+                    {"type": "section", "text": {"type": "mrkdwn", "text": "✅  *Test User* applied to a job!"}},
+                    {"type": "section", "fields": [
+                        {"type": "mrkdwn", "text": "*Role*\nTest Role"},
+                        {"type": "mrkdwn", "text": "*Company*\nTest Co"},
+                        {"type": "mrkdwn", "text": "*Country*\nIreland"},
+                    ]},
+                    {"type": "context", "elements": [{"type": "mrkdwn", "text": "🕐  diagnostic test  ·  `test_user`"}]},
+                    {"type": "divider"},
+                ]
+            },
+            timeout=8,
+        )
+        blocks_ok = blocks_resp.status_code == 200
+        diag_parts.append(f"blocks={blocks_resp.status_code}:{blocks_resp.text[:50]}")
+    except Exception as exc:
+        diag_parts.append(f"blocks=ERR:{exc}")
+
+    # Test 3: notify_job_applied_async (the actual async code path)
+    notify_error = None
+    if slack_notify is None:
+        notify_error = "slack_notify module is None (import failed on Railway)"
+        diag_parts.append("notify_async=module_none")
+    else:
         try:
             await slack_notify.notify_job_applied_async(
                 username="test_user",
                 display_name="Test User",
-                job_title="Test Role",
+                job_title="Test Role via notify_async",
                 company="Test Co",
                 country="Ireland",
             )
-            result["notify_async_test"] = {"ok": True}
+            diag_parts.append("notify_async=ok")
         except Exception as exc:
-            result["notify_async_test"] = {"ok": False, "error": str(exc)}
-    else:
-        result["notify_async_test"] = {"ok": False, "error": "slack_notify module is None"}
+            notify_error = f"notify_async raised: {exc}"
+            diag_parts.append(f"notify_async=ERR:{exc}")
 
-    return result
+    return {
+        "ok": direct_ok,
+        "status_code": direct_status,
+        "slack_response": direct_response + " | " + " | ".join(diag_parts),
+        "webhook_url_set": True,
+        "error": notify_error,
+    }
 
 
 @app.get("/api/admin/monitoring")
