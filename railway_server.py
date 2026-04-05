@@ -3149,34 +3149,57 @@ async def _store_activity_event(user_id: int, event_type: str, event_data: dict)
     except Exception as e:
         logger.warning("Failed to store activity event: %s", e)
 
-    # ── 2. Slack notifications (independent of DB success) ───────────────────
-    logger.warning("Slack check: module_loaded=%s action=%s event_type=%s", slack_notify is not None, action, event_type)
-    if not slack_notify or action not in ("applied", "rejected"):
-        logger.warning("Slack skipped: module_loaded=%s action=%s", slack_notify is not None, action)
+    # ── 2. Slack notifications — same approach as the test button ────────────
+    if action not in ("applied", "rejected"):
         return
 
-    username = user_row["username"] if user_row else f"user#{user_id}"
+    webhook_url = os.environ.get("SLACK_WEBHOOK_URL", "")
+    if not webhook_url:
+        logger.warning("Slack skipped: SLACK_WEBHOOK_URL not set")
+        return
+
+    username     = user_row["username"] if user_row else f"user#{user_id}"
     display_name = user_row["display_name"] if user_row else username
-    job_title = job_row["title"] if job_row else "Unknown role"
-    company   = job_row["company"] if job_row else "Unknown company"
-    country   = job_row["country"] if job_row else "Unknown country"
+    job_title    = job_row["title"] if job_row else "Unknown role"
+    company      = job_row["company"] if job_row else "Unknown company"
+    country      = job_row["country"] if job_row else "Unknown country"
+    name         = display_name or username
+
+    if action == "applied":
+        payload = {
+            "text": f"✅ *{name}* applied to *{job_title}* at {company} ({country})",
+            "blocks": [
+                {"type": "section", "text": {"type": "mrkdwn", "text": f"✅  *{name}* applied to a job!"}},
+                {"type": "section", "fields": [
+                    {"type": "mrkdwn", "text": f"*Role*\n{job_title}"},
+                    {"type": "mrkdwn", "text": f"*Company*\n{company}"},
+                    {"type": "mrkdwn", "text": f"*Country*\n{country}"},
+                ]},
+                {"type": "context", "elements": [{"type": "mrkdwn", "text": f"🕐  `{username}`"}]},
+                {"type": "divider"},
+            ],
+        }
+    else:
+        payload = {
+            "text": f"❌ *{name}* skipped *{job_title}* at {company}",
+            "blocks": [
+                {"type": "section", "text": {"type": "mrkdwn", "text": f"❌  *{name}* skipped a job"}},
+                {"type": "section", "fields": [
+                    {"type": "mrkdwn", "text": f"*Role*\n{job_title}"},
+                    {"type": "mrkdwn", "text": f"*Company*\n{company}"},
+                ]},
+                {"type": "context", "elements": [{"type": "mrkdwn", "text": f"🕐  `{username}`"}]},
+                {"type": "divider"},
+            ],
+        }
 
     try:
-        if action == "applied":
-            await slack_notify.notify_job_applied_async(
-                username=username,
-                display_name=display_name,
-                job_title=job_title,
-                company=company,
-                country=country,
-            )
+        import requests as _req
+        resp = _req.post(webhook_url, json=payload, timeout=5)
+        if resp.status_code != 200:
+            logger.warning("Slack job-%s returned %s: %s", action, resp.status_code, resp.text[:200])
         else:
-            await slack_notify.notify_job_rejected_async(
-                username=username,
-                display_name=display_name,
-                job_title=job_title,
-                company=company,
-            )
+            logger.warning("Slack job-%s notification sent OK", action)
     except Exception as slack_err:
         logger.warning("Slack job-%s notification failed: %s", action, slack_err)
 
