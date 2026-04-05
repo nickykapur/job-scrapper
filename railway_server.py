@@ -31,10 +31,14 @@ logging.basicConfig(
 logger = logging.getLogger("job_scraper")
 
 try:
-    import slack_notify
-    logger.warning("slack_notify imported OK: %s", slack_notify.__file__)
+    import importlib.util as _ilu, os as _os
+    _sn_path = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "slack_notify.py")
+    _sn_spec = _ilu.spec_from_file_location("slack_notify", _sn_path)
+    slack_notify = _ilu.module_from_spec(_sn_spec)
+    _sn_spec.loader.exec_module(slack_notify)
+    logger.warning("slack_notify loaded OK from %s", _sn_path)
 except Exception as e:
-    logger.warning("slack_notify import FAILED (%s): %s — Slack notifications disabled", type(e).__name__, e)
+    logger.warning("slack_notify load FAILED (%s): %s — Slack notifications disabled", type(e).__name__, e)
     slack_notify = None
 
 # ── Sentry: errors + tracing + logs ─────────────────────────────────────────
