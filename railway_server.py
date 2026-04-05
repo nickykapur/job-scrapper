@@ -3130,19 +3130,15 @@ async def _store_activity_event(user_id: int, event_type: str, event_data: dict)
                     user_id, event_type, json.dumps(event_data)
                 )
                 # Fetch user + job info for Slack (while connection is open)
-                if slack_notify and action in ("applied", "rejected"):
+                if action in ("applied", "rejected"):
                     user_row = await conn.fetchrow(
                         "SELECT username, COALESCE(full_name, username) AS display_name FROM users WHERE id = $1",
                         user_id,
                     )
                     job_id = event_data.get("job_id")
                     if job_id:
-                        try:
-                            job_id = int(job_id)
-                        except (TypeError, ValueError):
-                            pass
                         job_row = await conn.fetchrow(
-                            "SELECT title, company, country FROM jobs WHERE id = $1", job_id
+                            "SELECT title, company, country FROM jobs WHERE id = $1", str(job_id)
                         )
             finally:
                 await db._release(conn)
