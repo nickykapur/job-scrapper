@@ -33,7 +33,7 @@ def _send_sync(payload: dict, label: str = "") -> None:
         if resp.status_code != 200:
             logger.warning("Slack %s returned %s: %s", label, resp.status_code, resp.text[:300])
         else:
-            logger.info("Slack %s notification sent OK", label)
+            logger.warning("Slack %s notification sent OK", label)
     except Exception as exc:
         logger.warning("Slack %s notification failed: %s", label, exc)
 

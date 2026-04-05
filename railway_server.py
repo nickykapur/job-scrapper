@@ -3145,7 +3145,9 @@ async def _store_activity_event(user_id: int, event_type: str, event_data: dict)
         logger.warning("Failed to store activity event: %s", e)
 
     # ── 2. Slack notifications (independent of DB success) ───────────────────
+    logger.warning("Slack check: module_loaded=%s action=%s event_type=%s", slack_notify is not None, action, event_type)
     if not slack_notify or action not in ("applied", "rejected"):
+        logger.warning("Slack skipped: module_loaded=%s action=%s", slack_notify is not None, action)
         return
 
     username = user_row["username"] if user_row else f"user#{user_id}"
