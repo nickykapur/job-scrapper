@@ -32,8 +32,9 @@ logger = logging.getLogger("job_scraper")
 
 try:
     import slack_notify
-except ImportError as e:
-    logger.warning("slack_notify import failed: %s — Slack notifications disabled", e)
+    logger.warning("slack_notify imported OK: %s", slack_notify.__file__)
+except Exception as e:
+    logger.warning("slack_notify import FAILED (%s): %s — Slack notifications disabled", type(e).__name__, e)
     slack_notify = None
 
 # ── Sentry: errors + tracing + logs ─────────────────────────────────────────
