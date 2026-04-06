@@ -8,7 +8,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Filter, Search, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import type { FilterState, Job } from '../types';
 
 interface FilterControlsProps {
@@ -16,21 +15,6 @@ interface FilterControlsProps {
   onFiltersChange: (filters: FilterState) => void;
   jobs: Record<string, Job>;
 }
-
-const JOB_TYPE_LABELS: Record<string, string> = {
-  finance: 'Finance',
-  accounting: 'Accounting',
-  financial_analysis: 'Financial Analysis',
-  software: 'Software',
-  hr: 'HR',
-  cybersecurity: 'Cybersecurity',
-  sales: 'Sales',
-  marketing: 'Marketing',
-  engineering: 'Engineering',
-  biotech: 'Biotech',
-  events: 'Events',
-  other: 'Other',
-};
 
 export const FilterControls: React.FC<FilterControlsProps> = ({
   filters,
@@ -48,18 +32,7 @@ export const FilterControls: React.FC<FilterControlsProps> = ({
     return Array.from(countrySet).sort();
   }, [jobs]);
 
-  // Auto-detect available job types from actual jobs (not applied/rejected)
-  const availableJobTypes = useMemo(() => {
-    const typeSet = new Set<string>();
-    Object.entries(jobs).forEach(([key, job]) => {
-      if (!key.startsWith('_') && job.job_type && job.job_type !== 'other' && !job.applied && !job.rejected) {
-        typeSet.add(job.job_type);
-      }
-    });
-    return Array.from(typeSet).sort();
-  }, [jobs]);
-
-  const hasIreland = Object.entries(jobs).some(
+const hasIreland = Object.entries(jobs).some(
     ([key, job]) => !key.startsWith('_') && job.country === 'Ireland' && !job.applied && !job.rejected
   );
 
@@ -90,32 +63,6 @@ export const FilterControls: React.FC<FilterControlsProps> = ({
             </button>
           )}
         </div>
-
-        {/* Job type chips — shown when at least one type exists */}
-        {availableJobTypes.length > 0 && (
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-muted-foreground">Job Type</label>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant={filters.jobType === 'all' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => onFiltersChange({ ...filters, jobType: 'all' })}
-              >
-                All
-              </Button>
-              {availableJobTypes.map((type) => (
-                <Button
-                  key={type}
-                  variant={filters.jobType === type ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => onFiltersChange({ ...filters, jobType: type })}
-                >
-                  {JOB_TYPE_LABELS[type] ?? type}
-                </Button>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Country filter */}
         <div className="space-y-2">
