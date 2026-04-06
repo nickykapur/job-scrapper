@@ -63,8 +63,6 @@ export const FilterControls: React.FC<FilterControlsProps> = ({
     ([key, job]) => !key.startsWith('_') && job.country === 'Ireland' && !job.applied && !job.rejected
   );
 
-  const hasMultipleJobTypes = availableJobTypes.length > 1;
-
   return (
     <Card className="mb-6">
       <CardContent className="p-6 space-y-4">
@@ -93,8 +91,8 @@ export const FilterControls: React.FC<FilterControlsProps> = ({
           )}
         </div>
 
-        {/* Job type chips — only shown when multiple types exist */}
-        {hasMultipleJobTypes && (
+        {/* Job type chips — shown when at least one type exists */}
+        {availableJobTypes.length > 0 && (
           <div className="space-y-2">
             <label className="text-sm font-medium text-muted-foreground">Job Type</label>
             <div className="flex flex-wrap gap-2">
