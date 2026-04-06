@@ -182,16 +182,7 @@ const App: React.FC = () => {
     return () => clearInterval(interval);
   }, [loadJobs]);
 
-  const handleApplyAndOpen = async (jobId: string, jobUrl: string) => {
-    // Open URL in background tab (doesn't steal focus)
-    const link = document.createElement('a');
-    link.href = jobUrl;
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
+  const handleMarkApplied = async (jobId: string) => {
     // OPTIMISTIC UI UPDATE - Update UI immediately for instant feedback
     setJobs(prev => ({
       ...prev,
@@ -719,7 +710,7 @@ const App: React.FC = () => {
                     <JobCard
                       key={id}
                       job={job}
-                      onApplyAndOpen={handleApplyAndOpen}
+                      onMarkApplied={handleMarkApplied}
                       onRejectJob={handleRejectJob}
                       onRefreshJobs={() => loadJobs(true)}
                       isUpdating={updatingJobs.has(id)}

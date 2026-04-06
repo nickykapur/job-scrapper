@@ -10,7 +10,7 @@ import toast from 'react-hot-toast';
 
 interface JobCardProps {
   job: Job;
-  onApplyAndOpen: (jobId: string, jobUrl: string) => void;
+  onMarkApplied: (jobId: string) => void;
   onRejectJob: (jobId: string) => void;
   onRefreshJobs?: () => void;
   isUpdating?: boolean;
@@ -18,12 +18,13 @@ interface JobCardProps {
 
 export const JobCard: React.FC<JobCardProps> = ({
   job,
-  onApplyAndOpen,
+  onMarkApplied,
   onRejectJob,
   onRefreshJobs,
   isUpdating = false,
 }) => {
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
+  const [pendingApply, setPendingApply] = useState(false);
   const extractedCountry = job.country || getCountryFromLocation(job.location);
 
   // Calculate how long ago the job was scraped
@@ -166,12 +167,23 @@ export const JobCard: React.FC<JobCardProps> = ({
 
         {/* Action Buttons */}
         <div>
-          {!job.applied && !job.rejected && (
+          {!job.applied && !job.rejected && !pendingApply && (
             <div className="space-y-3">
               <Button
                 className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold shadow-none hover:shadow-lg hover:shadow-blue-500/30 transition-all"
                 size="lg"
-                onClick={() => onApplyAndOpen(job.id, job.job_url)}
+                onClick={() => {
+                  // Open the job URL immediately
+                  const link = document.createElement('a');
+                  link.href = job.job_url;
+                  link.target = '_blank';
+                  link.rel = 'noopener noreferrer';
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                  // Show confirmation UI
+                  setPendingApply(true);
+                }}
               >
                 Apply Now
                 <ExternalLink className="ml-2 h-4 w-4" />
@@ -197,6 +209,33 @@ export const JobCard: React.FC<JobCardProps> = ({
                   <Building2 className="h-4 w-4" />
                 </Button>
               </div>
+            </div>
+          )}
+
+          {!job.applied && !job.rejected && pendingApply && (
+            <div className="space-y-3">
+              <p className="text-sm font-medium text-center text-muted-foreground">
+                Did you complete the application?
+              </p>
+              <Button
+                className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold"
+                size="lg"
+                onClick={() => {
+                  setPendingApply(false);
+                  onMarkApplied(job.id);
+                }}
+              >
+                <Check className="mr-2 h-4 w-4" />
+                Yes, I Applied!
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full font-medium"
+                size="lg"
+                onClick={() => setPendingApply(false)}
+              >
+                Not Yet
+              </Button>
             </div>
           )}
 
