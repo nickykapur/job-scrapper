@@ -74,6 +74,7 @@ const App: React.FC = () => {
     sort: 'newest',
     jobType: 'all',
     country: 'Ireland',  // Default to Ireland
+    keyword: '',
     quickApply: 'all',
   });
 
@@ -288,6 +289,14 @@ const App: React.FC = () => {
 
       // Job type filter
       if (filters.jobType !== 'all' && job.job_type !== filters.jobType) return;
+
+      // Keyword filter — matches title or company name
+      if (filters.keyword && filters.keyword.trim()) {
+        const kw = filters.keyword.toLowerCase();
+        const matchesTitle = job.title?.toLowerCase().includes(kw);
+        const matchesCompany = job.company?.toLowerCase().includes(kw);
+        if (!matchesTitle && !matchesCompany) return;
+      }
 
       // Country filter
       if (filters.country !== 'all' && job.country !== filters.country) return;

@@ -17,7 +17,7 @@ export interface Job {
   first_seen?: string;
   last_seen_24h?: string;
   country?: string;
-  job_type?: 'software' | 'hr' | 'cybersecurity' | 'sales' | 'finance' | 'other';
+  job_type?: 'software' | 'hr' | 'cybersecurity' | 'sales' | 'finance' | 'marketing' | 'engineering' | 'biotech' | 'events' | 'other';
   experience_level?: 'entry' | 'junior' | 'mid' | 'senior';
 }
 
@@ -32,7 +32,8 @@ export interface JobStats {
 export interface FilterState {
   status: 'all' | 'applied' | 'not-applied' | 'rejected' | 'new';
   sort: 'newest' | 'oldest' | 'title' | 'company';
-  jobType: 'all' | 'software' | 'hr' | 'cybersecurity' | 'sales' | 'finance';
+  jobType: 'all' | string;
   country: 'all' | string;
+  keyword?: string;
   quickApply?: 'all' | 'quick_only' | 'non_quick' | 'confirmed_only' | 'probable_only';
 }
