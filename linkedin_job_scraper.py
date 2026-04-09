@@ -535,9 +535,9 @@ class LinkedInJobScraper:
             'crm manager', 'marketing automation', 'copywriter'
         ]
 
-        # Biotech/Life Sciences keywords
+        # Biotech/Life Sciences keywords — no bare 'scientist' (catches data scientist)
         biotech_keywords = [
-            'research scientist', 'scientist', 'research associate',
+            'research scientist', 'research associate',
             'cell culture', 'molecular biologist', 'gene therapy', 'crispr',
             'biotechnology', 'lab scientist', 'r&d scientist', 'biologist',
             'biochemist', 'microbiologist', 'lab technician', 'laboratory'
@@ -910,9 +910,9 @@ class LinkedInJobScraper:
             'growth marketing', 'campaign manager', 'paid media', 'copywriter'
         ]
 
-        # Biotech/Life Sciences keywords
+        # Biotech/Life Sciences keywords — no bare 'scientist' (catches data scientist)
         biotech_keywords = [
-            'research scientist', 'scientist', 'research associate',
+            'research scientist', 'research associate',
             'cell culture', 'molecular biologist', 'gene therapy', 'crispr',
             'biotechnology', 'lab scientist', 'r&d scientist', 'biologist',
             'biochemist', 'microbiologist', 'lab technician', 'laboratory'

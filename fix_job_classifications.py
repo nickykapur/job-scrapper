@@ -67,25 +67,74 @@ def detect_job_type(title, description=""):
         'talento humano', 'analista de recursos humanos', 'coordinador de rrhh'
     ]
 
-    # Software keywords - NOTE: 'analytics' removed as standalone
+    # Marketing keywords
+    marketing_keywords = [
+        'digital marketing', 'marketing manager', 'marketing executive',
+        'marketing coordinator', 'marketing specialist', 'social media manager',
+        'social media', 'seo', 'content marketing', 'content manager',
+        'brand manager', 'ppc', 'performance marketing', 'email marketing',
+        'growth marketing', 'campaign manager', 'paid media', 'copywriter'
+    ]
+
+    # Engineering (non-software) keywords
+    engineering_keywords = [
+        'mechanical engineer', 'manufacturing engineer', 'industrial engineer',
+        'process engineer', 'aerospace engineer', 'design engineer',
+        'production engineer', 'quality engineer', 'electrical engineer',
+        'chemical engineer', 'project engineer', 'field engineer'
+    ]
+
+    # Biotech/Life Sciences keywords — no bare 'scientist' (catches data scientist)
+    biotech_keywords = [
+        'research scientist', 'cell culture', 'molecular biologist', 'gene therapy', 'crispr',
+        'biotechnology', 'lab scientist', 'r&d scientist', 'biologist',
+        'biochemist', 'microbiologist', 'lab technician', 'laboratory'
+    ]
+
+    # Events & Hospitality keywords
+    events_keywords = [
+        'event manager', 'event coordinator', 'event executive',
+        'event planner', 'event specialist', 'event organiser', 'event organizer',
+        'events manager', 'events coordinator', 'hospitality manager',
+        'venue manager', 'conference manager', 'conference coordinator',
+        'meeting planner', 'wedding planner', 'catering manager',
+    ]
+
+    # Software keywords — no bare 'engineer' (too broad, catches mechanical/chemical etc.)
     software_keywords = [
-        'software', 'developer', 'engineer', 'programming', 'programmer',
+        'software', 'developer', 'programming', 'programmer',
+        'software engineer', 'cloud engineer', 'site reliability engineer',
+        'platform engineer', 'infrastructure engineer',
         'frontend', 'backend', 'full stack', 'devops', 'react', 'python',
         'javascript', 'node', 'java', 'web developer', 'mobile developer',
         'data scientist', 'data engineer', 'data engineering', 'data analyst',
         'data analytics', 'machine learning', 'ml engineer', 'mlops',
         'business intelligence', 'bi analyst', 'data science', 'big data',
         'data pipeline', 'data warehouse', 'data lake', 'etl', 'elt',
-        'analytics engineer', 'quantitative analyst', 'research scientist',
+        'analytics engineer', 'quantitative analyst',
         'applied scientist', 'ai engineer', 'deep learning', 'nlp engineer',
+        'computer vision', 'data modeling', 'statistical analyst',
+        'qa engineer', 'sdet', 'test automation', 'qa automation',
         'desarrollador', 'programador', 'ingeniero de software',
         'científico de datos', 'ingeniero de datos', 'analista de datos'
     ]
 
-    # Check priority order
+    # Check priority order: most specific first, broadest last
     for keyword in cybersecurity_keywords:
         if keyword in text:
             return 'cybersecurity'
+
+    for keyword in engineering_keywords:
+        if keyword in text:
+            return 'engineering'
+
+    for keyword in biotech_keywords:
+        if keyword in text:
+            return 'biotech'
+
+    for keyword in events_keywords:
+        if keyword in text:
+            return 'events'
 
     for keyword in sales_keywords:
         if keyword in text:
@@ -94,6 +143,10 @@ def detect_job_type(title, description=""):
     for keyword in finance_keywords:
         if keyword in text:
             return 'finance'
+
+    for keyword in marketing_keywords:
+        if keyword in text:
+            return 'marketing'
 
     for keyword in hr_keywords:
         if keyword in text:
@@ -115,11 +168,11 @@ async def fix_job_classifications():
     conn = await asyncpg.connect(DATABASE_URL)
 
     try:
-        # Get all jobs
+        # Only target legacy LinkedIn category jobs — correctly classified jobs are left untouched
         jobs = await conn.fetch("""
             SELECT id, title, description, job_type
             FROM jobs
-            WHERE job_type IS NOT NULL
+            WHERE job_type IN ('accounting', 'account_management', 'communications')
         """)
 
         print(f"📊 Found {len(jobs)} jobs to check")
