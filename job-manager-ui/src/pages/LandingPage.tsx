@@ -1,14 +1,15 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   motion,
   useScroll,
   useTransform,
   useInView,
+  useReducedMotion,
 } from 'framer-motion';
 import {
   Briefcase, BarChart3, Target, Bell, Globe, Zap,
-  ArrowRight, Check, Star, TrendingUp, Shield,
+  ArrowRight, Check, Star, TrendingUp, Shield, Menu, X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -91,14 +92,27 @@ const HOW_IT_WORKS = [
 
 const LandingPage: React.FC = () => {
   const heroRef = useRef(null);
+  const prefersReduced = useReducedMotion();
+  const [isMobile, setIsMobile] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
+  const disableParallax = prefersReduced || isMobile;
+
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
 
-  // Parallax transforms
-  const heroY     = useTransform(scrollYProgress, [0, 1], ['0%', '35%']);
-  const heroOpacity = useTransform(scrollYProgress, [0, 0.7], [1, 0]);
-  const orb1Y     = useTransform(scrollYProgress, [0, 1], ['0%', '-25%']);
-  const orb2Y     = useTransform(scrollYProgress, [0, 1], ['0%', '20%']);
-  const orb3Y     = useTransform(scrollYProgress, [0, 1], ['0%', '-15%']);
+  // Parallax transforms — disabled on mobile/reduced-motion for performance
+  const heroY       = useTransform(scrollYProgress, [0, 1], disableParallax ? ['0%', '0%'] : ['0%', '35%']);
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.7], disableParallax ? [1, 1] : [1, 0]);
+  const orb1Y       = useTransform(scrollYProgress, [0, 1], disableParallax ? ['0%', '0%'] : ['0%', '-25%']);
+  const orb2Y       = useTransform(scrollYProgress, [0, 1], disableParallax ? ['0%', '0%'] : ['0%', '20%']);
+  const orb3Y       = useTransform(scrollYProgress, [0, 1], disableParallax ? ['0%', '0%'] : ['0%', '-15%']);
 
   return (
     <div className="bg-[#060b18] text-white min-h-screen overflow-x-hidden">
@@ -123,32 +137,61 @@ const LandingPage: React.FC = () => {
           </nav>
 
           <div className="relative flex items-center gap-3">
-            <Link to="/login">
+            <Link to="/login" className="hidden md:block">
               <Button variant="ghost" size="sm"
                 className="text-white/80 hover:text-white hover:bg-white/10 border border-white/10">
                 Log in
               </Button>
             </Link>
-            <Link to="/register">
+            <Link to="/register" className="hidden md:block">
               <Button size="sm"
                 className="bg-gradient-to-r from-blue-500 to-violet-600 hover:from-blue-600 hover:to-violet-700 text-white border-0 shadow-lg shadow-blue-500/25">
                 Get started
               </Button>
             </Link>
+            {/* Mobile menu toggle */}
+            <button
+              className="relative md:hidden p-2 text-white/70 hover:text-white"
+              onClick={() => setMenuOpen(o => !o)}
+              aria-label="Toggle menu"
+            >
+              {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile dropdown */}
+        {menuOpen && (
+          <div className="md:hidden mx-2 mb-2 rounded-2xl bg-[#0d1425] border border-white/10 px-5 py-4 flex flex-col gap-4 text-sm">
+            <a href="#features" className="text-white/70 hover:text-white transition-colors" onClick={() => setMenuOpen(false)}>Features</a>
+            <a href="#how"      className="text-white/70 hover:text-white transition-colors" onClick={() => setMenuOpen(false)}>How it works</a>
+            <a href="#stats"    className="text-white/70 hover:text-white transition-colors" onClick={() => setMenuOpen(false)}>Stats</a>
+            <div className="flex gap-3 pt-1 border-t border-white/10">
+              <Link to="/login" className="flex-1" onClick={() => setMenuOpen(false)}>
+                <Button variant="ghost" size="sm" className="w-full text-white/80 hover:text-white hover:bg-white/10 border border-white/10">
+                  Log in
+                </Button>
+              </Link>
+              <Link to="/register" className="flex-1" onClick={() => setMenuOpen(false)}>
+                <Button size="sm" className="w-full bg-gradient-to-r from-blue-500 to-violet-600 text-white border-0">
+                  Get started
+                </Button>
+              </Link>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* ── Hero ── */}
       <section ref={heroRef} className="relative min-h-screen flex items-center justify-center overflow-hidden">
 
-        {/* Parallax background orbs */}
+        {/* Parallax background orbs — smaller on mobile to reduce GPU load */}
         <motion.div style={{ y: orb1Y }}
-          className="absolute top-1/4 left-1/4 w-[600px] h-[600px] rounded-full bg-blue-600/20 blur-[120px] pointer-events-none" />
+          className="absolute top-1/4 left-1/4 w-[250px] h-[250px] sm:w-[600px] sm:h-[600px] rounded-full bg-blue-600/20 blur-[60px] sm:blur-[120px] pointer-events-none" />
         <motion.div style={{ y: orb2Y }}
-          className="absolute top-1/3 right-1/4 w-[500px] h-[500px] rounded-full bg-violet-600/20 blur-[120px] pointer-events-none" />
+          className="absolute top-1/3 right-1/4 w-[200px] h-[200px] sm:w-[500px] sm:h-[500px] rounded-full bg-violet-600/20 blur-[60px] sm:blur-[120px] pointer-events-none" />
         <motion.div style={{ y: orb3Y }}
-          className="absolute bottom-1/4 left-1/2 w-[400px] h-[400px] rounded-full bg-indigo-500/15 blur-[100px] pointer-events-none" />
+          className="absolute bottom-1/4 left-1/2 w-[180px] h-[180px] sm:w-[400px] sm:h-[400px] rounded-full bg-indigo-500/15 blur-[50px] sm:blur-[100px] pointer-events-none" />
 
         {/* Grid overlay */}
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjAzKSIgc3Ryb2tlLXdpZHRoPSIxIj48cGF0aCBkPSJNNjAgMEgwdjYwaDYwVjB6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-100 pointer-events-none" />

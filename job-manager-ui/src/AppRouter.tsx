@@ -3,14 +3,22 @@
  * Handles all application routing and route protection
  */
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
-import App from './App';
+import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
-import LandingPage from './pages/LandingPage';
+
+// Lazy-load the dashboard — keeps MUI + Recharts out of the landing page bundle
+const App = React.lazy(() => import('./App'));
+
+const AppFallback = () => (
+  <div className="flex justify-center items-center min-h-screen">
+    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+  </div>
+);
 // import SettingsPage from './pages/SettingsPage'; // Temporarily disabled - MUI migration pending
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -43,7 +51,9 @@ const AppRouter: React.FC = () => {
         path="/"
         element={
           isAuthenticated ? (
-            <ProtectedRoute><App /></ProtectedRoute>
+            <ProtectedRoute>
+              <Suspense fallback={<AppFallback />}><App /></Suspense>
+            </ProtectedRoute>
           ) : (
             <LandingPage />
           )

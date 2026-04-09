@@ -17,10 +17,12 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       output: {
-        manualChunks: undefined,
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'motion': ['framer-motion'],
+        },
       },
     },
-    minify: false, // Disable minification for faster builds
     target: 'esnext',
   },
   server: {
