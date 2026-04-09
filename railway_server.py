@@ -329,6 +329,13 @@ async def startup_event():
         asyncio.create_task(_queue_worker())
         print("✅ Job upload queue worker started")
 
+        # Initialize UserDatabase connection pool
+        try:
+            from user_database import UserDatabase
+            await UserDatabase.init_pool()
+        except Exception as e:
+            print(f"⚠️  UserDatabase pool initialization failed: {e}")
+
 async def _process_queue_once() -> bool:
     """Claim and process one pending queue item. Returns True if something was processed."""
     import traceback as _tb

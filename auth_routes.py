@@ -493,7 +493,7 @@ async def delete_user(
         )
         return {"success": True, "message": f"User '{user['username']}' deactivated"}
     finally:
-        await conn.close()
+        await user_db._release(conn)
 
 
 # Export router

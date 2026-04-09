@@ -12,6 +12,8 @@ from auth_utils import hash_password, verify_password
 
 
 class UserDatabase:
+    _pool = None  # Class-level pool shared across all instances
+
     def __init__(self):
         self.db_url = os.environ.get('DATABASE_URL')
         self.use_postgres = bool(self.db_url)
@@ -19,16 +21,38 @@ class UserDatabase:
         if not self.use_postgres:
             print("⚠️  User database requires PostgreSQL")
 
+    @classmethod
+    async def init_pool(cls):
+        """Initialize the shared connection pool. Call once at app startup."""
+        db_url = os.environ.get('DATABASE_URL')
+        if db_url and cls._pool is None:
+            cls._pool = await asyncpg.create_pool(
+                db_url,
+                min_size=2,
+                max_size=10,
+                command_timeout=60
+            )
+            print("✅ UserDatabase connection pool initialized")
+
     async def get_connection(self):
-        """Get database connection"""
+        """Acquire a connection from the shared pool."""
         if not self.use_postgres:
             return None
-
-        try:
-            return await asyncpg.connect(self.db_url)
-        except Exception as e:
-            print(f"❌ Database connection failed: {e}")
+        if UserDatabase._pool is None:
+            await UserDatabase.init_pool()
+        if UserDatabase._pool is None:
+            print("❌ Database pool unavailable")
             return None
+        try:
+            return await UserDatabase._pool.acquire()
+        except Exception as e:
+            print(f"❌ Failed to acquire DB connection: {e}")
+            return None
+
+    async def _release(self, conn):
+        """Release a connection back to the pool."""
+        if conn and UserDatabase._pool:
+            await UserDatabase._pool.release(conn)
 
     # ========================================================================
     # USER MANAGEMENT
@@ -95,7 +119,7 @@ class UserDatabase:
             print(f"❌ Error creating user: {e}")
             return None
         finally:
-            await conn.close()
+            await self._release(conn)
 
     async def get_user_by_username(self, username: str) -> Optional[Dict[str, Any]]:
         """Get user by username"""
@@ -121,7 +145,7 @@ class UserDatabase:
             print(f"❌ Error getting user: {e}")
             return None
         finally:
-            await conn.close()
+            await self._release(conn)
 
     async def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
         """Get user by email"""
@@ -147,7 +171,7 @@ class UserDatabase:
             print(f"❌ Error getting user: {e}")
             return None
         finally:
-            await conn.close()
+            await self._release(conn)
 
     async def get_user_by_id(self, user_id: int) -> Optional[Dict[str, Any]]:
         """Get user by ID"""
@@ -173,7 +197,7 @@ class UserDatabase:
             print(f"❌ Error getting user: {e}")
             return None
         finally:
-            await conn.close()
+            await self._release(conn)
 
     async def authenticate_user(self, username: str, password: str) -> Optional[Dict[str, Any]]:
         """
@@ -227,7 +251,7 @@ class UserDatabase:
             print(f"❌ Error updating last login: {e}")
             return False
         finally:
-            await conn.close()
+            await self._release(conn)
 
     async def update_profile(self, user_id: int, full_name: Optional[str] = None, email: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """Update user profile (full_name and/or email)"""
@@ -279,7 +303,7 @@ class UserDatabase:
             print(f"❌ Error updating profile: {e}")
             return None
         finally:
-            await conn.close()
+            await self._release(conn)
 
     async def change_password(self, user_id: int, old_password: str, new_password: str) -> bool:
         """Change user password"""
@@ -320,7 +344,7 @@ class UserDatabase:
             print(f"❌ Error changing password: {e}")
             return False
         finally:
-            await conn.close()
+            await self._release(conn)
 
     # ========================================================================
     # USER PREFERENCES
@@ -350,7 +374,7 @@ class UserDatabase:
             print(f"❌ Error getting preferences: {e}")
             return None
         finally:
-            await conn.close()
+            await self._release(conn)
 
     async def update_user_preferences(self, user_id: int, preferences: Dict[str, Any]) -> bool:
         """Update user preferences"""
@@ -403,7 +427,7 @@ class UserDatabase:
             print(f"❌ Error updating preferences: {e}")
             return False
         finally:
-            await conn.close()
+            await self._release(conn)
 
     # ========================================================================
     # USER JOB INTERACTIONS
@@ -433,7 +457,7 @@ class UserDatabase:
             print(f"❌ Error getting interaction: {e}")
             return None
         finally:
-            await conn.close()
+            await self._release(conn)
 
     async def update_job_interaction(
         self,
@@ -560,7 +584,7 @@ class UserDatabase:
             print(f"❌ Error updating interaction: {e}")
             return False
         finally:
-            await conn.close()
+            await self._release(conn)
 
     async def get_user_applied_jobs(self, user_id: int) -> List[str]:
         """Get list of job IDs user has applied to"""
@@ -585,7 +609,7 @@ class UserDatabase:
             print(f"❌ Error getting applied jobs: {e}")
             return []
         finally:
-            await conn.close()
+            await self._release(conn)
 
     async def get_user_rejected_jobs(self, user_id: int) -> List[str]:
         """Get list of job IDs user has rejected"""
@@ -610,7 +634,7 @@ class UserDatabase:
             print(f"❌ Error getting rejected jobs: {e}")
             return []
         finally:
-            await conn.close()
+            await self._release(conn)
 
     async def get_user_saved_jobs(self, user_id: int) -> List[str]:
         """Get list of job IDs user has saved"""
@@ -635,7 +659,7 @@ class UserDatabase:
             print(f"❌ Error getting saved jobs: {e}")
             return []
         finally:
-            await conn.close()
+            await self._release(conn)
 
     async def get_user_stats(self, user_id: int) -> Dict[str, int]:
         """Get user statistics"""
@@ -663,7 +687,7 @@ class UserDatabase:
             print(f"❌ Error getting user stats: {e}")
             return {}
         finally:
-            await conn.close()
+            await self._release(conn)
 
 
 # Testing
