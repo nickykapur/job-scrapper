@@ -7,6 +7,7 @@ Handles user registration, login, and profile management
 from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, Dict, Any, List
+from datetime import datetime, timezone
 from auth_utils import (
     validate_password_strength,
     validate_email,
@@ -186,6 +187,23 @@ async def get_current_user_info(current_user: Dict[str, Any] = Depends(get_curre
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
+
+    # Fire a Slack notification when a user returns to the app via stored JWT
+    # (explicit logins are handled in /login; this catches the auto-auth path).
+    # Only notify if last_login was more than 1 hour ago to avoid per-request spam.
+    last_login = user.get('last_login')
+    if slack_notify and last_login:
+        now = datetime.now(timezone.utc)
+        last_login_aware = last_login.replace(tzinfo=timezone.utc) if last_login.tzinfo is None else last_login
+        if (now - last_login_aware).total_seconds() > 3600:
+            try:
+                slack_notify.notify_login(
+                    username=user['username'],
+                    display_name=user.get('full_name') or '',
+                )
+            except Exception as e:
+                print(f"[slack] notify_login (session resume) failed: {e}")
+            await user_db.update_last_login(user['id'])
 
     return {
         "user_id": user['id'],
