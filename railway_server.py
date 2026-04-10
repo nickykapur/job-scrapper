@@ -2473,6 +2473,20 @@ async def get_scraping_targets():
         await db._release(conn)
 
     try:
+        # Map legacy LinkedIn category names (stored in user_preferences) to the canonical
+        # types the scraper understands.  Without this, the scraper gets types like
+        # 'accounting' or 'manufacturing' which have no default_terms or TITLE_KEYWORDS,
+        # causing is_relevant_job() to pass ALL results unfiltered.
+        LEGACY_TYPE_MAP = {
+            'accounting':        'finance',
+            'financial_analysis': 'finance',
+            'account_management': 'sales',
+            'business_development': 'sales',
+            'manufacturing':     'engineering',
+            'mechanical':        'engineering',
+            'communications':    'marketing',
+        }
+
         # Aggregate job types, countries, and custom keywords across all active users
         all_job_types = set()
         all_countries = set()
@@ -2480,16 +2494,18 @@ async def get_scraping_targets():
 
         for user in users:
             if user['job_types']:
-                for job_type in user['job_types']:
+                for raw_type in user['job_types']:
+                    job_type = LEGACY_TYPE_MAP.get(raw_type, raw_type)
                     all_job_types.add(job_type)
 
             if user['countries']:
                 for country in user['countries']:
                     all_countries.add(country)
 
-            # Attach user keywords to each of their job types
+            # Attach user keywords to each of their job types (using normalized type)
             if user['keywords'] and user['job_types']:
-                for job_type in user['job_types']:
+                for raw_type in user['job_types']:
+                    job_type = LEGACY_TYPE_MAP.get(raw_type, raw_type)
                     if job_type not in custom_keywords_by_type:
                         custom_keywords_by_type[job_type] = set()
                     for kw in user['keywords']:
