@@ -96,6 +96,24 @@ def notify_register(username: str, email: str, display_name: str = "") -> None:
     }, label="register")
 
 
+async def notify_login_async(username: str, display_name: str = "") -> None:
+    name = display_name or username
+    await _send_async({
+        "text": f"👋 *{name}* just logged in  ·  `{username}`  ·  {_now_str()}",
+        "blocks": [
+            {
+                "type": "section",
+                "text": {"type": "mrkdwn", "text": f"👋  *{name}* just logged in"},
+            },
+            {
+                "type": "context",
+                "elements": [{"type": "mrkdwn", "text": f"🕐  {_now_str()}  ·  `{username}`"}],
+            },
+            {"type": "divider"},
+        ]
+    }, label="login")
+
+
 # ── Sync helpers (job applied/rejected — called from background tasks) ────────
 
 def notify_job_applied(

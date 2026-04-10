@@ -161,7 +161,7 @@ async def login(request: LoginRequest):
 
     if slack_notify:
         try:
-            slack_notify.notify_login(
+            await slack_notify.notify_login_async(
                 username=user['username'],
                 display_name=user.get('full_name') or '',
             )
@@ -197,7 +197,7 @@ async def get_current_user_info(current_user: Dict[str, Any] = Depends(get_curre
         last_login_aware = last_login.replace(tzinfo=timezone.utc) if last_login.tzinfo is None else last_login
         if (now - last_login_aware).total_seconds() > 3600:
             try:
-                slack_notify.notify_login(
+                await slack_notify.notify_login_async(
                     username=user['username'],
                     display_name=user.get('full_name') or '',
                 )
