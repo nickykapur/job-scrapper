@@ -733,6 +733,15 @@ async def get_jobs_api(current_user: Optional[Dict[str, Any]] = Depends(get_curr
                             if not country_match:
                                 continue
 
+                    # For aml/compliance users: enforce keywords as a title filter
+                    # The scraper sometimes mislabels unrelated jobs (e.g. Data Analyst) as aml
+                    # User's keyword list defines exactly what they want to see
+                    job_types_list = preferences.get('job_types', [])
+                    if preferences.get('keywords') and any(t in job_types_list for t in ['aml', 'compliance']):
+                        keyword_in_title = any(kw.lower() in title_lower for kw in preferences['keywords'])
+                        if not keyword_in_title:
+                            continue
+
                     # Check excluded keywords
                     if preferences.get('excluded_keywords'):
                         if any(keyword.lower() in title_desc for keyword in preferences['excluded_keywords']):
