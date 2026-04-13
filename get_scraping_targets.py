@@ -91,7 +91,7 @@ def get_scraping_targets():
         # Map country names to scraping locations
         country_locations = {
             'Ireland': 'Dublin, County Dublin, Ireland',
-            'Spain': 'Madrid, Community of Madrid, Spain',
+            'Spain': ['Madrid, Community of Madrid, Spain', 'Barcelona, Catalonia, Spain', 'Valencia, Valencian Community, Spain'],
             'Panama': 'Panama City, Panama',
             'Chile': 'Santiago, Santiago Metropolitan Region, Chile',
             'Netherlands': 'Amsterdam, North Holland, Netherlands',

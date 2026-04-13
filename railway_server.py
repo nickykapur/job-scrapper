@@ -658,6 +658,21 @@ async def get_jobs_api(current_user: Optional[Dict[str, Any]] = Depends(get_curr
                                     if any(kw in title_desc for kw in finance_keywords):
                                         type_match = True
                                         break
+                                elif pref_type == 'aml' or pref_type == 'compliance':
+                                    aml_keywords = [
+                                        'aml', 'anti money laundering', 'anti-money laundering',
+                                        'kyc', 'know your customer',
+                                        'compliance analyst', 'compliance officer',
+                                        'financial crime', 'transaction monitoring',
+                                        'sanctions analyst', 'fraud analyst',
+                                        'pbc', 'prevención de blanqueo', 'blanqueo de capitales',
+                                        'cumplimiento normativo', 'analista pbc', 'técnico pbc',
+                                        'oficial de cumplimiento', 'especialista pbc', 'analista aml',
+                                        'analista kyc', 'analista de cumplimiento', 'analista laft'
+                                    ]
+                                    if any(kw in title_desc for kw in aml_keywords):
+                                        type_match = True
+                                        break
                                 elif pref_type == 'marketing' or pref_type == 'digital_marketing' or pref_type == 'content' or pref_type == 'communications' or pref_type == 'crm' or pref_type == 'analytics':
                                     marketing_keywords = [
                                         'digital marketing', 'marketing manager', 'marketing executive', 'marketing coordinator', 'marketing specialist',
@@ -717,6 +732,12 @@ async def get_jobs_api(current_user: Optional[Dict[str, Any]] = Depends(get_curr
                                     break
                             if not country_match:
                                 continue
+
+                    # Filter by city - if user has preferred_cities, job location must match one
+                    if preferences.get('preferred_cities'):
+                        city_match = any(city.lower() in location for city in preferences['preferred_cities'])
+                        if not city_match:
+                            continue
 
                     # Check excluded keywords
                     if preferences.get('excluded_keywords'):
