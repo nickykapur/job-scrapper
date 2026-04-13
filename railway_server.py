@@ -733,12 +733,6 @@ async def get_jobs_api(current_user: Optional[Dict[str, Any]] = Depends(get_curr
                             if not country_match:
                                 continue
 
-                    # Filter by city - if user has preferred_cities, job location must match one
-                    if preferences.get('preferred_cities'):
-                        city_match = any(city.lower() in location for city in preferences['preferred_cities'])
-                        if not city_match:
-                            continue
-
                     # Check excluded keywords
                     if preferences.get('excluded_keywords'):
                         if any(keyword.lower() in title_desc for keyword in preferences['excluded_keywords']):
