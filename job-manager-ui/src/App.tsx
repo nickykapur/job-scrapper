@@ -64,6 +64,7 @@ const App: React.FC = () => {
 
   // State
   const [jobs, setJobs] = useState<Record<string, Job>>({});
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [updatingJobs, setUpdatingJobs] = useState<Set<string>>(new Set());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [localRejectedCount, setLocalRejectedCount] = useState(0);
@@ -145,6 +146,7 @@ const App: React.FC = () => {
     try {
       const jobsData = await jobApi.getJobs();
       setJobs(jobsData);
+      setIsInitialLoading(false);
 
       // Persist to localStorage so users can still see jobs if backend goes down
       try {
@@ -182,6 +184,8 @@ const App: React.FC = () => {
         }
       } catch {
         showNotification('Failed to load jobs', 'error');
+      } finally {
+        setIsInitialLoading(false);
       }
     } finally {
       if (!silent) setIsRefreshing(false);
@@ -719,20 +723,44 @@ const App: React.FC = () => {
                   jobs={jobs}
                 />
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {Object.entries(paginatedJobs.jobs).map(([id, job]) => (
-                    <JobCard
-                      key={id}
-                      job={job}
-                      onMarkApplied={handleMarkApplied}
-                      onRejectJob={handleRejectJob}
-                      onRefreshJobs={() => loadJobs(true)}
-                      isUpdating={updatingJobs.has(id)}
-                    />
-                  ))}
-                </div>
+                {/* Loading skeleton */}
+                {isInitialLoading && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <div key={i} className="rounded-xl border bg-card overflow-hidden animate-pulse" style={{ height: '280px' }}>
+                        <div style={{ height: '4px', background: '#e5e7eb' }} />
+                        <div className="p-5 flex flex-col gap-3">
+                          <div className="h-3 rounded bg-muted w-1/3" />
+                          <div className="h-4 rounded bg-muted w-4/5" />
+                          <div className="h-4 rounded bg-muted w-3/5" />
+                          <div className="h-3 rounded bg-muted w-2/5 mt-2" />
+                          <div className="h-3 rounded bg-muted w-1/4" />
+                        </div>
+                        <div className="px-5 mt-auto flex flex-col gap-2">
+                          <div className="h-10 rounded-lg bg-muted" />
+                          <div className="h-8 rounded-lg bg-muted w-2/3" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
-                {paginatedJobs.totalJobs === 0 && (
+                {!isInitialLoading && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {Object.entries(paginatedJobs.jobs).map(([id, job]) => (
+                      <JobCard
+                        key={id}
+                        job={job}
+                        onMarkApplied={handleMarkApplied}
+                        onRejectJob={handleRejectJob}
+                        onRefreshJobs={() => loadJobs(true)}
+                        isUpdating={updatingJobs.has(id)}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {!isInitialLoading && paginatedJobs.totalJobs === 0 && (
                   <div style={{ textAlign: 'center', padding: '60px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                     <div style={{ fontSize: '48px' }}>🔍</div>
                     <Text size={400} weight="semibold">No jobs found</Text>
