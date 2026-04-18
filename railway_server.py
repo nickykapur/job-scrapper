@@ -88,12 +88,27 @@ except ImportError as e:
     async def get_current_user():
         raise HTTPException(status_code=501, detail="Authentication not available")
 
+# Import CV routes (auto-apply pilot)
+try:
+    from cv_routes import router as cv_router, init_cv_table
+    CV_AVAILABLE = True
+    print("✅ CV routes imported successfully")
+except Exception as e:
+    print(f"⚠️  CV routes not available: {e}")
+    CV_AVAILABLE = False
+    init_cv_table = None
+
 app = FastAPI(title="LinkedIn Job Manager", version="1.0.0")
 
 # Include authentication router if available
 if AUTH_AVAILABLE:
     app.include_router(auth_router)
     print("✅ Authentication routes registered")
+
+# Include CV router if available
+if CV_AVAILABLE:
+    app.include_router(cv_router)
+    print("✅ CV routes registered")
 
 # Initialize database
 db = None
@@ -273,6 +288,12 @@ async def startup_event():
             print("✅ Database initialized successfully")
         except Exception as e:
             print(f"⚠️  Database initialization failed: {e}")
+
+    if CV_AVAILABLE and init_cv_table:
+        try:
+            await init_cv_table()
+        except Exception as e:
+            print(f"⚠️  CV table init failed: {e}")
 
         # Run incremental migrations that may not be in the base schema yet
         try:
