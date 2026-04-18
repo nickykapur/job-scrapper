@@ -81,16 +81,50 @@ const chipActive: React.CSSProperties = {
   fontWeight: 700,
 };
 
+const labelStyle: React.CSSProperties = {
+  color: 'rgba(255,255,255,0.4)',
+  fontWeight: 600,
+  fontSize: '10px',
+  textTransform: 'uppercase',
+  letterSpacing: '0.07em',
+};
+
 export const FilterControls: React.FC<FilterControlsProps> = ({ filters, onFiltersChange, jobs }) => {
   const styles = useStyles();
 
+  const activeJobs = useMemo(() =>
+    Object.entries(jobs).filter(([k, j]) => !k.startsWith('_') && !j.applied && !j.rejected),
+    [jobs]
+  );
+
   const availableCountries = useMemo(() => {
     const s = new Set<string>();
-    Object.entries(jobs).forEach(([k, j]) => {
-      if (!k.startsWith('_') && j.country && !j.applied && !j.rejected) s.add(j.country);
+    activeJobs.forEach(([, j]) => { if (j.country) s.add(j.country); });
+    return Array.from(s).sort();
+  }, [activeJobs]);
+
+  const availableCities = useMemo(() => {
+    const s = new Set<string>();
+    activeJobs.forEach(([, j]) => {
+      if (j.location) s.add(j.location);
     });
     return Array.from(s).sort();
-  }, [jobs]);
+  }, [activeJobs]);
+
+  // Reset city when country changes
+  const handleCountryChange = (country: string) => {
+    onFiltersChange({ ...filters, country, city: 'all' });
+  };
+
+  // Cities filtered by selected country
+  const citiesForCountry = useMemo(() => {
+    if (filters.country === 'all') return availableCities;
+    return activeJobs
+      .filter(([, j]) => j.country === filters.country && j.location)
+      .map(([, j]) => j.location!)
+      .filter((v, i, a) => a.indexOf(v) === i)
+      .sort();
+  }, [availableCities, activeJobs, filters.country]);
 
   return (
     <div className={styles.wrap}>
@@ -144,7 +178,7 @@ export const FilterControls: React.FC<FilterControlsProps> = ({ filters, onFilte
       {/* Secondary filters */}
       <div className={styles.row}>
         <div className={styles.field}>
-          <Label size="small" style={{ color: tokens.colorNeutralForeground3, fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Sort</Label>
+          <Label size="small" style={labelStyle}>Sort</Label>
           <Select
             value={filters.sort}
             onChange={(_, d) => onFiltersChange({ ...filters, sort: d.value as FilterState['sort'] })}
@@ -157,14 +191,28 @@ export const FilterControls: React.FC<FilterControlsProps> = ({ filters, onFilte
 
         {availableCountries.length > 1 && (
           <div className={styles.field}>
-            <Label size="small" style={{ color: tokens.colorNeutralForeground3, fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Country</Label>
+            <Label size="small" style={labelStyle}>Country</Label>
             <Select
               value={filters.country || 'all'}
-              onChange={(_, d) => onFiltersChange({ ...filters, country: d.value })}
+              onChange={(_, d) => handleCountryChange(d.value)}
               style={{ borderRadius: '8px' }}
             >
               <option value="all">All countries</option>
               {availableCountries.map(c => <option key={c} value={c}>{c}</option>)}
+            </Select>
+          </div>
+        )}
+
+        {citiesForCountry.length > 1 && (
+          <div className={styles.field}>
+            <Label size="small" style={labelStyle}>City</Label>
+            <Select
+              value={filters.city || 'all'}
+              onChange={(_, d) => onFiltersChange({ ...filters, city: d.value })}
+              style={{ borderRadius: '8px' }}
+            >
+              <option value="all">All cities</option>
+              {citiesForCountry.map(c => <option key={c} value={c}>{c}</option>)}
             </Select>
           </div>
         )}

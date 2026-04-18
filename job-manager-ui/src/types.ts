@@ -34,6 +34,7 @@ export interface FilterState {
   sort: 'newest' | 'oldest' | 'title' | 'company';
   jobType: 'all' | string;
   country: 'all' | string;
+  city: 'all' | string;
   keyword?: string;
   quickApply?: 'all' | 'quick_only' | 'non_quick' | 'confirmed_only' | 'probable_only';
 }

@@ -87,6 +87,7 @@ const App: React.FC = () => {
     sort: 'newest',
     jobType: 'all',
     country: 'all',
+    city: 'all',
     keyword: '',
     quickApply: 'all',
   });
@@ -307,6 +308,9 @@ const App: React.FC = () => {
 
       // Country filter
       if (filters.country !== 'all' && job.country !== filters.country) return;
+
+      // City filter
+      if (filters.city !== 'all' && job.location !== filters.city) return;
 
       // Quick Apply filter with verification status support
       if (filters.quickApply === 'confirmed_only' && job.easy_apply_status !== 'confirmed') return;
