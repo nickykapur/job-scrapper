@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Input, Select, Label, makeStyles, tokens, shorthands } from '@fluentui/react-components';
+import { Input, Select, Label, makeStyles, tokens } from '@fluentui/react-components';
 import { SearchRegular, DismissRegular } from '@fluentui/react-icons';
 import type { FilterState, Job } from '../types';
 
@@ -14,7 +14,7 @@ const useStyles = makeStyles({
     marginBottom: '24px',
     display: 'flex',
     flexDirection: 'column',
-    gap: '14px',
+    gap: '12px',
   },
   searchWrap: {
     position: 'relative',
@@ -46,45 +46,40 @@ const useStyles = makeStyles({
     minWidth: '130px',
     flex: '1 1 130px',
   },
-  // Status chips row
   chips: {
     display: 'flex',
-    gap: '8px',
+    gap: '6px',
     flexWrap: 'wrap',
-  },
-  chip: {
-    ...shorthands.padding('6px', '14px'),
-    borderRadius: '20px',
-    fontSize: '12.5px',
-    fontWeight: '600',
-    border: `1.5px solid ${tokens.colorNeutralStroke1}`,
-    background: tokens.colorNeutralBackground1,
-    color: tokens.colorNeutralForeground2,
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
-    ':hover': {
-      borderColor: tokens.colorBrandStroke1,
-      color: tokens.colorBrandForeground1,
-    },
-  },
-  chipActive: {
-    ...shorthands.padding('6px', '14px'),
-    borderRadius: '20px',
-    fontSize: '12.5px',
-    fontWeight: '700',
-    border: '1.5px solid transparent',
-    background: 'linear-gradient(135deg,#3b82f6,#6366f1)',
-    color: '#fff',
-    cursor: 'pointer',
   },
 });
 
 const STATUS_CHIPS: { value: string; label: string }[] = [
-  { value: 'all',         label: '🔍 Active' },
-  { value: 'new',         label: '✨ New' },
-  { value: 'applied',     label: '✅ Applied' },
-  { value: 'rejected',    label: '❌ Skipped' },
+  { value: 'all',      label: 'Active' },
+  { value: 'new',      label: 'New' },
+  { value: 'applied',  label: 'Applied' },
+  { value: 'rejected', label: 'Skipped' },
 ];
+
+const chipBase: React.CSSProperties = {
+  padding: '6px 16px',
+  borderRadius: '20px',
+  fontSize: '12.5px',
+  fontWeight: 600,
+  border: '1.5px solid rgba(255,255,255,0.1)',
+  background: 'transparent',
+  color: 'rgba(255,255,255,0.5)',
+  cursor: 'pointer',
+  transition: 'all 0.15s ease',
+  letterSpacing: '0.01em',
+};
+
+const chipActive: React.CSSProperties = {
+  ...chipBase,
+  border: '1.5px solid #3b82f6',
+  background: 'rgba(59,130,246,0.15)',
+  color: '#60a5fa',
+  fontWeight: 700,
+};
 
 export const FilterControls: React.FC<FilterControlsProps> = ({ filters, onFiltersChange, jobs }) => {
   const styles = useStyles();
@@ -99,13 +94,25 @@ export const FilterControls: React.FC<FilterControlsProps> = ({ filters, onFilte
 
   return (
     <div className={styles.wrap}>
-      {/* Status chip row */}
+      {/* Status chips */}
       <div className={styles.chips}>
         {STATUS_CHIPS.map(({ value, label }) => (
           <button
             key={value}
-            className={filters.status === value ? styles.chipActive : styles.chip}
+            style={filters.status === value ? chipActive : chipBase}
             onClick={() => onFiltersChange({ ...filters, status: value as FilterState['status'] })}
+            onMouseEnter={e => {
+              if (filters.status !== value) {
+                (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.2)';
+                (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.75)';
+              }
+            }}
+            onMouseLeave={e => {
+              if (filters.status !== value) {
+                (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.1)';
+                (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.5)';
+              }
+            }}
           >
             {label}
           </button>
@@ -116,15 +123,14 @@ export const FilterControls: React.FC<FilterControlsProps> = ({ filters, onFilte
       <div className={styles.searchWrap}>
         <Input
           contentBefore={<SearchRegular style={{ fontSize: '16px', color: tokens.colorNeutralForeground3 }} />}
-          placeholder="Search job title or company…"
+          placeholder="Search title or company..."
           value={filters.keyword || ''}
           onChange={(_, d) => onFiltersChange({ ...filters, keyword: d.value })}
           style={{
             width: '100%',
-            height: '44px',
-            borderRadius: '12px',
-            fontSize: '14px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+            height: '42px',
+            borderRadius: '10px',
+            fontSize: '13.5px',
             paddingRight: filters.keyword ? '40px' : undefined,
           }}
         />
@@ -138,38 +144,24 @@ export const FilterControls: React.FC<FilterControlsProps> = ({ filters, onFilte
       {/* Secondary filters */}
       <div className={styles.row}>
         <div className={styles.field}>
-          <Label size="small" style={{ color: tokens.colorNeutralForeground3, fontWeight: 600 }}>Sort</Label>
+          <Label size="small" style={{ color: tokens.colorNeutralForeground3, fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Sort</Label>
           <Select
             value={filters.sort}
             onChange={(_, d) => onFiltersChange({ ...filters, sort: d.value as FilterState['sort'] })}
-            style={{ borderRadius: '10px' }}
+            style={{ borderRadius: '8px' }}
           >
             <option value="newest">Newest first</option>
             <option value="oldest">Oldest first</option>
           </Select>
         </div>
 
-        <div className={styles.field}>
-          <Label size="small" style={{ color: tokens.colorNeutralForeground3, fontWeight: 600 }}>Quick Apply</Label>
-          <Select
-            value={filters.quickApply || 'all'}
-            onChange={(_, d) => onFiltersChange({ ...filters, quickApply: d.value as FilterState['quickApply'] })}
-            style={{ borderRadius: '10px' }}
-          >
-            <option value="all">All jobs</option>
-            <option value="confirmed_only">Verified quick</option>
-            <option value="quick_only">Quick apply</option>
-            <option value="non_quick">Standard only</option>
-          </Select>
-        </div>
-
         {availableCountries.length > 1 && (
           <div className={styles.field}>
-            <Label size="small" style={{ color: tokens.colorNeutralForeground3, fontWeight: 600 }}>Country</Label>
+            <Label size="small" style={{ color: tokens.colorNeutralForeground3, fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Country</Label>
             <Select
               value={filters.country || 'all'}
               onChange={(_, d) => onFiltersChange({ ...filters, country: d.value })}
-              style={{ borderRadius: '10px' }}
+              style={{ borderRadius: '8px' }}
             >
               <option value="all">All countries</option>
               {availableCountries.map(c => <option key={c} value={c}>{c}</option>)}

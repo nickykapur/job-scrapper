@@ -513,7 +513,7 @@ const App: React.FC = () => {
     <div className="flex h-screen bg-background text-foreground">
       {/* Sidebar - Desktop */}
       {!isMobile && (
-        <aside className="w-64 border-r bg-card flex-shrink-0">
+        <aside style={{ width: '240px', flexShrink: 0, background: '#0d0d10', borderRight: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column' }}>
           {sidebarContent}
         </aside>
       )}
@@ -612,7 +612,7 @@ const App: React.FC = () => {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="border-b bg-card px-6" style={{ paddingTop: '14px', paddingBottom: '14px' }}>
+        <header style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#0d0d10', padding: '14px 24px' }}>
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <Text weight="bold" size={500}>
@@ -719,7 +719,6 @@ const App: React.FC = () => {
 
                 {!isInitialLoading && paginatedJobs.totalJobs === 0 && (
                   <div style={{ textAlign: 'center', padding: '60px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ fontSize: '48px' }}>🔍</div>
                     <Text size={400} weight="semibold">No jobs found</Text>
                     <Text size={300} style={{ color: tokens.colorNeutralForeground3 }}>
                       Try adjusting your filters or check back after the next scrape

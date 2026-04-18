@@ -1,29 +1,21 @@
 import React, { useState } from 'react';
-import {
-  Button,
-  Text,
-  makeStyles,
-  tokens,
-  Tooltip,
-  shorthands,
-} from '@fluentui/react-components';
+import { Button, makeStyles, tokens, Tooltip } from '@fluentui/react-components';
 import {
   CheckmarkCircleFilled,
   DismissCircleFilled,
-  ArrowRightFilled,
-  FlashFilled,
-  PeopleRegular,
-  BriefcaseFilled,
-  PaintBrushFilled,
-  VideoFilled,
-  HeadphonesFilled,
-  CodeFilled,
-  MoneyFilled,
-  ShieldFilled,
+  ArrowRightRegular,
+  BriefcaseRegular,
+  PaintBrushRegular,
+  VideoRegular,
+  HeadphonesRegular,
+  CodeRegular,
+  MoneyRegular,
+  ShieldRegular,
   LocationRegular,
   ClockRegular,
-  BuildingRegular,
   DismissRegular,
+  BuildingRegular,
+  FlashRegular,
 } from '@fluentui/react-icons';
 import type { Job } from '../types';
 import { getCountryFromLocation } from '../utils/countryUtils';
@@ -38,39 +30,30 @@ interface JobCardProps {
   isUpdating?: boolean;
 }
 
-type JobTypeKey = 'sales'|'painter'|'painting'|'customer_service'|'customer_support'|'media_production'|'media'|'software'|'hr'|'finance'|'aml'|'compliance'|'cybersecurity';
+type JobTypeKey = string;
 
-const JOB_TYPES: Record<JobTypeKey, { label: string; Icon: React.ElementType; color: string; light: string; dark: string; gradient: string }> = {
-  sales:            { label: 'Sales',           Icon: BriefcaseFilled,   color: '#b45309', light: '#fef3c7', dark: '#78350f', gradient: 'linear-gradient(135deg,#f59e0b,#d97706)' },
-  painter:          { label: 'Painter',          Icon: PaintBrushFilled,  color: '#1d4ed8', light: '#dbeafe', dark: '#1e3a8a', gradient: 'linear-gradient(135deg,#3b82f6,#2563eb)' },
-  painting:         { label: 'Painter',          Icon: PaintBrushFilled,  color: '#1d4ed8', light: '#dbeafe', dark: '#1e3a8a', gradient: 'linear-gradient(135deg,#3b82f6,#2563eb)' },
-  customer_service: { label: 'Customer Service', Icon: HeadphonesFilled,  color: '#065f46', light: '#d1fae5', dark: '#064e3b', gradient: 'linear-gradient(135deg,#10b981,#059669)' },
-  customer_support: { label: 'Customer Support', Icon: HeadphonesFilled,  color: '#065f46', light: '#d1fae5', dark: '#064e3b', gradient: 'linear-gradient(135deg,#10b981,#059669)' },
-  media_production: { label: 'Media',            Icon: VideoFilled,       color: '#5b21b6', light: '#ede9fe', dark: '#3b0764', gradient: 'linear-gradient(135deg,#8b5cf6,#7c3aed)' },
-  media:            { label: 'Media',            Icon: VideoFilled,       color: '#5b21b6', light: '#ede9fe', dark: '#3b0764', gradient: 'linear-gradient(135deg,#8b5cf6,#7c3aed)' },
-  software:         { label: 'Software',         Icon: CodeFilled,        color: '#1e40af', light: '#dbeafe', dark: '#1e3a8a', gradient: 'linear-gradient(135deg,#6366f1,#4f46e5)' },
-  hr:               { label: 'HR',               Icon: PeopleRegular,     color: '#9d174d', light: '#fce7f3', dark: '#831843', gradient: 'linear-gradient(135deg,#ec4899,#db2777)' },
-  finance:          { label: 'Finance',           Icon: MoneyFilled,       color: '#0f766e', light: '#ccfbf1', dark: '#134e4a', gradient: 'linear-gradient(135deg,#14b8a6,#0d9488)' },
-  aml:              { label: 'AML/Compliance',   Icon: ShieldFilled,      color: '#991b1b', light: '#fee2e2', dark: '#7f1d1d', gradient: 'linear-gradient(135deg,#ef4444,#dc2626)' },
-  compliance:       { label: 'Compliance',        Icon: ShieldFilled,      color: '#991b1b', light: '#fee2e2', dark: '#7f1d1d', gradient: 'linear-gradient(135deg,#ef4444,#dc2626)' },
-  cybersecurity:    { label: 'Cybersecurity',    Icon: ShieldFilled,      color: '#92400e', light: '#fef3c7', dark: '#78350f', gradient: 'linear-gradient(135deg,#f97316,#ea580c)' },
+const TYPE_CONFIG: Record<string, { label: string; Icon: React.ElementType; accent: string; dim: string }> = {
+  sales:            { label: 'Sales',            Icon: BriefcaseRegular,  accent: '#f59e0b', dim: 'rgba(245,158,11,0.12)' },
+  painter:          { label: 'Painter',           Icon: PaintBrushRegular, accent: '#60a5fa', dim: 'rgba(96,165,250,0.12)' },
+  painting:         { label: 'Painter',           Icon: PaintBrushRegular, accent: '#60a5fa', dim: 'rgba(96,165,250,0.12)' },
+  customer_service: { label: 'Customer Service',  Icon: HeadphonesRegular, accent: '#34d399', dim: 'rgba(52,211,153,0.12)' },
+  customer_support: { label: 'Customer Support',  Icon: HeadphonesRegular, accent: '#34d399', dim: 'rgba(52,211,153,0.12)' },
+  media_production: { label: 'Media Production',  Icon: VideoRegular,      accent: '#a78bfa', dim: 'rgba(167,139,250,0.12)' },
+  media:            { label: 'Media',             Icon: VideoRegular,      accent: '#a78bfa', dim: 'rgba(167,139,250,0.12)' },
+  software:         { label: 'Software',          Icon: CodeRegular,       accent: '#818cf8', dim: 'rgba(129,140,248,0.12)' },
+  hr:               { label: 'HR',                Icon: BriefcaseRegular,  accent: '#f472b6', dim: 'rgba(244,114,182,0.12)' },
+  finance:          { label: 'Finance',           Icon: MoneyRegular,      accent: '#2dd4bf', dim: 'rgba(45,212,191,0.12)' },
+  aml:              { label: 'AML / Compliance',  Icon: ShieldRegular,     accent: '#f87171', dim: 'rgba(248,113,113,0.12)' },
+  compliance:       { label: 'Compliance',        Icon: ShieldRegular,     accent: '#f87171', dim: 'rgba(248,113,113,0.12)' },
+  cybersecurity:    { label: 'Cybersecurity',     Icon: ShieldRegular,     accent: '#fb923c', dim: 'rgba(251,146,60,0.12)'  },
 };
 
-// Consistent avatar color from company name
-const AVATAR_GRADIENTS = [
-  'linear-gradient(135deg,#6366f1,#8b5cf6)',
-  'linear-gradient(135deg,#3b82f6,#06b6d4)',
-  'linear-gradient(135deg,#10b981,#14b8a6)',
-  'linear-gradient(135deg,#f59e0b,#f97316)',
-  'linear-gradient(135deg,#ec4899,#8b5cf6)',
-  'linear-gradient(135deg,#ef4444,#f97316)',
-  'linear-gradient(135deg,#0ea5e9,#6366f1)',
-  'linear-gradient(135deg,#84cc16,#10b981)',
-];
-function avatarGradient(name: string) {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) & 0xffffffff;
-  return AVATAR_GRADIENTS[Math.abs(hash) % AVATAR_GRADIENTS.length];
+// Deterministic avatar color from string
+const AVATAR_COLORS = ['#6366f1','#3b82f6','#0ea5e9','#10b981','#f59e0b','#f97316','#ec4899','#a855f7'];
+function pickColor(s: string) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return AVATAR_COLORS[h % AVATAR_COLORS.length];
 }
 
 const useStyles = makeStyles({
@@ -78,80 +61,80 @@ const useStyles = makeStyles({
     display: 'flex',
     flexDirection: 'column',
     height: '100%',
-    borderRadius: '16px',
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    overflow: 'hidden',
-    background: tokens.colorNeutralBackground1,
-    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-    transition: 'transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease',
+    borderRadius: '14px',
+    border: '1px solid rgba(255,255,255,0.07)',
+    background: '#111114',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.4), 0 8px 24px rgba(0,0,0,0.2)',
+    transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
     ':hover': {
-      transform: 'translateY(-3px)',
-      boxShadow: '0 12px 32px rgba(0,0,0,0.12)',
-      borderColor: tokens.colorNeutralStroke1,
+      transform: 'translateY(-2px)',
+      boxShadow: '0 4px 16px rgba(0,0,0,0.5), 0 16px 40px rgba(0,0,0,0.3)',
+      borderColor: 'rgba(255,255,255,0.13)',
     },
-    cursor: 'default',
+    overflow: 'hidden',
   },
-  topAccent: {
-    height: '5px',
+  accentBar: {
+    height: '3px',
     flexShrink: 0,
   },
   body: {
     flex: 1,
-    ...shorthands.padding('18px', '20px', '14px'),
+    padding: '18px 20px 16px',
     display: 'flex',
     flexDirection: 'column',
-    gap: '14px',
+    gap: '12px',
   },
-  companyRow: {
+  topRow: {
     display: 'flex',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: '12px',
   },
   avatar: {
-    width: '42px',
-    height: '42px',
-    borderRadius: '10px',
+    width: '38px',
+    height: '38px',
+    borderRadius: '9px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '16px',
+    fontSize: '14px',
     fontWeight: '700',
     color: '#fff',
     flexShrink: 0,
-    letterSpacing: '-0.5px',
+    letterSpacing: '-0.3px',
   },
-  companyInfo: {
+  topRight: {
     flex: 1,
     minWidth: 0,
     display: 'flex',
     flexDirection: 'column',
-    gap: '2px',
+    gap: '4px',
   },
-  companyName: {
+  company: {
     fontSize: '11px',
-    fontWeight: '700',
+    fontWeight: '600',
+    letterSpacing: '0.06em',
     textTransform: 'uppercase',
-    letterSpacing: '0.08em',
-    color: tokens.colorNeutralForeground3,
+    color: '#71717a',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
   },
-  typePill: {
+  typeBadge: {
     display: 'inline-flex',
     alignItems: 'center',
     gap: '4px',
-    borderRadius: '20px',
-    padding: '2px 9px 2px 7px',
+    borderRadius: '6px',
+    padding: '2px 8px',
     fontSize: '10.5px',
-    fontWeight: '700',
+    fontWeight: '600',
     width: 'fit-content',
+    letterSpacing: '0.02em',
   },
   title: {
-    fontSize: '15px',
-    fontWeight: '650',
-    lineHeight: '1.4',
-    color: tokens.colorNeutralForeground1,
+    fontSize: '14.5px',
+    fontWeight: '600',
+    lineHeight: '1.45',
+    color: '#fafafa',
     display: '-webkit-box',
     WebkitLineClamp: '2',
     WebkitBoxOrient: 'vertical',
@@ -161,49 +144,62 @@ const useStyles = makeStyles({
     display: 'flex',
     flexDirection: 'column',
     gap: '5px',
+    marginTop: '2px',
   },
   metaRow: {
     display: 'flex',
     alignItems: 'center',
-    gap: '5px',
-    color: tokens.colorNeutralForeground3,
+    gap: '6px',
     fontSize: '12px',
+    color: '#71717a',
   },
-  metaIcon: {
-    fontSize: '13px',
-    flexShrink: 0,
-    opacity: 0.7,
+  locationAccent: {
+    color: '#a1a1aa',
+    fontWeight: '500',
   },
   quickBadge: {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: '3px',
-    borderRadius: '20px',
-    padding: '2px 8px',
+    gap: '4px',
+    borderRadius: '5px',
+    padding: '2px 7px',
     fontSize: '10px',
-    fontWeight: '700',
+    fontWeight: '600',
+    background: 'rgba(52,211,153,0.12)',
+    color: '#34d399',
     marginTop: '2px',
     width: 'fit-content',
   },
   divider: {
     height: '1px',
-    background: tokens.colorNeutralStroke2,
-    margin: '0 20px',
+    background: 'rgba(255,255,255,0.06)',
+    margin: '0',
   },
   footer: {
-    ...shorthands.padding('14px', '20px', '18px'),
+    padding: '14px 20px 18px',
     display: 'flex',
     flexDirection: 'column',
     gap: '8px',
   },
   applyBtn: {
     width: '100%',
-    height: '42px',
-    borderRadius: '10px',
-    fontSize: '14px',
-    fontWeight: '700',
+    height: '40px',
+    borderRadius: '9px',
+    fontSize: '13.5px',
+    fontWeight: '600',
+    border: 'none',
+    color: '#fff',
+    cursor: 'pointer',
+    transition: 'opacity 0.15s ease, transform 0.15s ease',
+    ':hover': {
+      opacity: 0.88,
+      transform: 'translateY(-1px)',
+    },
+    ':active': {
+      transform: 'translateY(0)',
+    },
   },
-  actionRow: {
+  secondRow: {
     display: 'flex',
     gap: '8px',
   },
@@ -211,127 +207,162 @@ const useStyles = makeStyles({
     flex: 1,
     height: '36px',
     borderRadius: '8px',
-    fontSize: '13px',
-    color: tokens.colorNeutralForeground3,
-  },
-  blockBtn: {
-    height: '36px',
-    width: '36px',
-    borderRadius: '8px',
-    minWidth: 'unset',
-    padding: '0',
-    color: tokens.colorNeutralForeground4,
-  },
-  appliedBox: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '8px',
-    height: '44px',
-    borderRadius: '10px',
-    background: 'linear-gradient(135deg,#d1fae5,#a7f3d0)',
-    color: '#065f46',
-    fontSize: '14px',
-    fontWeight: '700',
-  },
-  rejectedBox: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '8px',
-    height: '44px',
-    borderRadius: '10px',
-    background: tokens.colorNeutralBackground3,
-    color: tokens.colorNeutralForeground4,
-    fontSize: '13px',
-    fontWeight: '600',
-    opacity: '0.65',
-  },
-  confirmLabel: {
-    textAlign: 'center',
     fontSize: '12.5px',
     fontWeight: '500',
-    color: tokens.colorNeutralForeground3,
+    background: 'rgba(255,255,255,0.05)',
+    border: '1px solid rgba(255,255,255,0.07)',
+    color: '#71717a',
+    cursor: 'pointer',
+    transition: 'background 0.15s ease, color 0.15s ease',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '6px',
+    ':hover': {
+      background: 'rgba(255,255,255,0.08)',
+      color: '#a1a1aa',
+    },
+  },
+  blockBtn: {
+    width: '36px',
+    height: '36px',
+    borderRadius: '8px',
+    background: 'rgba(255,255,255,0.05)',
+    border: '1px solid rgba(255,255,255,0.07)',
+    color: '#52525b',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'background 0.15s ease, color 0.15s ease',
+    flexShrink: 0,
+    ':hover': {
+      background: 'rgba(239,68,68,0.1)',
+      color: '#f87171',
+    },
+  },
+  confirmNote: {
+    textAlign: 'center',
+    fontSize: '12px',
+    color: '#71717a',
+  },
+  yesBtn: {
+    width: '100%',
+    height: '40px',
+    borderRadius: '9px',
+    background: 'rgba(52,211,153,0.15)',
+    border: '1px solid rgba(52,211,153,0.25)',
+    color: '#34d399',
+    fontSize: '13.5px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    transition: 'background 0.15s ease',
+    ':hover': { background: 'rgba(52,211,153,0.22)' },
+  },
+  notYetBtn: {
+    width: '100%',
+    height: '36px',
+    borderRadius: '8px',
+    background: 'transparent',
+    border: '1px solid rgba(255,255,255,0.08)',
+    color: '#71717a',
+    fontSize: '12.5px',
+    fontWeight: '500',
+    cursor: 'pointer',
+    transition: 'background 0.15s ease',
+    ':hover': { background: 'rgba(255,255,255,0.05)' },
+  },
+  appliedBox: {
+    height: '44px',
+    borderRadius: '9px',
+    background: 'rgba(52,211,153,0.1)',
+    border: '1px solid rgba(52,211,153,0.2)',
+    color: '#34d399',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    fontSize: '13.5px',
+    fontWeight: '600',
+  },
+  skippedBox: {
+    height: '40px',
+    borderRadius: '9px',
+    background: 'rgba(255,255,255,0.03)',
+    border: '1px solid rgba(255,255,255,0.06)',
+    color: '#52525b',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    fontSize: '12.5px',
+    fontWeight: '500',
   },
 });
 
-export const JobCard: React.FC<JobCardProps> = ({
-  job,
-  onMarkApplied,
-  onRejectJob,
-  onRefreshJobs,
-  isUpdating = false,
-}) => {
-  const styles = useStyles();
-  const [pendingApply, setPendingApply] = useState(false);
-  const [bulkLoading, setBulkLoading] = useState(false);
+export const JobCard: React.FC<JobCardProps> = ({ job, onMarkApplied, onRejectJob, onRefreshJobs, isUpdating = false }) => {
+  const s = useStyles();
+  const [pending, setPending] = useState(false);
+  const [blocking, setBlocking] = useState(false);
 
-  const safeDecode = (s: string) => { try { return decodeURIComponent(s); } catch { return s; } };
+  const safe = (v: string) => { try { return decodeURIComponent(v); } catch { return v; } };
+  const company  = safe(job.company  || '');
+  const title    = safe(job.title    || '');
+  const location = safe(job.location || '');
+  const country  = job.country || getCountryFromLocation(job.location);
 
-  const company = safeDecode(job.company || '');
-  const title   = safeDecode(job.title || '');
-  const location = safeDecode(job.location || '');
-
-  const typeKey = (job.job_type || '').toLowerCase() as JobTypeKey;
-  const type = JOB_TYPES[typeKey] ?? { label: job.job_type ?? '', Icon: BriefcaseFilled, color: '#6b7280', light: '#f3f4f6', dark: '#374151', gradient: 'linear-gradient(135deg,#6b7280,#4b5563)' };
-  const { Icon: TypeIcon } = type;
+  const typeKey = (job.job_type || '').toLowerCase();
+  const type = TYPE_CONFIG[typeKey] ?? { label: job.job_type ?? '', Icon: BriefcaseRegular, accent: '#6366f1', dim: 'rgba(99,102,241,0.12)' };
+  const { Icon } = type;
 
   const initials = company.split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('') || '?';
+  const avatarColor = pickColor(company);
 
-  const extractedCountry = job.country || getCountryFromLocation(job.location);
-
-  const getTimeAgo = () => {
+  const timeAgo = (() => {
     if (!job.scraped_at) return null;
     try {
-      const diff = Date.now() - new Date(job.scraped_at).getTime();
-      const h = Math.floor(diff / 3600000);
+      const h = Math.floor((Date.now() - new Date(job.scraped_at).getTime()) / 3600000);
+      if (h < 1) return 'Just now';
+      if (h < 24) return `${h}h ago`;
       const d = Math.floor(h / 24);
-      if (d > 6) return `${Math.floor(d/7)}w ago`;
-      if (d > 0) return `${d}d ago`;
-      if (h > 0) return `${h}h ago`;
-      return 'Just now';
+      return d < 7 ? `${d}d ago` : `${Math.floor(d / 7)}w ago`;
     } catch { return null; }
-  };
+  })();
 
-  const hasQuickApply = job.easy_apply_status === 'confirmed' || job.easy_apply_status === 'probable' || (job.easy_apply && !job.easy_apply_status);
-  const isConfirmedQuick = job.easy_apply_status === 'confirmed';
+  const hasQuick = job.easy_apply_status === 'confirmed' || job.easy_apply_status === 'probable' || (job.easy_apply && !job.easy_apply_status);
 
-  const handleBulkReject = async () => {
-    if (!window.confirm(`Reject ALL jobs from ${company}?`)) return;
-    setBulkLoading(true);
+  const handleBlock = async () => {
+    if (!window.confirm(`Block all jobs from ${company}?`)) return;
+    setBlocking(true);
     try {
       const r = await jobApi.bulkRejectJobs({ company: job.company });
-      toast.success(`${r.jobs_rejected} jobs from ${company} rejected!`);
+      toast.success(`${r.jobs_rejected} jobs blocked from ${company}`);
       if (onRefreshJobs) setTimeout(onRefreshJobs, 800);
-    } catch (e: any) {
-      toast.error(e.response?.data?.detail || 'Failed to bulk reject');
-    } finally {
-      setBulkLoading(false);
-    }
+    } catch { toast.error('Failed'); }
+    finally { setBlocking(false); }
   };
 
-  const timeAgo = getTimeAgo();
-
   return (
-    <div className={styles.card}>
-      {/* Color accent stripe */}
-      <div className={styles.topAccent} style={{ background: type.gradient }} />
+    <div className={s.card}>
+      {/* Accent bar */}
+      <div className={s.accentBar} style={{ background: type.accent }} />
 
       {/* Body */}
-      <div className={styles.body}>
-        {/* Company row: avatar + name + type badge */}
-        <div className={styles.companyRow}>
-          <div className={styles.avatar} style={{ background: avatarGradient(company) }}>
+      <div className={s.body}>
+        {/* Top: avatar + company + badge */}
+        <div className={s.topRow}>
+          <div className={s.avatar} style={{ background: avatarColor }}>
             {initials}
           </div>
-          <div className={styles.companyInfo}>
-            <div className={styles.companyName}>{company}</div>
+          <div className={s.topRight}>
+            <div className={s.company}>{company}</div>
             {type.label && (
-              <span
-                className={styles.typePill}
-                style={{ background: type.light, color: type.color }}
-              >
-                <TypeIcon style={{ fontSize: '11px' }} />
+              <span className={s.typeBadge} style={{ background: type.dim, color: type.accent }}>
+                <Icon style={{ fontSize: '10px' }} />
                 {type.label}
               </span>
             )}
@@ -339,113 +370,89 @@ export const JobCard: React.FC<JobCardProps> = ({
         </div>
 
         {/* Title */}
-        <div className={styles.title}>{title}</div>
+        <div className={s.title}>{title}</div>
 
         {/* Meta */}
-        <div className={styles.metaList}>
+        <div className={s.metaList}>
           {location && (
-            <div className={styles.metaRow}>
-              <LocationRegular className={styles.metaIcon} />
-              <span>{location}</span>
-              {extractedCountry && extractedCountry !== 'Unknown' && (
-                <span style={{ color: tokens.colorBrandForeground1, fontWeight: 600 }}>· {extractedCountry}</span>
+            <div className={s.metaRow}>
+              <LocationRegular style={{ fontSize: '13px', flexShrink: 0 }} />
+              <span className={s.locationAccent}>{location}</span>
+              {country && country !== 'Unknown' && (
+                <span style={{ color: '#52525b' }}>· {country}</span>
               )}
             </div>
           )}
           {(job.posted_date || timeAgo) && (
-            <div className={styles.metaRow}>
-              <ClockRegular className={styles.metaIcon} />
-              <span>{job.posted_date || ''}</span>
-              {timeAgo && <span style={{ opacity: 0.6 }}>· {timeAgo}</span>}
+            <div className={s.metaRow}>
+              <ClockRegular style={{ fontSize: '13px', flexShrink: 0 }} />
+              <span>{job.posted_date}</span>
+              {timeAgo && <span style={{ color: '#52525b' }}>· scraped {timeAgo}</span>}
             </div>
           )}
-          {hasQuickApply && (
-            <span
-              className={styles.quickBadge}
-              style={{
-                background: isConfirmedQuick ? '#d1fae5' : '#fef3c7',
-                color: isConfirmedQuick ? '#065f46' : '#92400e',
-              }}
-            >
-              <FlashFilled style={{ fontSize: '10px' }} />
-              {isConfirmedQuick ? 'Quick Apply ✓' : 'Quick Apply'}
+          {hasQuick && (
+            <span className={s.quickBadge}>
+              <FlashRegular style={{ fontSize: '10px' }} />
+              Quick Apply
             </span>
           )}
         </div>
       </div>
 
-      {/* Divider */}
-      <div className={styles.divider} />
+      <div className={s.divider} />
 
       {/* Footer */}
-      <div className={styles.footer}>
-        {!job.applied && !job.rejected && !pendingApply && (
+      <div className={s.footer}>
+        {!job.applied && !job.rejected && !pending && (
           <>
-            <Button
-              className={styles.applyBtn}
-              style={{ background: type.gradient, border: 'none', color: '#fff' }}
-              icon={<ArrowRightFilled />}
-              iconPosition="after"
+            <button
+              className={s.applyBtn}
+              style={{ background: type.accent }}
               disabled={isUpdating}
               onClick={() => {
                 const a = document.createElement('a');
                 a.href = job.job_url; a.target = '_blank'; a.rel = 'noopener noreferrer';
                 document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                setPendingApply(true);
+                setPending(true);
               }}
             >
-              Apply Now
-            </Button>
-            <div className={styles.actionRow}>
-              <Button
-                appearance="subtle"
-                className={styles.skipBtn}
-                onClick={() => onRejectJob(job.id)}
-                disabled={isUpdating}
-              >
-                <DismissRegular style={{ marginRight: '6px', fontSize: '14px' }} />
-                Skip
-              </Button>
+              Apply Now <ArrowRightRegular style={{ marginLeft: '6px', fontSize: '14px' }} />
+            </button>
+            <div className={s.secondRow}>
+              <button className={s.skipBtn} onClick={() => onRejectJob(job.id)} disabled={isUpdating}>
+                <DismissRegular style={{ fontSize: '14px' }} />
+                Not Interested
+              </button>
               <Tooltip content={`Block all from ${company}`} relationship="label">
-                <Button
-                  appearance="subtle"
-                  className={styles.blockBtn}
-                  icon={<BuildingRegular />}
-                  onClick={handleBulkReject}
-                  disabled={bulkLoading}
-                />
+                <button className={s.blockBtn} onClick={handleBlock} disabled={blocking}>
+                  <BuildingRegular style={{ fontSize: '14px' }} />
+                </button>
               </Tooltip>
             </div>
           </>
         )}
 
-        {!job.applied && !job.rejected && pendingApply && (
+        {!job.applied && !job.rejected && pending && (
           <>
-            <div className={styles.confirmLabel}>Did you complete the application?</div>
-            <Button
-              className={styles.applyBtn}
-              style={{ background: 'linear-gradient(135deg,#10b981,#059669)', border: 'none', color: '#fff' }}
-              icon={<CheckmarkCircleFilled />}
-              onClick={() => { setPendingApply(false); onMarkApplied(job.id); }}
-            >
-              Yes, I Applied!
-            </Button>
-            <Button appearance="outline" className={styles.applyBtn} onClick={() => setPendingApply(false)}>
-              Not Yet
-            </Button>
+            <div className={s.confirmNote}>Did you submit the application?</div>
+            <button className={s.yesBtn} onClick={() => { setPending(false); onMarkApplied(job.id); }}>
+              <CheckmarkCircleFilled style={{ fontSize: '16px' }} />
+              Yes, Applied!
+            </button>
+            <button className={s.notYetBtn} onClick={() => setPending(false)}>Not yet</button>
           </>
         )}
 
         {job.applied && (
-          <div className={styles.appliedBox}>
-            <CheckmarkCircleFilled style={{ fontSize: '20px', color: '#059669' }} />
-            Applied Successfully
+          <div className={s.appliedBox}>
+            <CheckmarkCircleFilled style={{ fontSize: '18px' }} />
+            Applied
           </div>
         )}
 
         {job.rejected && (
-          <div className={styles.rejectedBox}>
-            <DismissCircleFilled style={{ fontSize: '18px' }} />
+          <div className={s.skippedBox}>
+            <DismissCircleFilled style={{ fontSize: '16px' }} />
             Skipped
           </div>
         )}
