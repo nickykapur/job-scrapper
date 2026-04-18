@@ -36,7 +36,7 @@ try:
     from cv_routes import router as cv_router, init_cv_table
     CV_AVAILABLE = True
     print("✅ CV routes imported successfully")
-except ImportError as e:
+except Exception as e:
     print(f"⚠️  CV routes not available: {e}")
     CV_AVAILABLE = False
     init_cv_table = None

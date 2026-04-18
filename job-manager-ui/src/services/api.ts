@@ -226,7 +226,7 @@ export const jobApi = {
   },
 
   deleteCV: async (): Promise<any> => {
-    const response = await api.delete('/api/cv');
+    const response = await api.delete('/api/cv/');
     return response.data;
   },
 
