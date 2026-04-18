@@ -205,6 +205,31 @@ export const jobApi = {
     api.post('/api/activity', { event_type: eventType, event_data: data || {} }).catch(() => {});
   },
 
+  // CV / Auto-Apply Pilot
+  uploadCV: async (file: File): Promise<any> => {
+    const form = new FormData();
+    form.append('file', file);
+    const response = await api.post('/api/cv/upload', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  getCVProfile: async (): Promise<any> => {
+    const response = await api.get('/api/cv/profile');
+    return response.data;
+  },
+
+  updateCVProfile: async (data: Record<string, any>): Promise<any> => {
+    const response = await api.put('/api/cv/profile', data);
+    return response.data;
+  },
+
+  deleteCV: async (): Promise<any> => {
+    const response = await api.delete('/api/cv');
+    return response.data;
+  },
+
   // Admin: Get activity feed
   getActivity: async (limit = 150): Promise<any> =>
     (await api.get(`/api/admin/activity?limit=${limit}`)).data,
