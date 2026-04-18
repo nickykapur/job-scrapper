@@ -31,10 +31,25 @@ except ImportError as e:
     print(f"⚠️  Authentication routes not available: {e}")
     AUTH_AVAILABLE = False
 
+# Import CV routes (auto-apply pilot)
+try:
+    from cv_routes import router as cv_router, init_cv_table
+    CV_AVAILABLE = True
+    print("✅ CV routes imported successfully")
+except ImportError as e:
+    print(f"⚠️  CV routes not available: {e}")
+    CV_AVAILABLE = False
+    init_cv_table = None
+
 # Include authentication router if available
 if AUTH_AVAILABLE:
     app.include_router(auth_router)
     print("✅ Authentication routes registered")
+
+# Include CV router if available
+if CV_AVAILABLE:
+    app.include_router(cv_router)
+    print("✅ CV routes registered")
 
 # Enable CORS for React frontend
 app.add_middleware(
@@ -56,6 +71,8 @@ async def startup_event():
     """Initialize database on startup"""
     if USE_DATABASE and db:
         await db.init_database()
+    if CV_AVAILABLE and init_cv_table:
+        await init_cv_table()
 
 @app.get("/api/health")
 async def health_check():
