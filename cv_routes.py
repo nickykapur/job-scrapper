@@ -328,7 +328,7 @@ async def update_cv_profile(
     return {"success": True, "message": "CV profile updated"}
 
 
-@router.delete("")
+@router.delete("/")
 async def delete_cv(current_user: Dict[str, Any] = Depends(get_current_user)):
     conn = await user_db.get_connection()
     if not conn:
