@@ -1,57 +1,20 @@
 import React, { useMemo } from 'react';
-import {
-  Input,
-  Select,
-  Label,
-  Card,
-  makeStyles,
-  tokens,
-  Text,
-} from '@fluentui/react-components';
-import {
-  SearchRegular,
-  FilterRegular,
-  DismissRegular,
-} from '@fluentui/react-icons';
+import { Input, Select, Label, makeStyles, tokens, shorthands } from '@fluentui/react-components';
+import { SearchRegular, DismissRegular } from '@fluentui/react-icons';
 import type { FilterState, Job } from '../types';
 
 interface FilterControlsProps {
   filters: FilterState;
-  onFiltersChange: (filters: FilterState) => void;
+  onFiltersChange: (f: FilterState) => void;
   jobs: Record<string, Job>;
 }
 
 const useStyles = makeStyles({
-  card: {
-    borderRadius: tokens.borderRadiusXLarge,
-    boxShadow: tokens.shadow4,
-    marginBottom: '20px',
-    overflow: 'hidden',
-  },
-  inner: {
-    padding: '20px',
+  wrap: {
+    marginBottom: '24px',
     display: 'flex',
     flexDirection: 'column',
-    gap: '16px',
-  },
-  header: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    marginBottom: '4px',
-  },
-  row: {
-    display: 'grid',
-    gridTemplateColumns: '1fr',
-    gap: '12px',
-    '@media (min-width: 640px)': {
-      gridTemplateColumns: '1fr 1fr',
-    },
-  },
-  field: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '4px',
+    gap: '14px',
   },
   searchWrap: {
     position: 'relative',
@@ -60,126 +23,160 @@ const useStyles = makeStyles({
   },
   clearBtn: {
     position: 'absolute',
-    right: '10px',
+    right: '12px',
     background: 'none',
     border: 'none',
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
     color: tokens.colorNeutralForeground3,
-    padding: '0',
+    padding: '4px',
+    borderRadius: '4px',
+    ':hover': { color: tokens.colorNeutralForeground1 },
+  },
+  row: {
+    display: 'flex',
+    gap: '10px',
+    flexWrap: 'wrap',
+  },
+  field: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+    minWidth: '130px',
+    flex: '1 1 130px',
+  },
+  // Status chips row
+  chips: {
+    display: 'flex',
+    gap: '8px',
+    flexWrap: 'wrap',
+  },
+  chip: {
+    ...shorthands.padding('6px', '14px'),
+    borderRadius: '20px',
+    fontSize: '12.5px',
+    fontWeight: '600',
+    border: `1.5px solid ${tokens.colorNeutralStroke1}`,
+    background: tokens.colorNeutralBackground1,
+    color: tokens.colorNeutralForeground2,
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
     ':hover': {
-      color: tokens.colorNeutralForeground1,
+      borderColor: tokens.colorBrandStroke1,
+      color: tokens.colorBrandForeground1,
     },
+  },
+  chipActive: {
+    ...shorthands.padding('6px', '14px'),
+    borderRadius: '20px',
+    fontSize: '12.5px',
+    fontWeight: '700',
+    border: '1.5px solid transparent',
+    background: 'linear-gradient(135deg,#3b82f6,#6366f1)',
+    color: '#fff',
+    cursor: 'pointer',
   },
 });
 
-export const FilterControls: React.FC<FilterControlsProps> = ({
-  filters,
-  onFiltersChange,
-  jobs,
-}) => {
+const STATUS_CHIPS: { value: string; label: string }[] = [
+  { value: 'all',         label: '🔍 Active' },
+  { value: 'new',         label: '✨ New' },
+  { value: 'applied',     label: '✅ Applied' },
+  { value: 'rejected',    label: '❌ Skipped' },
+];
+
+export const FilterControls: React.FC<FilterControlsProps> = ({ filters, onFiltersChange, jobs }) => {
   const styles = useStyles();
 
   const availableCountries = useMemo(() => {
-    const countrySet = new Set<string>();
-    Object.entries(jobs).forEach(([key, job]) => {
-      if (!key.startsWith('_') && job.country && !job.applied && !job.rejected) {
-        countrySet.add(job.country);
-      }
+    const s = new Set<string>();
+    Object.entries(jobs).forEach(([k, j]) => {
+      if (!k.startsWith('_') && j.country && !j.applied && !j.rejected) s.add(j.country);
     });
-    return Array.from(countrySet).sort();
+    return Array.from(s).sort();
   }, [jobs]);
 
   return (
-    <Card className={styles.card}>
-      <div className={styles.inner}>
-        <div className={styles.header}>
-          <FilterRegular style={{ fontSize: '18px', color: tokens.colorBrandForeground1 }} />
-          <Text weight="semibold" size={400}>Filters</Text>
-        </div>
-
-        {/* Keyword search */}
-        <div className={styles.field}>
-          <Label size="small" style={{ color: tokens.colorNeutralForeground2 }}>Search jobs</Label>
-          <div className={styles.searchWrap}>
-            <Input
-              contentBefore={<SearchRegular style={{ fontSize: '16px' }} />}
-              placeholder="Job title or company…"
-              value={filters.keyword || ''}
-              onChange={(_, d) => onFiltersChange({ ...filters, keyword: d.value })}
-              style={{ width: '100%', paddingRight: filters.keyword ? '36px' : undefined }}
-            />
-            {filters.keyword && (
-              <button
-                className={styles.clearBtn}
-                onClick={() => onFiltersChange({ ...filters, keyword: '' })}
-              >
-                <DismissRegular style={{ fontSize: '16px' }} />
-              </button>
-            )}
-          </div>
-        </div>
-
-        <div className={styles.row}>
-          {/* Status */}
-          <div className={styles.field}>
-            <Label size="small" style={{ color: tokens.colorNeutralForeground2 }}>Status</Label>
-            <Select
-              value={filters.status}
-              onChange={(_, d) => onFiltersChange({ ...filters, status: d.value as FilterState['status'] })}
-            >
-              <option value="all">Active Jobs</option>
-              <option value="applied">Applied</option>
-              <option value="not_applied">Not Applied</option>
-              <option value="rejected">Rejected</option>
-              <option value="new">New Only</option>
-            </Select>
-          </div>
-
-          {/* Sort */}
-          <div className={styles.field}>
-            <Label size="small" style={{ color: tokens.colorNeutralForeground2 }}>Sort by</Label>
-            <Select
-              value={filters.sort}
-              onChange={(_, d) => onFiltersChange({ ...filters, sort: d.value as FilterState['sort'] })}
-            >
-              <option value="newest">Newest First</option>
-              <option value="oldest">Oldest First</option>
-            </Select>
-          </div>
-
-          {/* Country */}
-          {availableCountries.length > 1 && (
-            <div className={styles.field}>
-              <Label size="small" style={{ color: tokens.colorNeutralForeground2 }}>Country</Label>
-              <Select
-                value={filters.country || 'all'}
-                onChange={(_, d) => onFiltersChange({ ...filters, country: d.value })}
-              >
-                <option value="all">All Countries</option>
-                {availableCountries.map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </Select>
-            </div>
-          )}
-
-          {/* Quick Apply */}
-          <div className={styles.field}>
-            <Label size="small" style={{ color: tokens.colorNeutralForeground2 }}>Quick Apply</Label>
-            <Select
-              value={filters.quickApply || 'all'}
-              onChange={(_, d) => onFiltersChange({ ...filters, quickApply: d.value as FilterState['quickApply'] })}
-            >
-              <option value="all">All Jobs</option>
-              <option value="quick_only">Quick Apply Only</option>
-              <option value="confirmed_only">Verified Quick Apply</option>
-              <option value="non_quick">Standard Apply Only</option>
-            </Select>
-          </div>
-        </div>
+    <div className={styles.wrap}>
+      {/* Status chip row */}
+      <div className={styles.chips}>
+        {STATUS_CHIPS.map(({ value, label }) => (
+          <button
+            key={value}
+            className={filters.status === value ? styles.chipActive : styles.chip}
+            onClick={() => onFiltersChange({ ...filters, status: value as FilterState['status'] })}
+          >
+            {label}
+          </button>
+        ))}
       </div>
-    </Card>
+
+      {/* Search bar */}
+      <div className={styles.searchWrap}>
+        <Input
+          contentBefore={<SearchRegular style={{ fontSize: '16px', color: tokens.colorNeutralForeground3 }} />}
+          placeholder="Search job title or company…"
+          value={filters.keyword || ''}
+          onChange={(_, d) => onFiltersChange({ ...filters, keyword: d.value })}
+          style={{
+            width: '100%',
+            height: '44px',
+            borderRadius: '12px',
+            fontSize: '14px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+            paddingRight: filters.keyword ? '40px' : undefined,
+          }}
+        />
+        {filters.keyword && (
+          <button className={styles.clearBtn} onClick={() => onFiltersChange({ ...filters, keyword: '' })}>
+            <DismissRegular style={{ fontSize: '16px' }} />
+          </button>
+        )}
+      </div>
+
+      {/* Secondary filters */}
+      <div className={styles.row}>
+        <div className={styles.field}>
+          <Label size="small" style={{ color: tokens.colorNeutralForeground3, fontWeight: 600 }}>Sort</Label>
+          <Select
+            value={filters.sort}
+            onChange={(_, d) => onFiltersChange({ ...filters, sort: d.value as FilterState['sort'] })}
+            style={{ borderRadius: '10px' }}
+          >
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+          </Select>
+        </div>
+
+        <div className={styles.field}>
+          <Label size="small" style={{ color: tokens.colorNeutralForeground3, fontWeight: 600 }}>Quick Apply</Label>
+          <Select
+            value={filters.quickApply || 'all'}
+            onChange={(_, d) => onFiltersChange({ ...filters, quickApply: d.value as FilterState['quickApply'] })}
+            style={{ borderRadius: '10px' }}
+          >
+            <option value="all">All jobs</option>
+            <option value="confirmed_only">Verified quick</option>
+            <option value="quick_only">Quick apply</option>
+            <option value="non_quick">Standard only</option>
+          </Select>
+        </div>
+
+        {availableCountries.length > 1 && (
+          <div className={styles.field}>
+            <Label size="small" style={{ color: tokens.colorNeutralForeground3, fontWeight: 600 }}>Country</Label>
+            <Select
+              value={filters.country || 'all'}
+              onChange={(_, d) => onFiltersChange({ ...filters, country: d.value })}
+              style={{ borderRadius: '10px' }}
+            >
+              <option value="all">All countries</option>
+              {availableCountries.map(c => <option key={c} value={c}>{c}</option>)}
+            </Select>
+          </div>
+        )}
+      </div>
+    </div>
   );
 };

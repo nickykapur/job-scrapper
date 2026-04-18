@@ -385,17 +385,59 @@ const App: React.FC = () => {
     setCurrentPage(1);
   }, [filters]);
 
+  // Nav item helper
+  const NavItem = ({ tab, label, icon: Icon, badge }: { tab: typeof currentTab; label: string; icon: React.ElementType; badge?: string }) => {
+    const active = currentTab === tab;
+    return (
+      <button
+        onClick={() => handleTabChange(tab)}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          width: '100%',
+          padding: '9px 12px',
+          borderRadius: '10px',
+          border: 'none',
+          cursor: 'pointer',
+          fontSize: '13.5px',
+          fontWeight: active ? 700 : 500,
+          background: active ? 'linear-gradient(135deg,rgba(59,130,246,0.15),rgba(99,102,241,0.15))' : 'transparent',
+          color: active ? '#3b82f6' : tokens.colorNeutralForeground2,
+          transition: 'all 0.15s ease',
+          textAlign: 'left',
+          position: 'relative',
+        }}
+        onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = tokens.colorNeutralBackground2; }}
+        onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+      >
+        {active && (
+          <div style={{ position: 'absolute', left: 0, top: '6px', bottom: '6px', width: '3px', borderRadius: '0 3px 3px 0', background: 'linear-gradient(180deg,#3b82f6,#6366f1)' }} />
+        )}
+        <Icon style={{ fontSize: '17px', flexShrink: 0 }} />
+        <span style={{ flex: 1 }}>{label}</span>
+        {badge && (
+          <span style={{ fontSize: '10px', fontWeight: 700, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', padding: '2px 7px', borderRadius: '10px' }}>
+            {badge}
+          </span>
+        )}
+      </button>
+    );
+  };
+
+  const userInitials = (user?.full_name || user?.username || 'U').split(/\s+/).slice(0, 2).map((w: string) => w[0]?.toUpperCase() ?? '').join('');
+
   const sidebarContent = (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="p-5 pb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)' }}>
-            <Database className="w-5 h-5 text-white" />
+      <div style={{ padding: '20px 16px 16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'linear-gradient(135deg,#3b82f6,#8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Database style={{ width: '20px', height: '20px', color: '#fff' }} />
           </div>
           <div>
-            <p className="text-base font-bold leading-tight">Job Tracker</p>
-            <p className="text-xs" style={{ color: tokens.colorNeutralForeground3 }}>Find your next role</p>
+            <p style={{ fontSize: '15px', fontWeight: 800, lineHeight: 1.2, margin: 0 }}>Job Tracker</p>
+            <p style={{ fontSize: '11px', color: tokens.colorNeutralForeground3, margin: 0 }}>Find your next role</p>
           </div>
         </div>
       </div>
@@ -403,151 +445,66 @@ const App: React.FC = () => {
       <Separator />
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
-        <Button
-          variant={currentTab === 'dashboard' ? 'secondary' : 'ghost'}
-          className="w-full justify-start"
-          onClick={() => handleTabChange('dashboard')}
-        >
-          <LayoutDashboard className="mr-3 h-4 w-4" />
-          Dashboard
-        </Button>
-
-        <Button
-          variant={currentTab === 'my-analytics' ? 'secondary' : 'ghost'}
-          className="w-full justify-start"
-          onClick={() => handleTabChange('my-analytics')}
-        >
-          <BarChart3 className="mr-3 h-4 w-4" />
-          My Analytics
-        </Button>
-
-        <Button
-          variant={currentTab === 'rewards' ? 'secondary' : 'ghost'}
-          className="w-full justify-start"
-          onClick={() => handleTabChange('rewards')}
-        >
-          <Trophy className="mr-3 h-4 w-4" />
-          Rewards
-        </Button>
-
-        <Button
-          variant={currentTab === 'interview-tracker' ? 'secondary' : 'ghost'}
-          className="w-full justify-start"
-          onClick={() => handleTabChange('interview-tracker')}
-        >
-          <Bookmark className="mr-3 h-4 w-4" />
-          Interview Tracker
-        </Button>
+      <nav style={{ flex: 1, padding: '12px 8px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        <NavItem tab="dashboard"         label="Jobs"             icon={LayoutDashboard} />
+        <NavItem tab="my-analytics"      label="My Analytics"     icon={BarChart3} />
+        <NavItem tab="rewards"           label="Rewards"          icon={Trophy} />
+        <NavItem tab="interview-tracker" label="Interviews"       icon={Bookmark} />
 
         {hasSoftwareAccess && (
           <>
-            <Button
-              variant={currentTab === 'training' ? 'secondary' : 'ghost'}
-              className="w-full justify-start"
-              onClick={() => handleTabChange('training')}
-            >
-              <GraduationCap className="mr-3 h-4 w-4" />
-              DSA Training
-            </Button>
-
-            <Button
-              variant={currentTab === 'system-design' ? 'secondary' : 'ghost'}
-              className="w-full justify-start"
-              onClick={() => handleTabChange('system-design')}
-            >
-              <Building2 className="mr-3 h-4 w-4" />
-              System Design
-            </Button>
+            <div style={{ height: '1px', background: tokens.colorNeutralStroke2, margin: '8px 4px' }} />
+            <NavItem tab="training"      label="DSA Training"     icon={GraduationCap} />
+            <NavItem tab="system-design" label="System Design"    icon={Building2} />
           </>
         )}
 
         {hasAdminAccess && (
           <>
-            <Button
-              variant={currentTab === 'analytics' ? 'secondary' : 'ghost'}
-              className="w-full justify-start"
-              onClick={() => handleTabChange('analytics')}
-            >
-              <BarChart3 className="mr-3 h-4 w-4" />
-              User Analytics
-              <Badge variant="secondary" className="ml-auto">Admin</Badge>
-            </Button>
-
-            <Button
-              variant={currentTab === 'country-analytics' ? 'secondary' : 'ghost'}
-              className="w-full justify-start"
-              onClick={() => handleTabChange('country-analytics')}
-            >
-              <Building2 className="mr-3 h-4 w-4" />
-              Country Analytics
-              <Badge variant="secondary" className="ml-auto">Admin</Badge>
-            </Button>
-
-            <Button
-              variant={currentTab === 'user-management' ? 'secondary' : 'ghost'}
-              className="w-full justify-start"
-              onClick={() => handleTabChange('user-management')}
-            >
-              <Users className="mr-3 h-4 w-4" />
-              User Management
-              <Badge variant="secondary" className="ml-auto">Admin</Badge>
-            </Button>
-
-            <Button
-              variant={currentTab === 'monitoring' ? 'secondary' : 'ghost'}
-              className="w-full justify-start"
-              onClick={() => handleTabChange('monitoring')}
-            >
-              <Activity className="mr-3 h-4 w-4" />
-              Monitoring
-              <Badge variant="secondary" className="ml-auto">Admin</Badge>
-            </Button>
-
-            <Button
-              variant={currentTab === 'user-behaviour' ? 'secondary' : 'ghost'}
-              className="w-full justify-start"
-              onClick={() => handleTabChange('user-behaviour')}
-            >
-              <MousePointerClick className="mr-3 h-4 w-4" />
-              User Behaviour
-              <Badge variant="secondary" className="ml-auto">Admin</Badge>
-            </Button>
+            <div style={{ height: '1px', background: tokens.colorNeutralStroke2, margin: '8px 4px' }} />
+            <NavItem tab="analytics"         label="User Analytics"    icon={BarChart3}       badge="Admin" />
+            <NavItem tab="country-analytics" label="Country Analytics" icon={Building2}        badge="Admin" />
+            <NavItem tab="user-management"   label="User Management"   icon={Users}            badge="Admin" />
+            <NavItem tab="monitoring"        label="Monitoring"         icon={Activity}         badge="Admin" />
+            <NavItem tab="user-behaviour"    label="User Behaviour"     icon={MousePointerClick} badge="Admin" />
           </>
         )}
       </nav>
 
       <Separator />
 
-      {/* User Section */}
-      <div className="p-4 space-y-2">
-        <div className="flex items-center gap-3 px-3 py-2">
-          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-            <User className="w-4 h-4 text-primary-foreground" />
+      {/* User section */}
+      <div style={{ padding: '12px 8px' }}>
+        {/* Avatar card */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '12px', background: tokens.colorNeutralBackground2, marginBottom: '6px' }}>
+          <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg,#f59e0b,#f97316)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 800, color: '#fff', flexShrink: 0 }}>
+            {userInitials}
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">{user?.username || 'User'}</p>
-            <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: '13px', fontWeight: 700, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.full_name || user?.username}</p>
+            <p style={{ fontSize: '11px', color: tokens.colorNeutralForeground3, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.email}</p>
           </div>
         </div>
 
-        <Button
-          variant="ghost"
-          className="w-full justify-start text-muted-foreground hover:text-foreground"
+        <button
           onClick={() => navigate('/settings')}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '8px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 500, background: 'transparent', color: tokens.colorNeutralForeground3, textAlign: 'left' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = tokens.colorNeutralBackground2; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
         >
-          <Settings className="mr-3 h-4 w-4" />
+          <Settings style={{ width: '15px', height: '15px' }} />
           Settings
-        </Button>
+        </button>
 
-        <Button
-          variant="ghost"
-          className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
+        <button
           onClick={handleLogout}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '8px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 500, background: 'transparent', color: '#ef4444', textAlign: 'left' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.08)'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
         >
-          <LogOut className="mr-3 h-4 w-4" />
-          Logout
-        </Button>
+          <LogOut style={{ width: '15px', height: '15px' }} />
+          Log out
+        </button>
       </div>
     </div>
   );
