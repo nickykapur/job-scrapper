@@ -1,8 +1,30 @@
 import React, { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { ExternalLink, Check, X, Zap, Building2 } from 'lucide-react';
+import {
+  Card,
+  CardHeader,
+  CardFooter,
+  Button,
+  Badge,
+  Text,
+  makeStyles,
+  tokens,
+  Tooltip,
+} from '@fluentui/react-components';
+import {
+  BuildingRegular,
+  LocationRegular,
+  ClockRegular,
+  CheckmarkCircleFilled,
+  DismissCircleFilled,
+  ArrowRightRegular,
+  FlashRegular,
+  PeopleRegular,
+  BriefcaseRegular,
+  PaintBrushRegular,
+  VideoRegular,
+  HeadphonesRegular,
+  TagRegular,
+} from '@fluentui/react-icons';
 import type { Job } from '../types';
 import { getCountryFromLocation } from '../utils/countryUtils';
 import { jobApi } from '../services/api';
@@ -16,6 +38,196 @@ interface JobCardProps {
   isUpdating?: boolean;
 }
 
+// Per-type visual config
+const JOB_TYPE_CONFIG: Record<string, {
+  label: string;
+  icon: React.ElementType;
+  color: string;
+  bg: string;
+}> = {
+  sales: {
+    label: 'Sales',
+    icon: BriefcaseRegular,
+    color: '#b45309',
+    bg: '#fef3c7',
+  },
+  painter: {
+    label: 'Painter',
+    icon: PaintBrushRegular,
+    color: '#1d4ed8',
+    bg: '#dbeafe',
+  },
+  painting: {
+    label: 'Painter',
+    icon: PaintBrushRegular,
+    color: '#1d4ed8',
+    bg: '#dbeafe',
+  },
+  customer_service: {
+    label: 'Customer Service',
+    icon: HeadphonesRegular,
+    color: '#065f46',
+    bg: '#d1fae5',
+  },
+  customer_support: {
+    label: 'Customer Support',
+    icon: HeadphonesRegular,
+    color: '#065f46',
+    bg: '#d1fae5',
+  },
+  media_production: {
+    label: 'Media',
+    icon: VideoRegular,
+    color: '#6d28d9',
+    bg: '#ede9fe',
+  },
+  media: {
+    label: 'Media',
+    icon: VideoRegular,
+    color: '#6d28d9',
+    bg: '#ede9fe',
+  },
+  software: {
+    label: 'Software',
+    icon: TagRegular,
+    color: '#1e40af',
+    bg: '#dbeafe',
+  },
+  hr: {
+    label: 'HR',
+    icon: PeopleRegular,
+    color: '#6d28d9',
+    bg: '#ede9fe',
+  },
+  finance: {
+    label: 'Finance',
+    icon: TagRegular,
+    color: '#065f46',
+    bg: '#d1fae5',
+  },
+  aml: {
+    label: 'AML / Compliance',
+    icon: TagRegular,
+    color: '#991b1b',
+    bg: '#fee2e2',
+  },
+};
+
+const useStyles = makeStyles({
+  card: {
+    height: '100%',
+    display: 'flex',
+    flexDirection: 'column',
+    borderRadius: tokens.borderRadiusXLarge,
+    boxShadow: tokens.shadow4,
+    transition: 'box-shadow 0.2s ease, transform 0.2s ease',
+    ':hover': {
+      boxShadow: tokens.shadow16,
+      transform: 'translateY(-2px)',
+    },
+    overflow: 'hidden',
+  },
+  typeStripe: {
+    height: '4px',
+    width: '100%',
+    flexShrink: 0,
+  },
+  body: {
+    flex: 1,
+    padding: '16px 20px 12px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
+  companyRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+  },
+  title: {
+    fontSize: '15px',
+    fontWeight: '600',
+    lineHeight: '1.35',
+    display: '-webkit-box',
+    WebkitLineClamp: '2',
+    WebkitBoxOrient: 'vertical',
+    overflow: 'hidden',
+  },
+  metaRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    color: tokens.colorNeutralForeground3,
+    fontSize: '12px',
+  },
+  tagsRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    flexWrap: 'wrap',
+    marginTop: '4px',
+  },
+  typeBadge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '4px',
+    borderRadius: tokens.borderRadiusMedium,
+    padding: '2px 8px',
+    fontSize: '11px',
+    fontWeight: '600',
+  },
+  footer: {
+    padding: '12px 20px 16px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+    borderTop: `1px solid ${tokens.colorNeutralStroke2}`,
+  },
+  applyBtn: {
+    width: '100%',
+    fontWeight: '600',
+    borderRadius: tokens.borderRadiusMedium,
+  },
+  actionRow: {
+    display: 'flex',
+    gap: '8px',
+  },
+  appliedState: {
+    width: '100%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    padding: '10px',
+    borderRadius: tokens.borderRadiusMedium,
+    background: tokens.colorPaletteGreenBackground2,
+    color: tokens.colorPaletteGreenForeground2,
+    fontWeight: '600',
+    fontSize: '14px',
+  },
+  rejectedState: {
+    width: '100%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    padding: '10px',
+    borderRadius: tokens.borderRadiusMedium,
+    background: tokens.colorNeutralBackground3,
+    color: tokens.colorNeutralForeground4,
+    fontWeight: '600',
+    fontSize: '14px',
+    opacity: '0.7',
+  },
+  confirmText: {
+    textAlign: 'center',
+    color: tokens.colorNeutralForeground2,
+    fontSize: '13px',
+    fontWeight: '500',
+    paddingTop: '2px',
+  },
+});
+
 export const JobCard: React.FC<JobCardProps> = ({
   job,
   onMarkApplied,
@@ -23,246 +235,231 @@ export const JobCard: React.FC<JobCardProps> = ({
   onRefreshJobs,
   isUpdating = false,
 }) => {
-  const [bulkActionLoading, setBulkActionLoading] = useState(false);
+  const styles = useStyles();
   const [pendingApply, setPendingApply] = useState(false);
-  const extractedCountry = job.country || getCountryFromLocation(job.location);
+  const [bulkLoading, setBulkLoading] = useState(false);
 
-  // Calculate how long ago the job was scraped
+  const typeKey = (job.job_type || '').toLowerCase();
+  const typeConfig = JOB_TYPE_CONFIG[typeKey] || {
+    label: job.job_type || '',
+    icon: TagRegular,
+    color: '#374151',
+    bg: '#f3f4f6',
+  };
+  const TypeIcon = typeConfig.icon;
+
+  const safeDecode = (str: string) => {
+    try { return decodeURIComponent(str); } catch { return str; }
+  };
+
   const getScrapedAgo = () => {
     if (!job.scraped_at) return null;
-
     try {
-      const scrapedDate = new Date(job.scraped_at);
-      const now = new Date();
-      const diffMs = now.getTime() - scrapedDate.getTime();
-      const diffSeconds = Math.floor(diffMs / 1000);
-      const diffMinutes = Math.floor(diffSeconds / 60);
-      const diffHours = Math.floor(diffMinutes / 60);
-      const diffDays = Math.floor(diffHours / 24);
-
-      if (diffDays > 7) {
-        const weeks = Math.floor(diffDays / 7);
-        return `${weeks} week${weeks > 1 ? 's' : ''} ago`;
-      } else if (diffDays > 0) {
-        return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-      } else if (diffHours > 0) {
-        return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-      } else if (diffMinutes > 0) {
-        return `${diffMinutes} min${diffMinutes > 1 ? 's' : ''} ago`;
-      } else {
-        return 'Just now';
-      }
-    } catch (error) {
-      return null;
-    }
+      const diff = Date.now() - new Date(job.scraped_at).getTime();
+      const mins = Math.floor(diff / 60000);
+      const hours = Math.floor(mins / 60);
+      const days = Math.floor(hours / 24);
+      if (days > 7) return `${Math.floor(days / 7)}w ago`;
+      if (days > 0) return `${days}d ago`;
+      if (hours > 0) return `${hours}h ago`;
+      if (mins > 0) return `${mins}m ago`;
+      return 'Just now';
+    } catch { return null; }
   };
 
-  const scrapedAgo = getScrapedAgo();
-
-  // Safe decode function to handle malformed URIs
-  const safeDecode = (str: string): string => {
-    try {
-      return decodeURIComponent(str);
-    } catch (e) {
-      // If decode fails, return original string
-      return str;
-    }
-  };
-
-  const handleRejectAllFromCompany = async () => {
-    if (!window.confirm(`Reject ALL jobs from ${job.company}? This will mark all current ${job.company} jobs as rejected.`)) {
-      return;
-    }
-
-    setBulkActionLoading(true);
+  const handleBulkReject = async () => {
+    if (!window.confirm(`Reject ALL jobs from ${job.company}?`)) return;
+    setBulkLoading(true);
     try {
       const result = await jobApi.bulkRejectJobs({ company: job.company });
       toast.success(`${result.jobs_rejected} jobs from ${job.company} rejected!`);
-      // Refresh jobs data without reloading the page
-      if (onRefreshJobs) {
-        setTimeout(() => onRefreshJobs(), 800);
-      }
+      if (onRefreshJobs) setTimeout(onRefreshJobs, 800);
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || 'Failed to bulk reject jobs');
+      toast.error(error.response?.data?.detail || 'Failed to bulk reject');
     } finally {
-      setBulkActionLoading(false);
+      setBulkLoading(false);
     }
   };
 
-  const jobTypeColors: Record<string, { bg: string; text: string }> = {
-    software: { bg: 'bg-blue-500/10 dark:bg-blue-500/20', text: 'text-blue-600 dark:text-blue-400' },
-    hr: { bg: 'bg-violet-500/10 dark:bg-violet-500/20', text: 'text-violet-600 dark:text-violet-400' },
-    cybersecurity: { bg: 'bg-red-500/10 dark:bg-red-500/20', text: 'text-red-600 dark:text-red-400' },
-    sales: { bg: 'bg-amber-500/10 dark:bg-amber-500/20', text: 'text-amber-600 dark:text-amber-400' },
-    finance: { bg: 'bg-emerald-500/10 dark:bg-emerald-500/20', text: 'text-emerald-600 dark:text-emerald-400' },
-  };
+  const hasQuickApply =
+    job.easy_apply_status === 'confirmed' ||
+    job.easy_apply_status === 'probable' ||
+    (job.easy_apply && !job.easy_apply_status);
 
-  const jobTypeStyle = jobTypeColors[job.job_type || 'software'] || { bg: 'bg-gray-500/10', text: 'text-gray-600' };
+  const scrapedAgo = getScrapedAgo();
+  const location = safeDecode(job.location || '');
+  const company = safeDecode(job.company || '');
+  const title = safeDecode(job.title || '');
+  const extractedCountry = job.country || getCountryFromLocation(job.location);
 
   return (
-    <Card className="h-full flex flex-col border-border hover:border-gray-400 dark:hover:border-gray-600 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
-      <CardContent className="p-6 flex-grow flex flex-col">
-        {/* Company Name */}
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-          {safeDecode(job.company || '')}
-        </p>
+    <Card className={styles.card}>
+      {/* Color stripe at top */}
+      <div
+        className={styles.typeStripe}
+        style={{ background: typeConfig.color }}
+      />
 
-        {/* Job Title */}
-        <h3 className="text-base font-bold mb-4 text-foreground line-clamp-2 leading-snug">
-          {safeDecode(job.title || '')}
-        </h3>
+      {/* Card body */}
+      <div className={styles.body}>
+        {/* Company */}
+        <div className={styles.companyRow}>
+          <BuildingRegular style={{ color: tokens.colorNeutralForeground3, fontSize: '14px', flexShrink: 0 }} />
+          <Text size={100} weight="semibold" style={{ color: tokens.colorNeutralForeground3, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            {company}
+          </Text>
+        </div>
 
-        {/* Job Details */}
-        <div className="space-y-2 mb-6 flex-grow">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              {safeDecode(job.location || '')}
-            </p>
+        {/* Title */}
+        <div className={styles.title}>
+          <Text weight="semibold" size={300}>
+            {title}
+          </Text>
+        </div>
+
+        {/* Location */}
+        {location && (
+          <div className={styles.metaRow}>
+            <LocationRegular style={{ fontSize: '13px', flexShrink: 0 }} />
+            <Text size={100}>{location}</Text>
             {extractedCountry && extractedCountry !== 'Unknown' && (
-              <p className="text-xs font-semibold text-primary">
-                {extractedCountry}
-              </p>
+              <Text size={100} weight="semibold" style={{ color: tokens.colorBrandForeground1, marginLeft: '4px' }}>
+                · {extractedCountry}
+              </Text>
             )}
           </div>
+        )}
 
-          <div className="flex items-center justify-between flex-wrap gap-1">
-            <div className="flex flex-col gap-0.5">
-              <p className="text-sm text-muted-foreground">
-                {job.posted_date}
-              </p>
-            </div>
-            <div className="flex gap-1 items-center">
-              {job.job_type && job.job_type !== 'other' && (
-                <Badge
-                  variant="outline"
-                  className={`h-5 text-[10px] font-semibold px-2 ${jobTypeStyle.bg} ${jobTypeStyle.text} border-0`}
-                >
-                  {job.job_type === 'hr' ? 'HR' : job.job_type.charAt(0).toUpperCase() + job.job_type.slice(1)}
-                </Badge>
-              )}
-              {/* Show Easy Apply badge with verification status */}
-              {(job.easy_apply_status === 'confirmed' || job.easy_apply_status === 'probable' || (job.easy_apply && !job.easy_apply_status)) && (
-                <Badge
-                  variant="outline"
-                  className={`h-5 text-[10px] font-semibold px-2 flex items-center gap-0.5 ${
-                    job.easy_apply_status === 'confirmed'
-                      ? 'bg-gradient-to-r from-emerald-500/20 to-green-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
-                      : 'bg-gradient-to-r from-yellow-500/20 to-amber-500/20 text-yellow-700 dark:text-yellow-400 border border-yellow-500/30'
-                  }`}
-                  title={
-                    job.easy_apply_status === 'confirmed'
-                      ? 'Verified Quick Apply'
-                      : job.easy_apply_status === 'probable'
-                      ? 'Likely Quick Apply (unverified)'
-                      : 'Quick Apply (legacy data)'
-                  }
-                >
-                  <Zap className={`w-3 h-3 ${job.easy_apply_status === 'confirmed' ? 'fill-emerald-500' : 'fill-yellow-500'}`} />
-                  {job.easy_apply_status === 'confirmed' ? 'Quick Apply ✓' : 'Quick Apply ?'}
-                </Badge>
-              )}
-            </div>
+        {/* Date + scraped */}
+        {(job.posted_date || scrapedAgo) && (
+          <div className={styles.metaRow}>
+            <ClockRegular style={{ fontSize: '13px', flexShrink: 0 }} />
+            <Text size={100}>{job.posted_date || ''}</Text>
+            {scrapedAgo && (
+              <Text size={100} style={{ color: tokens.colorNeutralForeground4 }}>
+                · scraped {scrapedAgo}
+              </Text>
+            )}
           </div>
-        </div>
+        )}
 
-        {/* Action Buttons */}
-        <div>
-          {!job.applied && !job.rejected && !pendingApply && (
-            <div className="space-y-3">
-              <Button
-                className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold shadow-none hover:shadow-lg hover:shadow-blue-500/30 transition-all"
-                size="lg"
-                onClick={() => {
-                  // Open the job URL immediately
-                  const link = document.createElement('a');
-                  link.href = job.job_url;
-                  link.target = '_blank';
-                  link.rel = 'noopener noreferrer';
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                  // Show confirmation UI
-                  setPendingApply(true);
+        {/* Tags */}
+        <div className={styles.tagsRow}>
+          {typeConfig.label && (
+            <span
+              className={styles.typeBadge}
+              style={{ background: typeConfig.bg, color: typeConfig.color }}
+            >
+              <TypeIcon style={{ fontSize: '11px' }} />
+              {typeConfig.label}
+            </span>
+          )}
+          {hasQuickApply && (
+            <Tooltip
+              content={
+                job.easy_apply_status === 'confirmed'
+                  ? 'Verified Quick Apply'
+                  : 'Likely Quick Apply'
+              }
+              relationship="label"
+            >
+              <span
+                className={styles.typeBadge}
+                style={{
+                  background: job.easy_apply_status === 'confirmed' ? '#d1fae5' : '#fef3c7',
+                  color: job.easy_apply_status === 'confirmed' ? '#065f46' : '#92400e',
                 }}
               >
-                Apply Now
-                <ExternalLink className="ml-2 h-4 w-4" />
-              </Button>
-
-              <div className="flex gap-2">
-                <Button
-                  variant="ghost"
-                  className="flex-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 font-medium"
-                  onClick={() => onRejectJob(job.id)}
-                >
-                  <X className="mr-2 h-4 w-4" />
-                  Not Interested
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                  onClick={handleRejectAllFromCompany}
-                  disabled={bulkActionLoading}
-                  title={`Reject all from ${job.company}`}
-                >
-                  <Building2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {!job.applied && !job.rejected && pendingApply && (
-            <div className="space-y-3">
-              <p className="text-sm font-medium text-center text-muted-foreground">
-                Did you complete the application?
-              </p>
-              <Button
-                className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold"
-                size="lg"
-                onClick={() => {
-                  setPendingApply(false);
-                  onMarkApplied(job.id);
-                }}
-              >
-                <Check className="mr-2 h-4 w-4" />
-                Yes, I Applied!
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full font-medium"
-                size="lg"
-                onClick={() => setPendingApply(false)}
-              >
-                Not Yet
-              </Button>
-            </div>
-          )}
-
-          {job.applied && (
-            <Button
-              className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold cursor-not-allowed"
-              size="lg"
-              disabled
-            >
-              <Check className="mr-2 h-4 w-4" />
-              Applied
-            </Button>
-          )}
-
-          {job.rejected && (
-            <Button
-              variant="secondary"
-              className="w-full font-semibold cursor-not-allowed opacity-60"
-              size="lg"
-              disabled
-            >
-              <X className="mr-2 h-4 w-4" />
-              Rejected
-            </Button>
+                <FlashRegular style={{ fontSize: '11px' }} />
+                {job.easy_apply_status === 'confirmed' ? 'Quick Apply ✓' : 'Quick Apply ?'}
+              </span>
+            </Tooltip>
           )}
         </div>
-      </CardContent>
+      </div>
+
+      {/* Footer actions */}
+      <div className={styles.footer}>
+        {!job.applied && !job.rejected && !pendingApply && (
+          <>
+            <Button
+              appearance="primary"
+              className={styles.applyBtn}
+              icon={<ArrowRightRegular />}
+              iconPosition="after"
+              disabled={isUpdating}
+              onClick={() => {
+                const a = document.createElement('a');
+                a.href = job.job_url;
+                a.target = '_blank';
+                a.rel = 'noopener noreferrer';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setPendingApply(true);
+              }}
+            >
+              Apply Now
+            </Button>
+
+            <div className={styles.actionRow}>
+              <Button
+                appearance="subtle"
+                style={{ flex: 1, color: tokens.colorPaletteRedForeground1 }}
+                onClick={() => onRejectJob(job.id)}
+                disabled={isUpdating}
+              >
+                Not Interested
+              </Button>
+              <Tooltip content={`Reject all from ${company}`} relationship="label">
+                <Button
+                  appearance="subtle"
+                  icon={<BuildingRegular />}
+                  style={{ color: tokens.colorNeutralForeground3 }}
+                  onClick={handleBulkReject}
+                  disabled={bulkLoading}
+                />
+              </Tooltip>
+            </div>
+          </>
+        )}
+
+        {!job.applied && !job.rejected && pendingApply && (
+          <>
+            <Text className={styles.confirmText}>Did you complete the application?</Text>
+            <Button
+              appearance="primary"
+              className={styles.applyBtn}
+              style={{ background: tokens.colorPaletteGreenBackground3, border: 'none' }}
+              icon={<CheckmarkCircleFilled />}
+              onClick={() => { setPendingApply(false); onMarkApplied(job.id); }}
+            >
+              Yes, I Applied!
+            </Button>
+            <Button
+              appearance="outline"
+              className={styles.applyBtn}
+              onClick={() => setPendingApply(false)}
+            >
+              Not Yet
+            </Button>
+          </>
+        )}
+
+        {job.applied && (
+          <div className={styles.appliedState}>
+            <CheckmarkCircleFilled style={{ fontSize: '18px' }} />
+            Applied
+          </div>
+        )}
+
+        {job.rejected && (
+          <div className={styles.rejectedState}>
+            <DismissCircleFilled style={{ fontSize: '18px' }} />
+            Not Interested
+          </div>
+        )}
+      </div>
     </Card>
   );
 };

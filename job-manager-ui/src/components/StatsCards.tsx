@@ -1,54 +1,114 @@
 import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { JobStats } from '../types';
-import { motion } from 'framer-motion';
+import {
+  Card,
+  Text,
+  makeStyles,
+  tokens,
+} from '@fluentui/react-components';
+import {
+  BriefcaseFilled,
+  SparkleRegular,
+} from '@fluentui/react-icons';
+import type { JobStats } from '../types';
 
 interface StatsCardsProps {
   stats: JobStats;
 }
 
-const MotionCard = motion(Card);
+const useStyles = makeStyles({
+  grid: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '12px',
+    marginBottom: '20px',
+  },
+  card: {
+    borderRadius: tokens.borderRadiusXLarge,
+    boxShadow: tokens.shadow4,
+    overflow: 'hidden',
+    transition: 'box-shadow 0.2s ease, transform 0.2s ease',
+    ':hover': {
+      boxShadow: tokens.shadow16,
+      transform: 'translateY(-2px)',
+    },
+  },
+  inner: {
+    padding: '20px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+  },
+  iconBox: {
+    width: '40px',
+    height: '40px',
+    borderRadius: tokens.borderRadiusLarge,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '22px',
+  },
+  value: {
+    fontSize: '36px',
+    fontWeight: '700',
+    lineHeight: '1',
+    letterSpacing: '-1px',
+  },
+  label: {
+    fontSize: '11px',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: '0.06em',
+    color: tokens.colorNeutralForeground3,
+  },
+});
 
 export const StatsCards: React.FC<StatsCardsProps> = ({ stats }) => {
-  const statItems = [
+  const styles = useStyles();
+
+  const items = [
     {
-      label: 'Total Jobs',
+      label: 'Available Jobs',
       value: stats.total,
-      color: 'rgb(59, 130, 246)', // blue-500
-      colorClass: 'text-blue-500',
-      hoverClass: 'hover:border-blue-500/40 hover:shadow-blue-500/10',
+      icon: BriefcaseFilled,
+      iconBg: '#dbeafe',
+      iconColor: '#1d4ed8',
+      valueColor: '#1d4ed8',
+      accent: '#3b82f6',
     },
     {
-      label: 'New Positions',
+      label: 'New Today',
       value: stats.new,
-      color: 'rgb(16, 185, 129)', // emerald-500
-      colorClass: 'text-emerald-500',
-      hoverClass: 'hover:border-emerald-500/40 hover:shadow-emerald-500/10',
+      icon: SparkleRegular,
+      iconBg: '#d1fae5',
+      iconColor: '#065f46',
+      valueColor: '#059669',
+      accent: '#10b981',
     },
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 md:gap-4 mb-4 md:mb-6">
-      {statItems.map((item, index) => (
-        <MotionCard
-          key={item.label}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: index * 0.1 }}
-          className={`transition-all duration-200 ${item.hoverClass} hover:-translate-y-1 hover:shadow-lg`}
-        >
-          <CardContent className="p-4 md:p-6">
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                {item.label}
-              </p>
-              <p className={`text-3xl md:text-4xl font-bold ${item.colorClass} tracking-tight`}>
-                {item.value}
-              </p>
+    <div className={styles.grid}>
+      {items.map((item) => {
+        const Icon = item.icon;
+        return (
+          <Card key={item.label} className={styles.card} style={{ borderTop: `3px solid ${item.accent}` }}>
+            <div className={styles.inner}>
+              <div
+                className={styles.iconBox}
+                style={{ background: item.iconBg }}
+              >
+                <Icon style={{ color: item.iconColor, fontSize: '22px' }} />
+              </div>
+              <div>
+                <div className={styles.value} style={{ color: item.valueColor }}>
+                  {item.value.toLocaleString()}
+                </div>
+                <Text className={styles.label}>{item.label}</Text>
+              </div>
             </div>
-          </CardContent>
-        </MotionCard>
-      ))}
+          </Card>
+        );
+      })}
     </div>
   );
 };

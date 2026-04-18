@@ -22,6 +22,18 @@ import {
   Activity,
   MousePointerClick,
 } from 'lucide-react';
+import {
+  Button as FluentButton,
+  Text,
+  makeStyles,
+  tokens,
+  Tooltip,
+} from '@fluentui/react-components';
+import {
+  ArrowSyncRegular,
+  WeatherMoonRegular,
+  WeatherSunnyRegular,
+} from '@fluentui/react-icons';
 import { JobCard } from './components/JobCard';
 import { StatsCards } from './components/StatsCards';
 import { FilterControls } from './components/FilterControls';
@@ -73,7 +85,7 @@ const App: React.FC = () => {
     status: 'all',
     sort: 'newest',
     jobType: 'all',
-    country: 'Ireland',  // Default to Ireland
+    country: 'all',
     keyword: '',
     quickApply: 'all',
   });
@@ -372,14 +384,14 @@ const App: React.FC = () => {
   const sidebarContent = (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="p-6">
+      <div className="p-5 pb-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-violet-500 flex items-center justify-center">
-            <Database className="w-6 h-6 text-white" />
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)' }}>
+            <Database className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold">Job Tracker</h1>
-            <p className="text-xs text-muted-foreground">Find your dream job</p>
+            <p className="text-base font-bold leading-tight">Job Tracker</p>
+            <p className="text-xs" style={{ color: tokens.colorNeutralForeground3 }}>Find your next role</p>
           </div>
         </div>
       </div>
@@ -639,12 +651,11 @@ const App: React.FC = () => {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="border-b bg-card px-6 py-4">
+        <header className="border-b bg-card px-6" style={{ paddingTop: '14px', paddingBottom: '14px' }}>
           <div className="flex items-center justify-between">
-
             <div className="flex-1">
-              <h2 className="text-lg font-bold">
-                {currentTab === 'dashboard' ? 'Jobs' :
+              <Text weight="bold" size={500}>
+                {currentTab === 'dashboard' ? 'Job Board' :
                  currentTab === 'my-analytics' ? 'My Analytics' :
                  currentTab === 'rewards' ? 'Rewards & Achievements' :
                  currentTab === 'interview-tracker' ? 'Interview Tracker' :
@@ -655,38 +666,41 @@ const App: React.FC = () => {
                  currentTab === 'user-management' ? 'User Management' :
                  currentTab === 'monitoring' ? 'System Monitoring' :
                  currentTab === 'user-behaviour' ? 'User Behaviour' : 'Dashboard'}
-              </h2>
+              </Text>
               {currentTab === 'dashboard' && (
-                <div className="space-y-0.5">
-                  <p className="text-sm text-muted-foreground">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '2px' }}>
+                  <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
                     {paginatedJobs.totalJobs} active opportunities
-                    {paginatedJobs.totalPages > 1 && ` • Page ${currentPage} of ${paginatedJobs.totalPages}`}
-                  </p>
+                    {paginatedJobs.totalPages > 1 && ` · Page ${currentPage} of ${paginatedJobs.totalPages}`}
+                  </Text>
                   {timeAgo && (
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <RefreshCw className="h-3 w-3" />
-                      Last updated: {timeAgo}
-                    </p>
+                    <Text size={100} style={{ color: tokens.colorNeutralForeground4, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <RefreshCw style={{ width: '10px', height: '10px' }} />
+                      Updated {timeAgo}
+                    </Text>
                   )}
                 </div>
               )}
             </div>
 
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" onClick={toggleDarkMode}>
-                {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-              </Button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Tooltip content={darkMode ? 'Switch to light mode' : 'Switch to dark mode'} relationship="label">
+                <FluentButton
+                  appearance="subtle"
+                  icon={darkMode ? <WeatherSunnyRegular /> : <WeatherMoonRegular />}
+                  onClick={toggleDarkMode}
+                />
+              </Tooltip>
 
               {currentTab === 'dashboard' && (
-                <Button
-                  variant="outline"
-                  size="sm"
+                <FluentButton
+                  appearance="outline"
+                  icon={<ArrowSyncRegular className={isRefreshing ? 'animate-spin' : ''} />}
                   onClick={() => loadJobs()}
                   disabled={isRefreshing}
                 >
-                  <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                   Refresh
-                </Button>
+                </FluentButton>
               )}
             </div>
           </div>
@@ -719,54 +733,56 @@ const App: React.FC = () => {
                 </div>
 
                 {paginatedJobs.totalJobs === 0 && (
-                  <div className="text-center py-12">
-                    <p className="text-muted-foreground">No jobs found matching your filters</p>
+                  <div style={{ textAlign: 'center', padding: '60px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ fontSize: '48px' }}>🔍</div>
+                    <Text size={400} weight="semibold">No jobs found</Text>
+                    <Text size={300} style={{ color: tokens.colorNeutralForeground3 }}>
+                      Try adjusting your filters or check back after the next scrape
+                    </Text>
                   </div>
                 )}
 
-                {/* Pagination Controls */}
+                {/* Pagination */}
                 {paginatedJobs.totalPages > 1 && (
-                  <div className="flex items-center justify-center gap-2 mt-8">
-                    <Button
-                      variant="outline"
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '32px' }}>
+                    <FluentButton
+                      appearance="outline"
                       onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                       disabled={currentPage === 1}
                     >
                       Previous
-                    </Button>
+                    </FluentButton>
 
-                    <div className="flex items-center gap-1">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       {Array.from({ length: paginatedJobs.totalPages }, (_, i) => i + 1)
-                        .filter(page => {
-                          // Show first page, last page, current page, and pages around current
-                          return page === 1 ||
-                                 page === paginatedJobs.totalPages ||
-                                 Math.abs(page - currentPage) <= 1;
-                        })
+                        .filter(page =>
+                          page === 1 ||
+                          page === paginatedJobs.totalPages ||
+                          Math.abs(page - currentPage) <= 1
+                        )
                         .map((page, idx, arr) => (
                           <React.Fragment key={page}>
                             {idx > 0 && arr[idx - 1] !== page - 1 && (
-                              <span className="px-2 text-muted-foreground">...</span>
+                              <Text style={{ padding: '0 4px', color: tokens.colorNeutralForeground3 }}>…</Text>
                             )}
-                            <Button
-                              variant={currentPage === page ? 'default' : 'outline'}
-                              size="sm"
+                            <FluentButton
+                              appearance={currentPage === page ? 'primary' : 'outline'}
                               onClick={() => setCurrentPage(page)}
-                              className="w-10"
+                              style={{ minWidth: '36px', padding: '0 8px' }}
                             >
                               {page}
-                            </Button>
+                            </FluentButton>
                           </React.Fragment>
                         ))}
                     </div>
 
-                    <Button
-                      variant="outline"
+                    <FluentButton
+                      appearance="outline"
                       onClick={() => setCurrentPage(p => Math.min(paginatedJobs.totalPages, p + 1))}
                       disabled={currentPage === paginatedJobs.totalPages}
                     >
                       Next
-                    </Button>
+                    </FluentButton>
                   </div>
                 )}
               </>

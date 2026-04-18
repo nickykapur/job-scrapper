@@ -1,13 +1,18 @@
 import React, { useMemo } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
 import {
+  Input,
   Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Filter, Search, X } from 'lucide-react';
+  Label,
+  Card,
+  makeStyles,
+  tokens,
+  Text,
+} from '@fluentui/react-components';
+import {
+  SearchRegular,
+  FilterRegular,
+  DismissRegular,
+} from '@fluentui/react-icons';
 import type { FilterState, Job } from '../types';
 
 interface FilterControlsProps {
@@ -16,12 +21,66 @@ interface FilterControlsProps {
   jobs: Record<string, Job>;
 }
 
+const useStyles = makeStyles({
+  card: {
+    borderRadius: tokens.borderRadiusXLarge,
+    boxShadow: tokens.shadow4,
+    marginBottom: '20px',
+    overflow: 'hidden',
+  },
+  inner: {
+    padding: '20px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+  },
+  header: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginBottom: '4px',
+  },
+  row: {
+    display: 'grid',
+    gridTemplateColumns: '1fr',
+    gap: '12px',
+    '@media (min-width: 640px)': {
+      gridTemplateColumns: '1fr 1fr',
+    },
+  },
+  field: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+  },
+  searchWrap: {
+    position: 'relative',
+    display: 'flex',
+    alignItems: 'center',
+  },
+  clearBtn: {
+    position: 'absolute',
+    right: '10px',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    color: tokens.colorNeutralForeground3,
+    padding: '0',
+    ':hover': {
+      color: tokens.colorNeutralForeground1,
+    },
+  },
+});
+
 export const FilterControls: React.FC<FilterControlsProps> = ({
   filters,
   onFiltersChange,
   jobs,
 }) => {
-  // Auto-detect available countries from actual jobs (not applied/rejected)
+  const styles = useStyles();
+
   const availableCountries = useMemo(() => {
     const countrySet = new Set<string>();
     Object.entries(jobs).forEach(([key, job]) => {
@@ -32,62 +91,95 @@ export const FilterControls: React.FC<FilterControlsProps> = ({
     return Array.from(countrySet).sort();
   }, [jobs]);
 
-const hasIreland = Object.entries(jobs).some(
-    ([key, job]) => !key.startsWith('_') && job.country === 'Ireland' && !job.applied && !job.rejected
-  );
-
   return (
-    <Card className="mb-6">
-      <CardContent className="p-6 space-y-4">
-        <div className="flex items-center gap-2 mb-2">
-          <Filter className="h-5 w-5 text-primary" />
-          <h3 className="text-lg font-semibold">Filters</h3>
+    <Card className={styles.card}>
+      <div className={styles.inner}>
+        <div className={styles.header}>
+          <FilterRegular style={{ fontSize: '18px', color: tokens.colorBrandForeground1 }} />
+          <Text weight="semibold" size={400}>Filters</Text>
         </div>
 
         {/* Keyword search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Search by job title or company…"
-            value={filters.keyword || ''}
-            onChange={(e) => onFiltersChange({ ...filters, keyword: e.target.value })}
-            className="w-full pl-9 pr-9 py-2 text-sm rounded-md border border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          />
-          {filters.keyword && (
-            <button
-              onClick={() => onFiltersChange({ ...filters, keyword: '' })}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
+        <div className={styles.field}>
+          <Label size="small" style={{ color: tokens.colorNeutralForeground2 }}>Search jobs</Label>
+          <div className={styles.searchWrap}>
+            <Input
+              contentBefore={<SearchRegular style={{ fontSize: '16px' }} />}
+              placeholder="Job title or company…"
+              value={filters.keyword || ''}
+              onChange={(_, d) => onFiltersChange({ ...filters, keyword: d.value })}
+              style={{ width: '100%', paddingRight: filters.keyword ? '36px' : undefined }}
+            />
+            {filters.keyword && (
+              <button
+                className={styles.clearBtn}
+                onClick={() => onFiltersChange({ ...filters, keyword: '' })}
+              >
+                <DismissRegular style={{ fontSize: '16px' }} />
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Country filter */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-muted-foreground">Country</label>
-          <Select
-            value={filters.country || 'Ireland'}
-            onValueChange={(value) => onFiltersChange({ ...filters, country: value })}
-          >
-            <SelectTrigger className="w-full md:w-48">
-              <SelectValue placeholder="Select country" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Countries</SelectItem>
-              {hasIreland && <SelectItem value="Ireland">Ireland</SelectItem>}
-              {availableCountries
-                .filter(c => c !== 'Ireland')
-                .map(country => (
-                  <SelectItem key={country} value={country}>
-                    {country}
-                  </SelectItem>
+        <div className={styles.row}>
+          {/* Status */}
+          <div className={styles.field}>
+            <Label size="small" style={{ color: tokens.colorNeutralForeground2 }}>Status</Label>
+            <Select
+              value={filters.status}
+              onChange={(_, d) => onFiltersChange({ ...filters, status: d.value as FilterState['status'] })}
+            >
+              <option value="all">Active Jobs</option>
+              <option value="applied">Applied</option>
+              <option value="not_applied">Not Applied</option>
+              <option value="rejected">Rejected</option>
+              <option value="new">New Only</option>
+            </Select>
+          </div>
+
+          {/* Sort */}
+          <div className={styles.field}>
+            <Label size="small" style={{ color: tokens.colorNeutralForeground2 }}>Sort by</Label>
+            <Select
+              value={filters.sort}
+              onChange={(_, d) => onFiltersChange({ ...filters, sort: d.value as FilterState['sort'] })}
+            >
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+            </Select>
+          </div>
+
+          {/* Country */}
+          {availableCountries.length > 1 && (
+            <div className={styles.field}>
+              <Label size="small" style={{ color: tokens.colorNeutralForeground2 }}>Country</Label>
+              <Select
+                value={filters.country || 'all'}
+                onChange={(_, d) => onFiltersChange({ ...filters, country: d.value })}
+              >
+                <option value="all">All Countries</option>
+                {availableCountries.map(c => (
+                  <option key={c} value={c}>{c}</option>
                 ))}
-            </SelectContent>
-          </Select>
+              </Select>
+            </div>
+          )}
+
+          {/* Quick Apply */}
+          <div className={styles.field}>
+            <Label size="small" style={{ color: tokens.colorNeutralForeground2 }}>Quick Apply</Label>
+            <Select
+              value={filters.quickApply || 'all'}
+              onChange={(_, d) => onFiltersChange({ ...filters, quickApply: d.value as FilterState['quickApply'] })}
+            >
+              <option value="all">All Jobs</option>
+              <option value="quick_only">Quick Apply Only</option>
+              <option value="confirmed_only">Verified Quick Apply</option>
+              <option value="non_quick">Standard Apply Only</option>
+            </Select>
+          </div>
         </div>
-      </CardContent>
+      </div>
     </Card>
   );
 };
