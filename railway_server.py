@@ -687,6 +687,38 @@ async def get_jobs_api(current_user: Optional[Dict[str, Any]] = Depends(get_curr
                                     if any(kw in title_desc for kw in marketing_keywords):
                                         type_match = True
                                         break
+                                elif pref_type == 'media_production' or pref_type == 'media':
+                                    media_keywords = [
+                                        'video editor', 'video producer', 'video production', 'media producer', 'media production',
+                                        'production assistant', 'production coordinator', 'broadcast', 'cameraman', 'camera operator',
+                                        'cinematographer', 'videographer', 'film editor', 'post production', 'post-production',
+                                        'motion graphics', 'graphic designer', 'multimedia', 'content creator', 'content production',
+                                        'audio engineer', 'sound engineer', 'podcast', 'studio coordinator', 'media coordinator',
+                                        'news producer', 'broadcast engineer', 'av technician', 'audiovisual'
+                                    ]
+                                    if any(kw in title_desc for kw in media_keywords):
+                                        type_match = True
+                                        break
+                                elif pref_type == 'painter' or pref_type == 'painting':
+                                    painter_keywords = [
+                                        'painter', 'painting', 'paint technician', 'residential painter', 'commercial painter',
+                                        'industrial painter', 'spray painter', 'exterior painter', 'interior painter',
+                                        'painting contractor', 'coating applicator', 'house painter'
+                                    ]
+                                    if any(kw in title_desc for kw in painter_keywords):
+                                        type_match = True
+                                        break
+                                elif pref_type == 'customer_service' or pref_type == 'customer_support':
+                                    cs_keywords = [
+                                        'customer service', 'customer support', 'customer care', 'client services',
+                                        'customer success', 'call center', 'contact center', 'help desk', 'helpdesk',
+                                        'service representative', 'support representative', 'customer experience',
+                                        'customer relations', 'client support', 'service advisor', 'customer associate',
+                                        'guest services', 'front desk', 'receptionist', 'customer specialist'
+                                    ]
+                                    if any(kw in title_desc for kw in cs_keywords):
+                                        type_match = True
+                                        break
                             if not type_match:
                                 continue
 
@@ -733,18 +765,17 @@ async def get_jobs_api(current_user: Optional[Dict[str, Any]] = Depends(get_curr
                             if not country_match:
                                 continue
 
-                    # For aml/compliance users: enforce keywords as a title filter
-                    # The scraper sometimes mislabels unrelated jobs (e.g. Data Analyst) as aml
-                    # User's keyword list defines exactly what they want to see
-                    job_types_list = preferences.get('job_types', [])
-                    if preferences.get('keywords') and any(t in job_types_list for t in ['aml', 'compliance']):
-                        keyword_in_title = any(kw.lower() in title_lower for kw in preferences['keywords'])
-                        if not keyword_in_title:
+                    # Filter by preferred cities if enforce_city_filter is set
+                    # Used for users who want jobs in specific metros only (e.g. Long Island, Tampa)
+                    if preferences.get('enforce_city_filter') and preferences.get('preferred_cities'):
+                        city_match = any(city.lower() in location for city in preferences['preferred_cities'])
+                        if not city_match:
                             continue
 
-                    # Check excluded keywords
+                    # Check excluded keywords - only against title to avoid false positives
+                    # (e.g. "Manager" in description = "reports to the Manager", not a senior role)
                     if preferences.get('excluded_keywords'):
-                        if any(keyword.lower() in title_desc for keyword in preferences['excluded_keywords']):
+                        if any(keyword.lower() in title_lower for keyword in preferences['excluded_keywords']):
                             continue
 
                     # Check included keywords - OPTIONAL if job_type already matched

@@ -394,7 +394,8 @@ class UserDatabase:
                 'preferred_countries', 'preferred_cities', 'exclude_locations',
                 'excluded_companies', 'preferred_companies',
                 'easy_apply_only', 'remote_only',
-                'email_notifications', 'daily_digest'
+                'email_notifications', 'daily_digest',
+                'enforce_city_filter'
             ]
 
             for field in allowed_fields:
