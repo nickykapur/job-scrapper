@@ -103,6 +103,19 @@ async function mapFields({ fields, jobContext }) {
   });
 }
 
+async function teachField({ ats, label, fieldType, value, jobContext }) {
+  return apiFetch("/api/autoapply/teach-field", {
+    method: "POST",
+    body: {
+      ats,
+      label,
+      field_type: fieldType || null,
+      value,
+      job_context: jobContext || null,
+    },
+  });
+}
+
 const handlers = {
   login,
   logout,
@@ -111,6 +124,7 @@ const handlers = {
   resolveFields,
   recordAnswer,
   mapFields,
+  teachField,
 };
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {

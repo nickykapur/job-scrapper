@@ -312,8 +312,11 @@
 
   // ── Learning: track + record user edits ─────────────────────────────────────
 
-  function trackFilledField(target, fieldId, fieldKey, filledValue, jobContext) {
-    const record = { fieldKey, filledValue, fieldId, jobContext };
+  function trackFilledField(target, field, fieldKey, filledValue, jobContext, ats) {
+    const record = {
+      fieldKey, filledValue, fieldId: field.id, jobContext,
+      label: field.label, fieldType: field.type, ats,
+    };
     if (target && target.radioGroup !== undefined) {
       RADIO_TRACKING.set(target.radioGroup, record);
       return;
@@ -324,8 +327,11 @@
     }
   }
 
-  function trackUnfilledField(target, fieldId, fieldKey, jobContext) {
-    const record = { fieldKey, filledValue: null, fieldId, jobContext };
+  function trackUnfilledField(target, field, fieldKey, jobContext, ats) {
+    const record = {
+      fieldKey, filledValue: null, fieldId: field.id, jobContext,
+      label: field.label, fieldType: field.type, ats,
+    };
     if (target && target.radioGroup !== undefined) {
       RADIO_TRACKING.set(target.radioGroup, record);
       return;
@@ -354,10 +360,28 @@
 
   async function recordCurrent(el) {
     const rec = FILL_TRACKING.get(el);
-    if (!rec || !rec.fieldKey || rec.fieldKey === "unknown" || rec.fieldKey === "custom_question") return;
+    if (!rec) return;
     let value = el.type === "checkbox" ? (el.checked ? "yes" : "no") : el.value;
     if (value == null || value === "") return;
-    if (String(value) === String(rec.filledValue)) return; // user didn't change our fill
+    if (String(value) === String(rec.filledValue)) return;
+
+    // Unknown/custom_question: auto-teach so future pages remember this answer.
+    if (!rec.fieldKey || rec.fieldKey === "unknown" || rec.fieldKey === "custom_question") {
+      if (!rec.label || !rec.ats) return;
+      try {
+        const res = await send("teachField", {
+          ats: rec.ats,
+          label: rec.label,
+          fieldType: rec.fieldType || el.type || null,
+          value: String(value),
+          jobContext: rec.jobContext,
+        });
+        if (res?.field_key) rec.fieldKey = res.field_key;
+        rec.filledValue = value;
+      } catch (_) {}
+      return;
+    }
+
     const source = rec.filledValue ? "user_edited_our_fill" : "user_typed";
     try {
       await send("recordAnswer", {
@@ -382,11 +406,25 @@
       const group = r.getAttribute("data-jsaa-group");
       if (!group) return;
       const rec = RADIO_TRACKING.get(group);
-      if (!rec || !rec.fieldKey || rec.fieldKey === "unknown" || rec.fieldKey === "custom_question") return;
+      if (!rec) return;
       const lblFor = r.id ? document.querySelector(`label[for="${CSS.escape(r.id)}"]`) : null;
       const lblText = textOf(lblFor) || textOf(r.closest("label")) || r.value;
       if (!lblText) return;
       if (String(lblText).toLowerCase() === String(rec.filledValue || "").toLowerCase()) return;
+
+      if (!rec.fieldKey || rec.fieldKey === "unknown" || rec.fieldKey === "custom_question") {
+        if (!rec.label || !rec.ats) return;
+        try {
+          const res = await send("teachField", {
+            ats: rec.ats, label: rec.label, fieldType: rec.fieldType || "radio",
+            value: String(lblText), jobContext: rec.jobContext,
+          });
+          if (res?.field_key) rec.fieldKey = res.field_key;
+          rec.filledValue = lblText;
+        } catch (_) {}
+        return;
+      }
+
       const source = rec.filledValue ? "user_edited_our_fill" : "user_typed";
       try {
         await send("recordAnswer", {
@@ -398,6 +436,78 @@
         rec.filledValue = lblText;
       } catch (_) {}
     });
+  }
+
+  // ── Teach-me chip: ask once, remember forever ───────────────────────────────
+
+  function currentValueOf(target) {
+    if (target && target.radioGroup !== undefined) {
+      const inputs = document.querySelectorAll(
+        `input[type="radio"][data-jsaa-group="${CSS.escape(target.radioGroup)}"]`
+      );
+      for (const r of inputs) {
+        if (r.checked) {
+          const lblFor = r.id ? document.querySelector(`label[for="${CSS.escape(r.id)}"]`) : null;
+          return textOf(lblFor) || textOf(r.closest("label")) || r.value || "";
+        }
+      }
+      return "";
+    }
+    if (!(target instanceof HTMLElement)) return "";
+    if (target.type === "checkbox") return target.checked ? "yes" : "no";
+    return target.value || "";
+  }
+
+  function anchorFor(target) {
+    if (target && target.radioGroup !== undefined) {
+      const first = document.querySelector(
+        `input[type="radio"][data-jsaa-group="${CSS.escape(target.radioGroup)}"]`
+      );
+      return first ? (first.closest("fieldset, [role='radiogroup'], [role='group']") || first.parentElement) : null;
+    }
+    return target instanceof HTMLElement ? target : null;
+  }
+
+  function attachTeachChip(field, target, ats, jobContext) {
+    const anchor = anchorFor(target);
+    if (!anchor || anchor._jsaaChip) return;
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "jsautoapply-chip";
+    chip.textContent = "💬 Teach me";
+    chip.title = "Answer once — I'll remember for future applications.";
+    chip.addEventListener("click", async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const existing = currentValueOf(target);
+      const answer = window.prompt(
+        `Save an answer for:\n\n"${field.label}"\n\nI'll reuse this on every future application.`,
+        existing || ""
+      );
+      if (answer == null) return;
+      const trimmed = String(answer).trim();
+      if (!trimmed) return;
+      try {
+        const res = await send("teachField", {
+          ats, label: field.label, fieldType: field.type,
+          value: trimmed, jobContext,
+        });
+        setValue(target, trimmed, SOURCE_COLORS.user_own);
+        if (res?.field_key && target instanceof Element) {
+          const rec = FILL_TRACKING.get(target) || {};
+          FILL_TRACKING.set(target, { ...rec, fieldKey: res.field_key, filledValue: trimmed, jobContext });
+        }
+        chip.textContent = "✓ Saved";
+        chip.disabled = true;
+        setTimeout(() => chip.remove(), 2000);
+      } catch (err) {
+        chip.textContent = "⚠ " + (err.message || "failed");
+        setTimeout(() => { chip.textContent = "💬 Teach me"; }, 2500);
+      }
+    });
+    anchor._jsaaChip = chip;
+    // Place chip right after the anchor
+    if (anchor.parentNode) anchor.parentNode.insertBefore(chip, anchor.nextSibling);
   }
 
   // ── Main fill flow ──────────────────────────────────────────────────────────
@@ -457,15 +567,16 @@
         // Respect pre-filled fields (e.g. LinkedIn email/phone) — still track for learning
         if (f.hadValue) {
           alreadyFilled += 1;
-          if (target && fieldKey !== "unknown" && fieldKey !== "custom_question") {
-            trackUnfilledField(target, f.id, fieldKey, jobContext);
-          }
+          if (target) trackUnfilledField(target, f, fieldKey, jobContext, ats);
           continue;
         }
 
         if (fieldKey === "custom_question" || fieldKey === "unknown") {
           fallbackFields.push(f);
-          if (target) trackUnfilledField(target, f.id, fieldKey, jobContext);
+          if (target) {
+            trackUnfilledField(target, f, fieldKey, jobContext, ats);
+            attachTeachChip(f, target, ats, jobContext);
+          }
           continue;
         }
         const resolution = resolveRes.resolutions?.[fieldKey];
@@ -475,12 +586,13 @@
           if (ok) {
             filled += 1;
             if (resolution.source === "cohort") suggestions += 1;
-            if (target) trackFilledField(target, f.id, fieldKey, resolution.value, jobContext);
+            if (target) trackFilledField(target, f, fieldKey, resolution.value, jobContext, ats);
           } else if (target) {
-            trackUnfilledField(target, f.id, fieldKey, jobContext);
+            trackUnfilledField(target, f, fieldKey, jobContext, ats);
           }
         } else if (target) {
-          trackUnfilledField(target, f.id, fieldKey, jobContext);
+          trackUnfilledField(target, f, fieldKey, jobContext, ats);
+          attachTeachChip(f, target, ats, jobContext);
         }
       }
 

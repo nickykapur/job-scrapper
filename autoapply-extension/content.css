@@ -39,3 +39,25 @@
 #jsautoapply-panel[data-kind="ok"] { border-color: rgba(34, 197, 94, 0.4); }
 #jsautoapply-panel[data-kind="warn"] { border-color: rgba(245, 158, 11, 0.4); }
 #jsautoapply-panel[data-kind="error"] { border-color: rgba(239, 68, 68, 0.5); }
+
+.jsautoapply-chip {
+  display: inline-block;
+  margin: 6px 0 6px 8px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #e5e7eb;
+  background: rgba(99, 102, 241, 0.18);
+  border: 1px solid rgba(99, 102, 241, 0.5);
+  border-radius: 999px;
+  cursor: pointer;
+  line-height: 1.2;
+  vertical-align: middle;
+}
+.jsautoapply-chip:hover {
+  background: rgba(99, 102, 241, 0.32);
+}
+.jsautoapply-chip:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

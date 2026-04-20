@@ -455,9 +455,19 @@ async def resolve_fields(
         user_own = {r["field_key"]: r["value"] for r in user_rows}
 
         for fk in request.field_keys:
-            if fk not in FIELD_KEYS:
+            if not _is_valid_field_key(fk):
                 resolutions[fk] = {"value": None, "source": "unknown_field_key",
                                    "confidence": 0, "suggestion_only": False}
+                continue
+
+            # Custom taught keys: user_own only, no CV / cohort fallback.
+            if fk.startswith("custom:"):
+                if fk in user_own and user_own[fk] is not None:
+                    resolutions[fk] = {"value": user_own[fk], "source": "user_own",
+                                       "confidence": 100, "suggestion_only": False}
+                else:
+                    resolutions[fk] = {"value": None, "source": "unknown",
+                                       "confidence": 0, "suggestion_only": False}
                 continue
 
             # Protected-class → never auto-fill
@@ -516,12 +526,16 @@ class RecordAnswerRequest(BaseModel):
     source: str = "user_typed"        # user_typed | accepted_suggestion | user_edited_our_fill
     job_context: Optional[Dict[str, Any]] = None
 
+def _is_valid_field_key(fk: str) -> bool:
+    return fk in FIELD_KEYS or (isinstance(fk, str) and fk.startswith("custom:"))
+
+
 @router.post("/record-answer")
 async def record_answer(
     request: RecordAnswerRequest,
     current_user: Dict[str, Any] = Depends(get_current_user),
 ):
-    if request.field_key not in FIELD_KEYS:
+    if not _is_valid_field_key(request.field_key):
         raise HTTPException(status_code=400, detail="unknown field_key")
     confidence = {"user_typed": 100, "user_edited_our_fill": 100,
                   "accepted_suggestion": 95}.get(request.source, 80)
@@ -594,6 +608,67 @@ async def delete_answer(
     finally:
         await user_db._release(conn)
     return {"ok": True}
+
+
+# ── Teach a custom field (user answers once, we remember forever) ────────────
+
+class TeachFieldRequest(BaseModel):
+    ats: str
+    label: str
+    field_type: Optional[str] = None
+    value: str
+    job_context: Optional[Dict[str, Any]] = None
+
+
+@router.post("/teach-field")
+async def teach_field(
+    request: TeachFieldRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
+    """Store a user's answer for a label we couldn't classify.
+
+    Creates a stable `custom:<label_hash>` key, maps the ATS label to it,
+    and saves the answer under that key. Next time the same label appears
+    on any form, classify-fields returns the custom key from cache and
+    resolve-fields returns the stored answer.
+    """
+    ats = (request.ats or "generic").lower()
+    label = (request.label or "").strip()
+    if not label or not request.value.strip():
+        raise HTTPException(status_code=400, detail="label and value required")
+
+    h = _label_hash(label, request.field_type)
+    field_key = f"custom:{h}"
+
+    conn = await user_db.get_connection()
+    if not conn:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+    try:
+        await conn.execute(
+            """
+            INSERT INTO field_key_mappings (ats, label_hash, raw_label, field_type, field_key, classified_by)
+            VALUES ($1, $2, $3, $4, $5, 'user_taught')
+            ON CONFLICT (ats, label_hash) DO UPDATE SET field_key = EXCLUDED.field_key
+            """,
+            ats, h, label[:500], request.field_type, field_key,
+        )
+        await conn.execute(
+            """
+            INSERT INTO user_answers (user_id, field_key, value, confidence, source, job_context, created_at, updated_at)
+            VALUES ($1, $2, $3, 100, 'user_taught', $4::jsonb, NOW(), NOW())
+            ON CONFLICT (user_id, field_key) DO UPDATE SET
+                value       = EXCLUDED.value,
+                confidence  = 100,
+                source      = 'user_taught',
+                job_context = EXCLUDED.job_context,
+                updated_at  = NOW()
+            """,
+            current_user["user_id"], field_key, request.value.strip(),
+            json.dumps(request.job_context or {}),
+        )
+    finally:
+        await user_db._release(conn)
+    return {"ok": True, "field_key": field_key}
 
 
 __all__ = ["router", "init_learning_tables", "FIELD_KEYS", "PROTECTED_FIELDS"]
