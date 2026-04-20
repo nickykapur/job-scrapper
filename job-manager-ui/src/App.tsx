@@ -85,6 +85,13 @@ const App: React.FC = () => {
   // Check if current user has software role access
   const hasSoftwareAccess = user?.username === 'software_admin' || user?.username === 'admin' || user?.is_admin === true;
 
+  // CV upload in the main UI is restricted to sales + software_admin (admins included).
+  // Everyone else uploads their CV only during onboarding.
+  const canUploadCvFromMain =
+    user?.is_admin === true ||
+    user?.username === 'software_admin' ||
+    user?.username === 'sales';
+
   const [filters, setFilters] = useState<FilterState>({
     status: 'all',
     sort: 'newest',
@@ -458,9 +465,13 @@ const App: React.FC = () => {
         <NavItem tab="rewards"           label="Rewards"          icon={Trophy} />
         <NavItem tab="interview-tracker" label="Interviews"       icon={Bookmark} />
 
-        {/* Pilot features */}
-        <div style={{ height: '1px', background: tokens.colorNeutralStroke2, margin: '8px 4px' }} />
-        <NavItem tab="cv-pilot" label="CV Upload" icon={FlaskConical} badge="Pilot" />
+        {/* Pilot features — CV upload is hidden from regular users; they upload via onboarding */}
+        {canUploadCvFromMain && (
+          <>
+            <div style={{ height: '1px', background: tokens.colorNeutralStroke2, margin: '8px 4px' }} />
+            <NavItem tab="cv-pilot" label="CV Upload" icon={FlaskConical} badge="Pilot" />
+          </>
+        )}
 
         {hasSoftwareAccess && (
           <>
@@ -796,7 +807,7 @@ const App: React.FC = () => {
             {currentTab === 'user-management' && hasAdminAccess && <ErrorBoundary><UserManagement /></ErrorBoundary>}
             {currentTab === 'monitoring' && hasAdminAccess && <ErrorBoundary><MonitoringPage /></ErrorBoundary>}
             {currentTab === 'user-behaviour' && hasAdminAccess && <ErrorBoundary><UserBehaviourPage /></ErrorBoundary>}
-            {currentTab === 'cv-pilot' && <ErrorBoundary><CVPilot /></ErrorBoundary>}
+            {currentTab === 'cv-pilot' && canUploadCvFromMain && <ErrorBoundary><CVPilot /></ErrorBoundary>}
             {currentTab === 'cv-uploads' && hasAdminAccess && <ErrorBoundary><AdminCVUploads /></ErrorBoundary>}
           </div>
         </main>
