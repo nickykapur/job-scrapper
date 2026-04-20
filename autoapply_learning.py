@@ -214,11 +214,15 @@ async def _fetch_profile(user_id: int) -> Optional[Dict[str, Any]]:
 def _profile_value(profile: Dict[str, Any], field_key: str) -> Optional[str]:
     """Map canonical field_key → value from the parsed CV profile (if any)."""
     ins = profile.get("insights") or {}
+    full_name = profile.get("full_name") or ""
+    city, country = _split_location(profile.get("location"))
     direct = {
-        "full_name":             profile.get("full_name"),
+        "full_name":             full_name or None,
         "email":                 profile.get("email"),
         "phone":                 profile.get("phone"),
         "location":              profile.get("location"),
+        "city":                  city,
+        "country":               country,
         "linkedin_url":          profile.get("linkedin_url"),
         "github_url":            profile.get("github_url"),
         "portfolio_url":         profile.get("portfolio_url"),
@@ -228,13 +232,16 @@ def _profile_value(profile: Dict[str, Any], field_key: str) -> Optional[str]:
         "current_company":       ins.get("current_company"),
         "seniority":             ins.get("seniority"),
         "highest_education":     ins.get("highest_education"),
+        "work_authorization_country": ins.get("work_authorization"),
     }
-    v = direct.get(field_key)
-    if v is None:
-        return None
     if field_key == "first_name":
-        return (profile.get("full_name") or "").split(" ", 1)[0] or None
-    return str(v)
+        parts = full_name.split()
+        return parts[0] if parts else None
+    if field_key == "last_name":
+        parts = full_name.split()
+        return parts[-1] if len(parts) >= 2 else None
+    v = direct.get(field_key)
+    return str(v) if v is not None else None
 
 
 def _split_location(loc: Optional[str]) -> Tuple[Optional[str], Optional[str]]:

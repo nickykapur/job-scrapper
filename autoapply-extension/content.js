@@ -144,12 +144,14 @@
       if (!visible(el)) return;
       const id = el.id || `jsaa-${idx}`;
       if (!el.id) el.setAttribute("data-jsaa-id", id);
+      const currentVal = el.value != null ? String(el.value).trim() : "";
       fields.push({
         id,
         label: visibleLabel(el),
         tag: el.tagName.toLowerCase(),
         type: el.type || null,
         required: el.required || el.getAttribute("aria-required") === "true",
+        hadValue: currentVal !== "",
         options: el.tagName === "SELECT"
           ? Array.from(el.options).map((o) => ({ value: o.value, label: o.text }))
           : undefined,
@@ -184,6 +186,7 @@
         tag: "radio-group",
         type: "radio",
         required: inputs.some((i) => i.required || i.getAttribute("aria-required") === "true"),
+        hadValue: inputs.some((i) => i.checked),
         options,
       });
     });
@@ -199,6 +202,7 @@
         tag: "checkbox",
         type: "checkbox",
         required: cb.required || cb.getAttribute("aria-required") === "true",
+        hadValue: cb.checked,
       });
     });
 
@@ -443,11 +447,21 @@
 
       // Step 3 — fill what we can; collect custom_question / unknown for mapper fallback
       let filled = 0;
+      let alreadyFilled = 0;
       let suggestions = 0;
       const fallbackFields = [];
       for (const f of fields) {
         const target = findTarget(f.id);
         const fieldKey = classify.mapping?.[f.id] || "unknown";
+
+        // Respect pre-filled fields (e.g. LinkedIn email/phone) — still track for learning
+        if (f.hadValue) {
+          alreadyFilled += 1;
+          if (target && fieldKey !== "unknown" && fieldKey !== "custom_question") {
+            trackUnfilledField(target, f.id, fieldKey, jobContext);
+          }
+          continue;
+        }
 
         if (fieldKey === "custom_question" || fieldKey === "unknown") {
           fallbackFields.push(f);
@@ -488,10 +502,11 @@
         }
       }
 
-      const skipped = fields.length - filled;
+      const needsReview = fields.length - filled - alreadyFilled;
       const parts = [`Filled ${filled} of ${fields.length}.`];
+      if (alreadyFilled) parts.push(`${alreadyFilled} already filled.`);
       if (suggestions) parts.push(`${suggestions} yellow suggestion(s) — confirm or edit.`);
-      if (skipped) parts.push(`${skipped} left for your review.`);
+      if (needsReview > 0) parts.push(`${needsReview} left for your review.`);
       showStatus(parts.join(" "), filled ? "ok" : "warn");
     } catch (err) {
       if (err.message === "not_authenticated" || err.message === "unauthorized") {
