@@ -99,6 +99,16 @@ except Exception as e:
     cv_admin_router = None
     init_cv_table = None
 
+# Import Auto-Apply routes (extension field mapper)
+try:
+    from autoapply_routes import router as autoapply_router
+    AUTOAPPLY_AVAILABLE = True
+    print("✅ Auto-Apply routes imported successfully")
+except Exception as e:
+    print(f"⚠️  Auto-Apply routes not available: {type(e).__name__}: {e}")
+    AUTOAPPLY_AVAILABLE = False
+    autoapply_router = None
+
 app = FastAPI(title="LinkedIn Job Manager", version="1.0.0")
 
 # Include authentication router if available
@@ -112,6 +122,11 @@ if CV_AVAILABLE:
     if cv_admin_router is not None:
         app.include_router(cv_admin_router)
     print("✅ CV routes registered (incl. admin)")
+
+# Include Auto-Apply router if available
+if AUTOAPPLY_AVAILABLE and autoapply_router is not None:
+    app.include_router(autoapply_router)
+    print("✅ Auto-Apply routes registered")
 
 
 

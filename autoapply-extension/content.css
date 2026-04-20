@@ -1,0 +1,41 @@
+#jsautoapply-fab {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 2147483647;
+  padding: 12px 20px;
+  border-radius: 999px;
+  border: none;
+  background: linear-gradient(135deg, #6366f1, #3b82f6);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  box-shadow: 0 10px 24px rgba(99, 102, 241, 0.35);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+#jsautoapply-fab:hover {
+  transform: translateY(-2px);
+}
+
+#jsautoapply-panel {
+  position: fixed;
+  right: 24px;
+  bottom: 80px;
+  z-index: 2147483647;
+  max-width: 320px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(17, 24, 39, 0.96);
+  color: #e5e7eb;
+  font-size: 13px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.5;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.35);
+  display: none;
+}
+#jsautoapply-panel[data-kind="ok"] { border-color: rgba(34, 197, 94, 0.4); }
+#jsautoapply-panel[data-kind="warn"] { border-color: rgba(245, 158, 11, 0.4); }
+#jsautoapply-panel[data-kind="error"] { border-color: rgba(239, 68, 68, 0.5); }

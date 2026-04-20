@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "JobScraper Auto-Apply",
+  "version": "0.1.0",
+  "description": "Auto-fill job application forms using your parsed CV profile.",
+  "permissions": ["storage", "activeTab", "scripting"],
+  "host_permissions": [
+    "https://web-production-110bb.up.railway.app/*",
+    "https://www.linkedin.com/*",
+    "https://boards.greenhouse.io/*",
+    "https://jobs.lever.co/*",
+    "https://*.myworkdayjobs.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "JobScraper Auto-Apply"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.linkedin.com/jobs/*",
+        "https://boards.greenhouse.io/*",
+        "https://jobs.lever.co/*",
+        "https://*.myworkdayjobs.com/*"
+      ],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}

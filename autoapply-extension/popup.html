@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>JobScraper Auto-Apply</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header>
+    <h1>Auto-Apply</h1>
+    <p class="sub">Fill application forms with your CV profile.</p>
+  </header>
+
+  <section id="logged-out" hidden>
+    <form id="login-form">
+      <label>Username or email
+        <input id="login-username" type="text" autocomplete="username" required />
+      </label>
+      <label>Password
+        <input id="login-password" type="password" autocomplete="current-password" required />
+      </label>
+      <button type="submit" id="login-btn">Sign in</button>
+      <p id="login-error" class="error" hidden></p>
+    </form>
+    <p class="hint">Use your JobScraper account.</p>
+  </section>
+
+  <section id="logged-in" hidden>
+    <div class="user">
+      <p class="user-name" id="user-name"></p>
+      <button id="logout-btn" class="link">Sign out</button>
+    </div>
+
+    <div class="profile-card" id="profile-card">
+      <p class="muted">Loading profile…</p>
+    </div>
+
+    <button id="refresh-btn" class="secondary">Refresh profile</button>
+    <p class="hint">Open a LinkedIn / Greenhouse / Lever apply page, then click the floating <strong>Auto-Fill</strong> button.</p>
+  </section>
+
+  <script src="config.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -67,6 +67,7 @@ COPY sync_to_railway.py .
 COPY jobs_database.json .
 COPY cv_routes.py .
 COPY cv_parser.py .
+COPY autoapply_routes.py .
 COPY slack_notify.py .
 COPY database_migrations/ ./database_migrations/
 
