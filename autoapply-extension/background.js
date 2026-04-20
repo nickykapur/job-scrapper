@@ -68,6 +68,34 @@ async function getProfile({ force = false } = {}) {
   return profile;
 }
 
+// Learning layer
+async function classifyFields({ ats, fields }) {
+  return apiFetch("/api/autoapply/classify-fields", {
+    method: "POST",
+    body: { ats, fields },
+  });
+}
+
+async function resolveFields({ fieldKeys, jobContext }) {
+  return apiFetch("/api/autoapply/resolve-fields", {
+    method: "POST",
+    body: { field_keys: fieldKeys, job_context: jobContext || null },
+  });
+}
+
+async function recordAnswer({ fieldKey, value, source, jobContext }) {
+  return apiFetch("/api/autoapply/record-answer", {
+    method: "POST",
+    body: {
+      field_key: fieldKey,
+      value,
+      source: source || "user_typed",
+      job_context: jobContext || null,
+    },
+  });
+}
+
+// Legacy single-shot mapper — used as fallback for custom_question / unknown fields
 async function mapFields({ fields, jobContext }) {
   return apiFetch("/api/autoapply/map-fields", {
     method: "POST",
@@ -75,7 +103,15 @@ async function mapFields({ fields, jobContext }) {
   });
 }
 
-const handlers = { login, logout, getProfile, mapFields };
+const handlers = {
+  login,
+  logout,
+  getProfile,
+  classifyFields,
+  resolveFields,
+  recordAnswer,
+  mapFields,
+};
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   const fn = handlers[msg?.type];
@@ -84,7 +120,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     return false;
   }
   Promise.resolve(fn(msg.payload || {}))
-    .then(data => sendResponse({ ok: true, data }))
-    .catch(err => sendResponse({ ok: false, error: err.message || String(err) }));
+    .then((data) => sendResponse({ ok: true, data }))
+    .catch((err) => sendResponse({ ok: false, error: err.message || String(err) }));
   return true;
 });
