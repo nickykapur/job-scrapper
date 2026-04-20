@@ -17,10 +17,60 @@ import {
   Trash2,
   AlertCircle,
   User,
+  Briefcase,
+  GraduationCap,
+  Globe,
+  Award,
+  TrendingUp,
+  Target,
+  Building2,
 } from 'lucide-react';
 import { jobApi } from '../services/api';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+
+interface CVExperience {
+  company?: string | null;
+  title?: string | null;
+  start?: string | null;
+  end?: string | null;
+  is_current?: boolean;
+  location?: string | null;
+  employment_type?: string | null;
+  bullets?: string[];
+}
+
+interface CVEducation {
+  school?: string | null;
+  degree?: string | null;
+  field?: string | null;
+  start?: string | null;
+  end?: string | null;
+  gpa?: string | null;
+}
+
+interface CVLanguage {
+  name?: string;
+  level?: string | null;
+}
+
+interface CVInsights {
+  years_of_experience?: number | null;
+  current_title?: string | null;
+  current_company?: string | null;
+  seniority?: string | null;
+  target_roles?: string[];
+  industries?: string[];
+  top_skills?: string[];
+  highest_education?: string | null;
+  management_experience?: boolean;
+  direct_reports_max?: number | null;
+  remote_experience?: boolean;
+  primary_tech_stack?: string[];
+  notable_achievements?: string[];
+  availability?: string | null;
+  work_authorization?: string | null;
+}
 
 interface CVData {
   exists: boolean;
@@ -31,8 +81,17 @@ interface CVData {
   linkedin_url?: string;
   github_url?: string;
   portfolio_url?: string;
+  headline?: string;
   skills?: string[];
   summary?: string;
+  experience?: CVExperience[];
+  education?: CVEducation[];
+  languages?: CVLanguage[];
+  certifications?: string[];
+  insights?: CVInsights;
+  parse_model?: string | null;
+  parse_input_tokens?: number | null;
+  parse_output_tokens?: number | null;
   cv_filename?: string;
   uploaded_at?: string;
 }
@@ -528,6 +587,20 @@ export const CVPilot: React.FC = () => {
           </Card>
         )}
 
+        {/* AI Insights */}
+        {d.insights && Object.keys(d.insights).length > 0 && <InsightsCard insights={d.insights} />}
+
+        {/* Experience */}
+        {d.experience && d.experience.length > 0 && <ExperienceCard items={d.experience} />}
+
+        {/* Education */}
+        {d.education && d.education.length > 0 && <EducationCard items={d.education} />}
+
+        {/* Languages + Certifications */}
+        {((d.languages && d.languages.length > 0) || (d.certifications && d.certifications.length > 0)) && (
+          <LangCertCard languages={d.languages || []} certifications={d.certifications || []} />
+        )}
+
         {/* Auto-apply hint */}
         <div
           style={{
@@ -541,13 +614,19 @@ export const CVPilot: React.FC = () => {
           }}
         >
           <AlertCircle size={15} color="#818cf8" style={{ flexShrink: 0, marginTop: 2 }} />
-          <div>
+          <div style={{ flex: 1 }}>
             <p style={{ margin: '0 0 3px', fontSize: 13, fontWeight: 600, color: '#a5b4fc' }}>
-              Auto-Apply Ready (Pilot)
+              Auto-Apply Ready
             </p>
             <p style={{ margin: 0, fontSize: 12, color: 'rgba(255,255,255,0.4)', lineHeight: 1.6 }}>
-              Your extracted profile is stored and will be used to pre-fill applications on supported job boards.
-              More fields (experience, education) will be added in the next iteration.
+              Your parsed profile is stored and will be used to pre-fill applications on supported job boards.
+              {d.parse_model && (
+                <span> Parsed by <code style={{ color: '#a5b4fc' }}>{d.parse_model}</code>
+                  {d.parse_input_tokens && d.parse_output_tokens ? (
+                    <> · {d.parse_input_tokens.toLocaleString()} in / {d.parse_output_tokens.toLocaleString()} out tokens</>
+                  ) : null}
+                </span>
+              )}
             </p>
           </div>
         </div>
@@ -566,6 +645,251 @@ export const CVPilot: React.FC = () => {
 // ── Tiny helper ───────────────────────────────────────────────────────────────
 const EmptyNote = ({ text }: { text: string }) => (
   <p style={{ margin: 0, fontSize: 13, color: 'rgba(255,255,255,0.3)', fontStyle: 'italic' }}>{text}</p>
+);
+
+// ── Rich display cards ────────────────────────────────────────────────────────
+
+const Stat = ({ label, value, accent }: { label: string; value: React.ReactNode; accent?: string }) => (
+  <div
+    style={{
+      borderRadius: 12,
+      border: '1px solid rgba(255,255,255,0.08)',
+      background: 'rgba(255,255,255,0.03)',
+      padding: '12px 14px',
+      minWidth: 140,
+    }}
+  >
+    <p style={{ margin: 0, fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)' }}>
+      {label}
+    </p>
+    <p style={{ margin: '4px 0 0', fontSize: 15, fontWeight: 700, color: accent || '#fff' }}>{value}</p>
+  </div>
+);
+
+const Chip = ({ label, tone = 'indigo' }: { label: string; tone?: 'indigo' | 'emerald' | 'amber' | 'rose' }) => {
+  const tones = {
+    indigo: { bg: 'rgba(99,102,241,0.12)', fg: '#a5b4fc', bd: 'rgba(99,102,241,0.25)' },
+    emerald: { bg: 'rgba(16,185,129,0.12)', fg: '#6ee7b7', bd: 'rgba(16,185,129,0.25)' },
+    amber: { bg: 'rgba(245,158,11,0.12)', fg: '#fcd34d', bd: 'rgba(245,158,11,0.25)' },
+    rose: { bg: 'rgba(244,63,94,0.12)', fg: '#fda4af', bd: 'rgba(244,63,94,0.25)' },
+  }[tone];
+  return (
+    <span
+      style={{
+        display: 'inline-block',
+        padding: '4px 11px',
+        borderRadius: 20,
+        fontSize: 12,
+        fontWeight: 600,
+        background: tones.bg,
+        color: tones.fg,
+        border: `1px solid ${tones.bd}`,
+      }}
+    >
+      {label}
+    </span>
+  );
+};
+
+const InsightsCard: React.FC<{ insights: CVInsights }> = ({ insights }) => {
+  const i = insights;
+  const yoe = i.years_of_experience != null ? `${i.years_of_experience} yrs` : null;
+  return (
+    <div
+      style={{
+        borderRadius: 18,
+        border: '1px solid rgba(99,102,241,0.25)',
+        background: 'linear-gradient(135deg,rgba(99,102,241,0.08),rgba(59,130,246,0.04))',
+        padding: '24px',
+      }}
+    >
+      <SectionHeading icon={TrendingUp} title="AI Insights" />
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: i.target_roles?.length || i.industries?.length ? 18 : 0 }}>
+        {yoe && <Stat label="Experience" value={yoe} accent="#a5b4fc" />}
+        {i.seniority && <Stat label="Seniority" value={i.seniority} accent="#a5b4fc" />}
+        {i.current_title && <Stat label="Current Role" value={i.current_title} />}
+        {i.current_company && <Stat label="Current Company" value={i.current_company} />}
+        {i.highest_education && <Stat label="Education" value={i.highest_education} />}
+        {i.management_experience && (
+          <Stat
+            label="Management"
+            value={i.direct_reports_max ? `Yes · up to ${i.direct_reports_max}` : 'Yes'}
+            accent="#6ee7b7"
+          />
+        )}
+        {i.remote_experience && <Stat label="Remote" value="Yes" accent="#6ee7b7" />}
+        {i.availability && <Stat label="Availability" value={i.availability} />}
+        {i.work_authorization && <Stat label="Work Auth" value={i.work_authorization} />}
+      </div>
+
+      {i.target_roles && i.target_roles.length > 0 && (
+        <div style={{ marginTop: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+            <Target size={13} color="#818cf8" />
+            <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)' }}>
+              Best-fit Roles
+            </p>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {i.target_roles.map(r => <Chip key={r} label={r} tone="indigo" />)}
+          </div>
+        </div>
+      )}
+
+      {i.industries && i.industries.length > 0 && (
+        <div style={{ marginTop: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+            <Building2 size={13} color="#818cf8" />
+            <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)' }}>
+              Industries
+            </p>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {i.industries.map(x => <Chip key={x} label={x} tone="emerald" />)}
+          </div>
+        </div>
+      )}
+
+      {i.primary_tech_stack && i.primary_tech_stack.length > 0 && (
+        <div style={{ marginTop: 16 }}>
+          <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)' }}>
+            Primary Tech Stack
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {i.primary_tech_stack.map(x => <Chip key={x} label={x} tone="amber" />)}
+          </div>
+        </div>
+      )}
+
+      {i.notable_achievements && i.notable_achievements.length > 0 && (
+        <div style={{ marginTop: 16 }}>
+          <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)' }}>
+            Notable Achievements
+          </p>
+          <ul style={{ margin: 0, paddingLeft: 18, color: 'rgba(255,255,255,0.75)', fontSize: 13, lineHeight: 1.7 }}>
+            {i.notable_achievements.map((a, idx) => <li key={idx}>{a}</li>)}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const formatDateRange = (start?: string | null, end?: string | null, isCurrent?: boolean) => {
+  const s = start || '';
+  const e = isCurrent ? 'Present' : (end || '');
+  if (!s && !e) return '';
+  return `${s}${s && e ? ' — ' : ''}${e}`;
+};
+
+const ExperienceCard: React.FC<{ items: CVExperience[] }> = ({ items }) => (
+  <Card>
+    <SectionHeading icon={Briefcase} title="Experience" />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      {items.map((e, idx) => {
+        const range = formatDateRange(e.start, e.end, e.is_current);
+        return (
+          <div
+            key={idx}
+            style={{
+              paddingLeft: 16,
+              borderLeft: '2px solid rgba(99,102,241,0.3)',
+              position: 'relative',
+            }}
+          >
+            <div
+              style={{
+                position: 'absolute',
+                left: -6,
+                top: 4,
+                width: 10,
+                height: 10,
+                borderRadius: '50%',
+                background: e.is_current ? '#22c55e' : '#6366f1',
+                boxShadow: e.is_current ? '0 0 0 3px rgba(34,197,94,0.2)' : 'none',
+              }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6, alignItems: 'baseline' }}>
+              <p style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>
+                {e.title || 'Role'}
+                {e.company && <span style={{ color: 'rgba(255,255,255,0.5)', fontWeight: 500 }}> · {e.company}</span>}
+              </p>
+              {range && (
+                <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.45)' }}>{range}</span>
+              )}
+            </div>
+            {(e.location || e.employment_type) && (
+              <p style={{ margin: '4px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
+                {e.location}
+                {e.location && e.employment_type && ' · '}
+                {e.employment_type}
+              </p>
+            )}
+            {e.bullets && e.bullets.length > 0 && (
+              <ul style={{ margin: '8px 0 0', paddingLeft: 18, color: 'rgba(255,255,255,0.72)', fontSize: 13, lineHeight: 1.7 }}>
+                {e.bullets.map((b, i) => <li key={i}>{b}</li>)}
+              </ul>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  </Card>
+);
+
+const EducationCard: React.FC<{ items: CVEducation[] }> = ({ items }) => (
+  <Card>
+    <SectionHeading icon={GraduationCap} title="Education" />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {items.map((ed, idx) => {
+        const range = formatDateRange(ed.start, ed.end);
+        const headline = [ed.degree, ed.field].filter(Boolean).join(' · ');
+        return (
+          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6, alignItems: 'baseline' }}>
+            <div>
+              <p style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>{ed.school || 'School'}</p>
+              {headline && (
+                <p style={{ margin: '2px 0 0', fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>{headline}</p>
+              )}
+              {ed.gpa && (
+                <p style={{ margin: '2px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>GPA: {ed.gpa}</p>
+              )}
+            </div>
+            {range && (
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.45)' }}>{range}</span>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  </Card>
+);
+
+const LangCertCard: React.FC<{ languages: CVLanguage[]; certifications: string[] }> = ({ languages, certifications }) => (
+  <div style={{ display: 'grid', gridTemplateColumns: languages.length && certifications.length ? '1fr 1fr' : '1fr', gap: 16 }}>
+    {languages.length > 0 && (
+      <Card>
+        <SectionHeading icon={Globe} title="Languages" />
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {languages.map((l, idx) => (
+            <Chip
+              key={idx}
+              label={l.level ? `${l.name} · ${l.level}` : (l.name || '')}
+              tone="emerald"
+            />
+          ))}
+        </div>
+      </Card>
+    )}
+    {certifications.length > 0 && (
+      <Card>
+        <SectionHeading icon={Award} title="Certifications" />
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {certifications.map((c, idx) => <Chip key={idx} label={c} tone="amber" />)}
+        </div>
+      </Card>
+    )}
+  </div>
 );
 
 export default CVPilot;

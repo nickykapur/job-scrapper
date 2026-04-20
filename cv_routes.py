@@ -55,6 +55,14 @@ CREATE TABLE IF NOT EXISTS user_cv_data (
     updated_at    TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_user_cv_data_user_id ON user_cv_data(user_id);
+
+-- Additive columns for Claude-derived enrichment (idempotent)
+ALTER TABLE user_cv_data ADD COLUMN IF NOT EXISTS headline TEXT;
+ALTER TABLE user_cv_data ADD COLUMN IF NOT EXISTS certifications JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE user_cv_data ADD COLUMN IF NOT EXISTS insights JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE user_cv_data ADD COLUMN IF NOT EXISTS parse_model TEXT;
+ALTER TABLE user_cv_data ADD COLUMN IF NOT EXISTS parse_input_tokens INTEGER;
+ALTER TABLE user_cv_data ADD COLUMN IF NOT EXISTS parse_output_tokens INTEGER;
 """
 
 
@@ -181,7 +189,7 @@ async def _fetch_cv(user_id: int) -> Optional[Dict]:
         if not row:
             return None
         d = dict(row)
-        for key in ("skills", "experience", "education", "languages"):
+        for key in ("skills", "experience", "education", "languages", "certifications"):
             val = d.get(key)
             if isinstance(val, str):
                 try:
@@ -190,6 +198,14 @@ async def _fetch_cv(user_id: int) -> Optional[Dict]:
                     d[key] = []
             elif val is None:
                 d[key] = []
+        insights_val = d.get("insights")
+        if isinstance(insights_val, str):
+            try:
+                d["insights"] = json.loads(insights_val)
+            except Exception:
+                d["insights"] = {}
+        elif insights_val is None:
+            d["insights"] = {}
         return d
     finally:
         await user_db._release(conn)
@@ -205,18 +221,21 @@ def _merge_parsed(claude: Dict[str, Any], regex: Dict[str, Any]) -> Dict[str, An
             return regex.get(k, default)
         return v
     return {
-        "full_name":     claude.get("name") or None,
-        "email":         pick("email"),
-        "phone":         pick("phone"),
-        "location":      claude.get("location"),
-        "linkedin_url":  pick("linkedin_url"),
-        "github_url":    pick("github_url"),
-        "portfolio_url": claude.get("portfolio_url"),
-        "summary":       claude.get("summary"),
-        "skills":        claude.get("skills") or regex.get("skills") or [],
-        "experience":    claude.get("experience") or [],
-        "education":     claude.get("education") or [],
-        "languages":     claude.get("languages") or [],
+        "full_name":      claude.get("name") or None,
+        "email":          pick("email"),
+        "phone":          pick("phone"),
+        "location":       claude.get("location"),
+        "linkedin_url":   pick("linkedin_url"),
+        "github_url":     pick("github_url"),
+        "portfolio_url":  claude.get("portfolio_url"),
+        "headline":       claude.get("headline"),
+        "summary":        claude.get("summary"),
+        "skills":         claude.get("skills") or regex.get("skills") or [],
+        "experience":     claude.get("experience") or [],
+        "education":      claude.get("education") or [],
+        "languages":      claude.get("languages") or [],
+        "certifications": claude.get("certifications") or [],
+        "insights":       claude.get("insights") or {},
     }
 
 
@@ -272,26 +291,34 @@ async def upload_cv(
             """
             INSERT INTO user_cv_data
                 (user_id, full_name, email, phone, location, linkedin_url, github_url,
-                 portfolio_url, summary, skills, experience, education, languages,
+                 portfolio_url, headline, summary, skills, experience, education, languages,
+                 certifications, insights, parse_model, parse_input_tokens, parse_output_tokens,
                  cv_filename, cv_raw_text, uploaded_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11::jsonb,
-                    $12::jsonb, $13::jsonb, $14, $15, NOW(), NOW())
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12::jsonb,
+                    $13::jsonb, $14::jsonb, $15::jsonb, $16::jsonb, $17, $18, $19,
+                    $20, $21, NOW(), NOW())
             ON CONFLICT (user_id) DO UPDATE SET
-                full_name     = EXCLUDED.full_name,
-                email         = EXCLUDED.email,
-                phone         = EXCLUDED.phone,
-                location      = EXCLUDED.location,
-                linkedin_url  = EXCLUDED.linkedin_url,
-                github_url    = EXCLUDED.github_url,
-                portfolio_url = EXCLUDED.portfolio_url,
-                summary       = EXCLUDED.summary,
-                skills        = EXCLUDED.skills,
-                experience    = EXCLUDED.experience,
-                education     = EXCLUDED.education,
-                languages     = EXCLUDED.languages,
-                cv_filename   = EXCLUDED.cv_filename,
-                cv_raw_text   = EXCLUDED.cv_raw_text,
-                updated_at    = NOW()
+                full_name           = EXCLUDED.full_name,
+                email               = EXCLUDED.email,
+                phone               = EXCLUDED.phone,
+                location            = EXCLUDED.location,
+                linkedin_url        = EXCLUDED.linkedin_url,
+                github_url          = EXCLUDED.github_url,
+                portfolio_url       = EXCLUDED.portfolio_url,
+                headline            = EXCLUDED.headline,
+                summary             = EXCLUDED.summary,
+                skills              = EXCLUDED.skills,
+                experience          = EXCLUDED.experience,
+                education           = EXCLUDED.education,
+                languages           = EXCLUDED.languages,
+                certifications      = EXCLUDED.certifications,
+                insights            = EXCLUDED.insights,
+                parse_model         = EXCLUDED.parse_model,
+                parse_input_tokens  = EXCLUDED.parse_input_tokens,
+                parse_output_tokens = EXCLUDED.parse_output_tokens,
+                cv_filename         = EXCLUDED.cv_filename,
+                cv_raw_text         = EXCLUDED.cv_raw_text,
+                updated_at          = NOW()
             """,
             user_id,
             merged["full_name"],
@@ -301,11 +328,17 @@ async def upload_cv(
             merged["linkedin_url"],
             merged["github_url"],
             merged["portfolio_url"],
+            merged["headline"],
             merged["summary"],
             json.dumps(merged["skills"]),
             json.dumps(merged["experience"]),
             json.dumps(merged["education"]),
             json.dumps(merged["languages"]),
+            json.dumps(merged["certifications"]),
+            json.dumps(merged["insights"]),
+            claude_usage.get("model"),
+            claude_usage.get("input_tokens") or 0,
+            claude_usage.get("output_tokens") or 0,
             filename,
             raw_text[:50000],
         )
@@ -361,6 +394,23 @@ async def get_cv_profile(current_user: Dict[str, Any] = Depends(get_current_user
     def _iso(dt):
         return dt.isoformat() if dt else None
 
+    insights = cv.get("insights")
+    if isinstance(insights, str):
+        try:
+            insights = json.loads(insights)
+        except Exception:
+            insights = {}
+    elif insights is None:
+        insights = {}
+    certifications = cv.get("certifications")
+    if isinstance(certifications, str):
+        try:
+            certifications = json.loads(certifications)
+        except Exception:
+            certifications = []
+    elif certifications is None:
+        certifications = []
+
     return {
         "exists": True,
         "full_name": cv.get("full_name"),
@@ -370,12 +420,18 @@ async def get_cv_profile(current_user: Dict[str, Any] = Depends(get_current_user
         "linkedin_url": cv.get("linkedin_url"),
         "github_url": cv.get("github_url"),
         "portfolio_url": cv.get("portfolio_url"),
+        "headline": cv.get("headline"),
         "skills": cv.get("skills", []),
         "experience": cv.get("experience", []),
         "education": cv.get("education", []),
         "languages": cv.get("languages", []),
+        "certifications": certifications,
+        "insights": insights,
         "summary": cv.get("summary"),
         "cv_filename": cv.get("cv_filename"),
+        "parse_model": cv.get("parse_model"),
+        "parse_input_tokens": cv.get("parse_input_tokens"),
+        "parse_output_tokens": cv.get("parse_output_tokens"),
         "uploaded_at": _iso(cv.get("uploaded_at")),
         "updated_at": _iso(cv.get("updated_at")),
     }
