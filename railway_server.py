@@ -120,9 +120,16 @@ if CV_AVAILABLE:
 @app.get("/api/_diag/cv")
 async def _diag_cv():
     """Diagnostic: reports whether CV routes loaded and any import error."""
+    import os as _os
+    app_dir = _os.path.dirname(_os.path.abspath(__file__))
+    py_files = sorted([f for f in _os.listdir(app_dir) if f.endswith(".py")])
     return {
         "cv_available": CV_AVAILABLE,
         "import_error": _CV_IMPORT_ERROR,
+        "app_dir": app_dir,
+        "py_files_in_app_dir": py_files,
+        "cv_routes_py_exists": _os.path.exists(_os.path.join(app_dir, "cv_routes.py")),
+        "slack_notify_py_exists": _os.path.exists(_os.path.join(app_dir, "slack_notify.py")),
         "routes_registered": [
             {"path": r.path, "methods": list(r.methods) if hasattr(r, "methods") else []}
             for r in app.routes if "/cv" in getattr(r, "path", "")
