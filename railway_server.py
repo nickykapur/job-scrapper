@@ -89,12 +89,15 @@ except ImportError as e:
         raise HTTPException(status_code=501, detail="Authentication not available")
 
 # Import CV routes (auto-apply pilot)
+_CV_IMPORT_ERROR = None
 try:
     from cv_routes import router as cv_router, admin_router as cv_admin_router, init_cv_table
     CV_AVAILABLE = True
     print("✅ CV routes imported successfully")
 except Exception as e:
-    print(f"⚠️  CV routes not available: {e}")
+    import traceback as _cv_tb
+    _CV_IMPORT_ERROR = f"{type(e).__name__}: {e}\n{_cv_tb.format_exc()}"
+    print(f"⚠️  CV routes not available: {_CV_IMPORT_ERROR}")
     CV_AVAILABLE = False
     cv_admin_router = None
     init_cv_table = None
@@ -112,6 +115,19 @@ if CV_AVAILABLE:
     if cv_admin_router is not None:
         app.include_router(cv_admin_router)
     print("✅ CV routes registered (incl. admin)")
+
+
+@app.get("/api/_diag/cv")
+async def _diag_cv():
+    """Diagnostic: reports whether CV routes loaded and any import error."""
+    return {
+        "cv_available": CV_AVAILABLE,
+        "import_error": _CV_IMPORT_ERROR,
+        "routes_registered": [
+            {"path": r.path, "methods": list(r.methods) if hasattr(r, "methods") else []}
+            for r in app.routes if "/cv" in getattr(r, "path", "")
+        ],
+    }
 
 # Initialize database
 db = None
