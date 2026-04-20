@@ -233,6 +233,10 @@ export const jobApi = {
   // Admin: Get activity feed
   getActivity: async (limit = 150): Promise<any> =>
     (await api.get(`/api/admin/activity?limit=${limit}`)).data,
+
+  // Admin: List all user CV uploads
+  adminListCVUploads: async (): Promise<any> =>
+    (await api.get('/api/admin/cv-uploads')).data,
 };
 
 export default api;

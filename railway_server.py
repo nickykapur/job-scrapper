@@ -90,12 +90,13 @@ except ImportError as e:
 
 # Import CV routes (auto-apply pilot)
 try:
-    from cv_routes import router as cv_router, init_cv_table
+    from cv_routes import router as cv_router, admin_router as cv_admin_router, init_cv_table
     CV_AVAILABLE = True
     print("✅ CV routes imported successfully")
 except Exception as e:
     print(f"⚠️  CV routes not available: {e}")
     CV_AVAILABLE = False
+    cv_admin_router = None
     init_cv_table = None
 
 app = FastAPI(title="LinkedIn Job Manager", version="1.0.0")
@@ -108,7 +109,9 @@ if AUTH_AVAILABLE:
 # Include CV router if available
 if CV_AVAILABLE:
     app.include_router(cv_router)
-    print("✅ CV routes registered")
+    if cv_admin_router is not None:
+        app.include_router(cv_admin_router)
+    print("✅ CV routes registered (incl. admin)")
 
 # Initialize database
 db = None

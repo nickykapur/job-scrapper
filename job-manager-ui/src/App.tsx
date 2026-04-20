@@ -49,6 +49,7 @@ import { MonitoringPage } from './components/MonitoringPage';
 import { UserBehaviourPage } from './components/UserBehaviourPage';
 import { InterviewTracker } from './components/InterviewTracker';
 import { CVPilot } from './components/CVPilot';
+import AdminCVUploads from './components/AdminCVUploads';
 // import JobSearch from './components/JobSearch';
 // import CountryStats from './components/CountryStats';
 import { jobApi } from './services/api';
@@ -71,7 +72,7 @@ const App: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [localRejectedCount, setLocalRejectedCount] = useState(0);
   const [showMobileProfile, setShowMobileProfile] = useState(false);
-  const [currentTab, setCurrentTab] = useState<'dashboard' | 'training' | 'system-design' | 'my-analytics' | 'analytics' | 'country-analytics' | 'rewards' | 'user-management' | 'interview-tracker' | 'monitoring' | 'user-behaviour' | 'cv-pilot'>('dashboard');
+  const [currentTab, setCurrentTab] = useState<'dashboard' | 'training' | 'system-design' | 'my-analytics' | 'analytics' | 'country-analytics' | 'rewards' | 'user-management' | 'interview-tracker' | 'monitoring' | 'user-behaviour' | 'cv-pilot' | 'cv-uploads'>('dashboard');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [timeAgo, setTimeAgo] = useState<string>('');
@@ -475,6 +476,7 @@ const App: React.FC = () => {
             <NavItem tab="analytics"         label="User Analytics"    icon={BarChart3}       badge="Admin" />
             <NavItem tab="country-analytics" label="Country Analytics" icon={Building2}        badge="Admin" />
             <NavItem tab="user-management"   label="User Management"   icon={Users}            badge="Admin" />
+            <NavItem tab="cv-uploads"        label="CV Uploads"         icon={FlaskConical}     badge="Admin" />
             <NavItem tab="monitoring"        label="Monitoring"         icon={Activity}         badge="Admin" />
             <NavItem tab="user-behaviour"    label="User Behaviour"     icon={MousePointerClick} badge="Admin" />
           </>
@@ -637,7 +639,8 @@ const App: React.FC = () => {
                  currentTab === 'user-management' ? 'User Management' :
                  currentTab === 'monitoring' ? 'System Monitoring' :
                  currentTab === 'user-behaviour' ? 'User Behaviour' :
-                 currentTab === 'cv-pilot' ? 'CV Upload — Auto-Apply Pilot' : 'Dashboard'}
+                 currentTab === 'cv-pilot' ? 'CV Upload — Auto-Apply Pilot' :
+                 currentTab === 'cv-uploads' ? 'CV Uploads — Admin View' : 'Dashboard'}
               </Text>
               {currentTab === 'dashboard' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '2px' }}>
@@ -794,6 +797,7 @@ const App: React.FC = () => {
             {currentTab === 'monitoring' && hasAdminAccess && <ErrorBoundary><MonitoringPage /></ErrorBoundary>}
             {currentTab === 'user-behaviour' && hasAdminAccess && <ErrorBoundary><UserBehaviourPage /></ErrorBoundary>}
             {currentTab === 'cv-pilot' && <ErrorBoundary><CVPilot /></ErrorBoundary>}
+            {currentTab === 'cv-uploads' && hasAdminAccess && <ErrorBoundary><AdminCVUploads /></ErrorBoundary>}
           </div>
         </main>
       </div>

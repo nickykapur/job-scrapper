@@ -240,3 +240,36 @@ async def notify_job_rejected_async(
             {"type": "divider"},
         ]
     }, label="job-rejected")
+
+
+async def notify_cv_upload_async(
+    username: str,
+    display_name: str,
+    filename: str,
+    file_size_kb: float,
+    skills_count: int,
+) -> None:
+    name = display_name or username
+    await _send_async({
+        "text": f"📄 *{name}* uploaded a CV: {filename} ({file_size_kb:.1f} KB, {skills_count} skills) — `{username}`  ·  {_now_str()}",
+        "blocks": [
+            {
+                "type": "header",
+                "text": {"type": "plain_text", "text": "📄  CV uploaded"},
+            },
+            {
+                "type": "section",
+                "fields": [
+                    {"type": "mrkdwn", "text": f"*User*\n{name} (`{username}`)"},
+                    {"type": "mrkdwn", "text": f"*File*\n{filename}"},
+                    {"type": "mrkdwn", "text": f"*Size*\n{file_size_kb:.1f} KB"},
+                    {"type": "mrkdwn", "text": f"*Skills matched*\n{skills_count}"},
+                ],
+            },
+            {
+                "type": "context",
+                "elements": [{"type": "mrkdwn", "text": f"🕐  {_now_str()}"}],
+            },
+            {"type": "divider"},
+        ]
+    }, label="cv-upload")

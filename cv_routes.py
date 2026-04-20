@@ -11,8 +11,19 @@ import json
 from auth_utils import get_current_user
 from user_database import UserDatabase
 
+try:
+    import slack_notify  # type: ignore
+except Exception:
+    slack_notify = None
+
 router = APIRouter(prefix="/api/cv", tags=["CV"])
+admin_router = APIRouter(prefix="/api/admin", tags=["Admin CV"])
 user_db = UserDatabase()
+
+
+def _require_admin(user: Dict[str, Any]) -> None:
+    if not user.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
 
 # ── Table bootstrap ───────────────────────────────────────────────────────────
 
@@ -227,6 +238,18 @@ async def upload_cv(
     finally:
         await user_db._release(conn)
 
+    if slack_notify is not None:
+        try:
+            await slack_notify.notify_cv_upload_async(
+                username=current_user.get("username", "unknown"),
+                display_name=current_user.get("full_name") or current_user.get("username", ""),
+                filename=file.filename or "unknown",
+                file_size_kb=len(content) / 1024,
+                skills_count=len(parsed["skills"]),
+            )
+        except Exception as e:
+            print(f"⚠️  Slack CV notification failed: {e}")
+
     return {
         "success": True,
         "message": "CV uploaded and parsed successfully",
@@ -342,4 +365,67 @@ async def delete_cv(current_user: Dict[str, Any] = Depends(get_current_user)):
     return {"success": True, "message": "CV data deleted"}
 
 
-__all__ = ["router", "init_cv_table"]
+@admin_router.get("/cv-uploads")
+async def admin_list_cv_uploads(
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
+    _require_admin(current_user)
+    conn = await user_db.get_connection()
+    if not conn:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+    try:
+        rows = await conn.fetch(
+            """
+            SELECT c.id, c.user_id, c.full_name, c.email, c.phone,
+                   c.location, c.linkedin_url, c.github_url, c.portfolio_url,
+                   c.skills, c.summary, c.cv_filename, c.uploaded_at, c.updated_at,
+                   u.username, u.email AS user_email, u.full_name AS user_full_name,
+                   u.is_admin, u.is_active
+            FROM user_cv_data c
+            JOIN users u ON u.id = c.user_id
+            ORDER BY c.updated_at DESC NULLS LAST, c.uploaded_at DESC NULLS LAST
+            """
+        )
+    finally:
+        await user_db._release(conn)
+
+    def _iso(dt):
+        return dt.isoformat() if dt else None
+
+    items = []
+    for r in rows:
+        d = dict(r)
+        skills = d.get("skills")
+        if isinstance(skills, str):
+            try:
+                skills = json.loads(skills)
+            except Exception:
+                skills = []
+        elif skills is None:
+            skills = []
+        items.append({
+            "id": d["id"],
+            "user_id": d["user_id"],
+            "username": d["username"],
+            "user_email": d["user_email"],
+            "user_full_name": d["user_full_name"],
+            "is_admin": d["is_admin"],
+            "is_active": d["is_active"],
+            "full_name": d.get("full_name"),
+            "email": d.get("email"),
+            "phone": d.get("phone"),
+            "location": d.get("location"),
+            "linkedin_url": d.get("linkedin_url"),
+            "github_url": d.get("github_url"),
+            "portfolio_url": d.get("portfolio_url"),
+            "skills": skills,
+            "skills_count": len(skills),
+            "summary": d.get("summary"),
+            "cv_filename": d.get("cv_filename"),
+            "uploaded_at": _iso(d.get("uploaded_at")),
+            "updated_at": _iso(d.get("updated_at")),
+        })
+    return {"items": items, "count": len(items)}
+
+
+__all__ = ["router", "admin_router", "init_cv_table"]
