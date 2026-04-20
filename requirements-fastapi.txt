@@ -12,6 +12,11 @@ bcrypt==4.0.1
 # Database Requirements
 asyncpg==0.29.0  # PostgreSQL async driver
 
+# CV parsing
+pypdf>=3.0.0
+python-docx>=0.8.11
+anthropic>=0.40.0
+
 # Existing scraper requirements
 selenium==4.15.2
 beautifulsoup4==4.12.2

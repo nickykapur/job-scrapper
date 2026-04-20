@@ -16,6 +16,12 @@ try:
 except Exception:
     slack_notify = None
 
+try:
+    import cv_parser  # type: ignore
+except Exception as _e:
+    cv_parser = None  # type: ignore
+    print(f"⚠️  cv_parser not available, will fall back to regex: {_e}")
+
 router = APIRouter(prefix="/api/cv", tags=["CV"])
 admin_router = APIRouter(prefix="/api/admin", tags=["Admin CV"])
 user_db = UserDatabase()
@@ -191,19 +197,71 @@ async def _fetch_cv(user_id: int) -> Optional[Dict]:
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
+def _merge_parsed(claude: Dict[str, Any], regex: Dict[str, Any]) -> Dict[str, Any]:
+    """Claude wins on every field it extracted. Regex fills gaps."""
+    def pick(k: str, default=None):
+        v = claude.get(k)
+        if v in (None, "", [], {}):
+            return regex.get(k, default)
+        return v
+    return {
+        "full_name":     claude.get("name") or None,
+        "email":         pick("email"),
+        "phone":         pick("phone"),
+        "location":      claude.get("location"),
+        "linkedin_url":  pick("linkedin_url"),
+        "github_url":    pick("github_url"),
+        "portfolio_url": claude.get("portfolio_url"),
+        "summary":       claude.get("summary"),
+        "skills":        claude.get("skills") or regex.get("skills") or [],
+        "experience":    claude.get("experience") or [],
+        "education":     claude.get("education") or [],
+        "languages":     claude.get("languages") or [],
+    }
+
+
 @router.post("/upload")
 async def upload_cv(
     file: UploadFile = File(...),
     current_user: Dict[str, Any] = Depends(get_current_user),
 ):
     content = await file.read()
-    if len(content) > 5 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="File too large (max 5 MB)")
+    filename = file.filename or "file.txt"
 
-    try:
-        parsed = _parse_file(file.filename or "file.txt", content)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    # 1. Robust text extraction (rejects garbage before tokens are spent)
+    if cv_parser is not None:
+        try:
+            raw_text = cv_parser.extract_text(content, filename)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        regex_parsed = {
+            "email": _extract_email(raw_text),
+            "phone": _extract_phone(raw_text),
+            "linkedin_url": _extract_linkedin(raw_text),
+            "github_url": _extract_github(raw_text),
+            "skills": _extract_skills(raw_text),
+        }
+    else:
+        if len(content) > 5 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="File too large (max 5 MB)")
+        try:
+            legacy = _parse_file(filename, content)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        raw_text = legacy["raw_text"]
+        regex_parsed = legacy
+
+    # 2. Try Claude for structured parsing. Fall back silently if it fails.
+    claude_parsed: Dict[str, Any] = {}
+    claude_usage: Dict[str, Any] = {}
+    if cv_parser is not None:
+        try:
+            claude_parsed, claude_usage = cv_parser.parse_with_claude(raw_text)
+        except Exception as e:
+            print(f"⚠️  Claude parse unexpected error: {e}")
+            claude_parsed, claude_usage = {}, {"error": str(e)}
+
+    merged = _merge_parsed(claude_parsed, regex_parsed)
 
     user_id = current_user["user_id"]
     conn = await user_db.get_connection()
@@ -213,27 +271,43 @@ async def upload_cv(
         await conn.execute(
             """
             INSERT INTO user_cv_data
-                (user_id, email, phone, linkedin_url, github_url,
-                 skills, cv_filename, cv_raw_text, uploaded_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, NOW(), NOW())
+                (user_id, full_name, email, phone, location, linkedin_url, github_url,
+                 portfolio_url, summary, skills, experience, education, languages,
+                 cv_filename, cv_raw_text, uploaded_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11::jsonb,
+                    $12::jsonb, $13::jsonb, $14, $15, NOW(), NOW())
             ON CONFLICT (user_id) DO UPDATE SET
-                email        = EXCLUDED.email,
-                phone        = EXCLUDED.phone,
-                linkedin_url = EXCLUDED.linkedin_url,
-                github_url   = EXCLUDED.github_url,
-                skills       = EXCLUDED.skills,
-                cv_filename  = EXCLUDED.cv_filename,
-                cv_raw_text  = EXCLUDED.cv_raw_text,
-                updated_at   = NOW()
+                full_name     = EXCLUDED.full_name,
+                email         = EXCLUDED.email,
+                phone         = EXCLUDED.phone,
+                location      = EXCLUDED.location,
+                linkedin_url  = EXCLUDED.linkedin_url,
+                github_url    = EXCLUDED.github_url,
+                portfolio_url = EXCLUDED.portfolio_url,
+                summary       = EXCLUDED.summary,
+                skills        = EXCLUDED.skills,
+                experience    = EXCLUDED.experience,
+                education     = EXCLUDED.education,
+                languages     = EXCLUDED.languages,
+                cv_filename   = EXCLUDED.cv_filename,
+                cv_raw_text   = EXCLUDED.cv_raw_text,
+                updated_at    = NOW()
             """,
             user_id,
-            parsed["email"],
-            parsed["phone"],
-            parsed["linkedin_url"],
-            parsed["github_url"],
-            json.dumps(parsed["skills"]),
-            file.filename,
-            parsed["raw_text"][:50000],
+            merged["full_name"],
+            merged["email"],
+            merged["phone"],
+            merged["location"],
+            merged["linkedin_url"],
+            merged["github_url"],
+            merged["portfolio_url"],
+            merged["summary"],
+            json.dumps(merged["skills"]),
+            json.dumps(merged["experience"]),
+            json.dumps(merged["education"]),
+            json.dumps(merged["languages"]),
+            filename,
+            raw_text[:50000],
         )
     finally:
         await user_db._release(conn)
@@ -243,9 +317,9 @@ async def upload_cv(
             await slack_notify.notify_cv_upload_async(
                 username=current_user.get("username", "unknown"),
                 display_name=current_user.get("full_name") or current_user.get("username", ""),
-                filename=file.filename or "unknown",
+                filename=filename,
                 file_size_kb=len(content) / 1024,
-                skills_count=len(parsed["skills"]),
+                skills_count=len(merged["skills"] or []),
             )
         except Exception as e:
             print(f"⚠️  Slack CV notification failed: {e}")
@@ -253,13 +327,27 @@ async def upload_cv(
     return {
         "success": True,
         "message": "CV uploaded and parsed successfully",
+        "parser": "claude" if claude_parsed else "regex",
+        "usage": {
+            "input_tokens": claude_usage.get("input_tokens", 0),
+            "output_tokens": claude_usage.get("output_tokens", 0),
+            "model": claude_usage.get("model"),
+            "error": claude_usage.get("error"),
+        },
         "extracted": {
-            "email": parsed["email"],
-            "phone": parsed["phone"],
-            "linkedin_url": parsed["linkedin_url"],
-            "github_url": parsed["github_url"],
-            "skills": parsed["skills"],
-            "cv_filename": file.filename,
+            "full_name": merged["full_name"],
+            "email": merged["email"],
+            "phone": merged["phone"],
+            "location": merged["location"],
+            "linkedin_url": merged["linkedin_url"],
+            "github_url": merged["github_url"],
+            "portfolio_url": merged["portfolio_url"],
+            "summary": merged["summary"],
+            "skills": merged["skills"],
+            "experience_count": len(merged["experience"] or []),
+            "education_count": len(merged["education"] or []),
+            "languages_count": len(merged["languages"] or []),
+            "cv_filename": filename,
         },
     }
 

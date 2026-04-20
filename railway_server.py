@@ -89,15 +89,12 @@ except ImportError as e:
         raise HTTPException(status_code=501, detail="Authentication not available")
 
 # Import CV routes (auto-apply pilot)
-_CV_IMPORT_ERROR = None
 try:
     from cv_routes import router as cv_router, admin_router as cv_admin_router, init_cv_table
     CV_AVAILABLE = True
     print("✅ CV routes imported successfully")
 except Exception as e:
-    import traceback as _cv_tb
-    _CV_IMPORT_ERROR = f"{type(e).__name__}: {e}\n{_cv_tb.format_exc()}"
-    print(f"⚠️  CV routes not available: {_CV_IMPORT_ERROR}")
+    print(f"⚠️  CV routes not available: {type(e).__name__}: {e}")
     CV_AVAILABLE = False
     cv_admin_router = None
     init_cv_table = None
@@ -117,24 +114,6 @@ if CV_AVAILABLE:
     print("✅ CV routes registered (incl. admin)")
 
 
-@app.get("/api/_diag/cv")
-async def _diag_cv():
-    """Diagnostic: reports whether CV routes loaded and any import error."""
-    import os as _os
-    app_dir = _os.path.dirname(_os.path.abspath(__file__))
-    py_files = sorted([f for f in _os.listdir(app_dir) if f.endswith(".py")])
-    return {
-        "cv_available": CV_AVAILABLE,
-        "import_error": _CV_IMPORT_ERROR,
-        "app_dir": app_dir,
-        "py_files_in_app_dir": py_files,
-        "cv_routes_py_exists": _os.path.exists(_os.path.join(app_dir, "cv_routes.py")),
-        "slack_notify_py_exists": _os.path.exists(_os.path.join(app_dir, "slack_notify.py")),
-        "routes_registered": [
-            {"path": r.path, "methods": list(r.methods) if hasattr(r, "methods") else []}
-            for r in app.routes if "/cv" in getattr(r, "path", "")
-        ],
-    }
 
 # Initialize database
 db = None

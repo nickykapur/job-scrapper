@@ -66,6 +66,7 @@ COPY daily_multi_country_update.py .
 COPY sync_to_railway.py .
 COPY jobs_database.json .
 COPY cv_routes.py .
+COPY cv_parser.py .
 COPY slack_notify.py .
 COPY database_migrations/ ./database_migrations/
 

@@ -16,3 +16,4 @@ pydantic[email]==2.5.0
 # CV parsing (auto-apply pilot)
 pypdf>=3.0.0
 python-docx>=0.8.11
+anthropic>=0.40.0
