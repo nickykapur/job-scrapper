@@ -109,6 +109,17 @@ except Exception as e:
     AUTOAPPLY_AVAILABLE = False
     autoapply_router = None
 
+# Import Auto-Apply learning layer (classifier + resolver + recorder)
+try:
+    from autoapply_learning import router as autoapply_learning_router, init_learning_tables
+    AUTOAPPLY_LEARNING_AVAILABLE = True
+    print("✅ Auto-Apply learning routes imported successfully")
+except Exception as e:
+    print(f"⚠️  Auto-Apply learning routes not available: {type(e).__name__}: {e}")
+    AUTOAPPLY_LEARNING_AVAILABLE = False
+    autoapply_learning_router = None
+    init_learning_tables = None
+
 app = FastAPI(title="LinkedIn Job Manager", version="1.0.0")
 
 # Include authentication router if available
@@ -127,6 +138,11 @@ if CV_AVAILABLE:
 if AUTOAPPLY_AVAILABLE and autoapply_router is not None:
     app.include_router(autoapply_router)
     print("✅ Auto-Apply routes registered")
+
+# Include Auto-Apply learning router if available
+if AUTOAPPLY_LEARNING_AVAILABLE and autoapply_learning_router is not None:
+    app.include_router(autoapply_learning_router)
+    print("✅ Auto-Apply learning routes registered")
 
 
 
@@ -314,6 +330,12 @@ async def startup_event():
             await init_cv_table()
         except Exception as e:
             print(f"⚠️  CV table init failed: {e}")
+
+    if AUTOAPPLY_LEARNING_AVAILABLE and init_learning_tables:
+        try:
+            await init_learning_tables()
+        except Exception as e:
+            print(f"⚠️  Auto-Apply learning table init failed: {e}")
 
         # Run incremental migrations that may not be in the base schema yet
         try:
