@@ -13,6 +13,15 @@ function Root() {
     return saved !== null ? JSON.parse(saved) : true
   })
 
+  // Keep the `.dark` class on <html> in sync with state on every route,
+  // not just inside App.tsx — otherwise public routes (/login, /register)
+  // render with light-mode CSS vars while Fluent paints text in dark-mode colors.
+  useEffect(() => {
+    const root = document.documentElement
+    if (isDark) root.classList.add('dark')
+    else root.classList.remove('dark')
+  }, [isDark])
+
   useEffect(() => {
     const observer = new MutationObserver(() => {
       setIsDark(document.documentElement.classList.contains('dark'))
