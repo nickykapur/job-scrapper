@@ -4,7 +4,7 @@
  */
 
 import React, { Suspense } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 import LandingPage from './pages/LandingPage';
@@ -36,7 +36,6 @@ const needsOnboarding = (user: any): boolean => {
 
 const AppRouter: React.FC = () => {
   const { isAuthenticated, isLoading, user } = useAuth();
-  const location = useLocation();
 
   // Show loading spinner while checking authentication
   if (isLoading) {
@@ -48,27 +47,22 @@ const AppRouter: React.FC = () => {
   }
 
   const mustOnboard = needsOnboarding(user);
-  const onOnboarding = location.pathname.startsWith('/onboarding');
 
-  // Authenticated but incomplete onboarding → always push them back to the wizard
-  if (isAuthenticated && mustOnboard && !onOnboarding) {
-    return <Navigate to="/onboarding" replace />;
-  }
+  // Note: we intentionally do NOT force-redirect authenticated-but-mid-onboarding
+  // users to /onboarding on every visit. Onboarding is reached only via the
+  // explicit navigate() in RegisterPage right after sign-up. Anything else
+  // (direct URL, login, return visit) lands on the normal landing/dashboard.
 
   return (
     <Routes>
       {/* Public routes - redirect to dashboard if already authenticated */}
       <Route
         path="/login"
-        element={isAuthenticated
-          ? <Navigate to={mustOnboard ? '/onboarding' : '/'} replace />
-          : <LoginPage />}
+        element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />}
       />
       <Route
         path="/register"
-        element={isAuthenticated
-          ? <Navigate to={mustOnboard ? '/onboarding' : '/'} replace />
-          : <RegisterPage />}
+        element={isAuthenticated ? <Navigate to="/" replace /> : <RegisterPage />}
       />
 
       {/* Onboarding — only available to authenticated users who haven't finished it */}
