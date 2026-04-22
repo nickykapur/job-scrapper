@@ -120,6 +120,24 @@ except Exception as e:
     autoapply_learning_router = None
     init_learning_tables = None
 
+# Import Onboarding (register-quick + scraper config) routes
+try:
+    from onboarding_routes import (
+        auth_quick_router,
+        onboarding_router,
+        me_router,
+        init_onboarding_tables,
+    )
+    ONBOARDING_AVAILABLE = True
+    print("✅ Onboarding routes imported successfully")
+except Exception as e:
+    print(f"⚠️  Onboarding routes not available: {type(e).__name__}: {e}")
+    ONBOARDING_AVAILABLE = False
+    auth_quick_router = None
+    onboarding_router = None
+    me_router = None
+    init_onboarding_tables = None
+
 app = FastAPI(title="LinkedIn Job Manager", version="1.0.0")
 
 # Include authentication router if available
@@ -143,6 +161,16 @@ if AUTOAPPLY_AVAILABLE and autoapply_router is not None:
 if AUTOAPPLY_LEARNING_AVAILABLE and autoapply_learning_router is not None:
     app.include_router(autoapply_learning_router)
     print("✅ Auto-Apply learning routes registered")
+
+# Include Onboarding routes if available
+if ONBOARDING_AVAILABLE:
+    if auth_quick_router is not None:
+        app.include_router(auth_quick_router)
+    if onboarding_router is not None:
+        app.include_router(onboarding_router)
+    if me_router is not None:
+        app.include_router(me_router)
+    print("✅ Onboarding routes registered")
 
 
 
@@ -336,6 +364,12 @@ async def startup_event():
             await init_learning_tables()
         except Exception as e:
             print(f"⚠️  Auto-Apply learning table init failed: {e}")
+
+    if ONBOARDING_AVAILABLE and init_onboarding_tables:
+        try:
+            await init_onboarding_tables()
+        except Exception as e:
+            print(f"⚠️  Onboarding table init failed: {e}")
 
         # Run incremental migrations that may not be in the base schema yet
         try:

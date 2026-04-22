@@ -14,6 +14,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (username: string, password: string) => Promise<void>;
   register: (username: string, email: string, password: string, fullName?: string) => Promise<void>;
+  registerQuick: (email: string, fullName?: string) => Promise<{ default_password: string }>;
   finalizeAuth: () => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -104,6 +105,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const registerQuick = async (email: string, fullName?: string) => {
+    try {
+      const res = await authService.registerQuick(email, fullName);
+      // Set user state so AppRouter treats them as authenticated and
+      // redirects them straight into the onboarding flow.
+      setUser({ ...res.user, onboarding_completed: false });
+      return { default_password: res.default_password };
+    } catch (error: any) {
+      const message = error.response?.data?.detail || 'Registration failed';
+      toast.error(message);
+      throw error;
+    }
+  };
+
   // Called by RegisterPage after onboarding step 2 is complete.
   // Sets user state which triggers AppRouter to redirect to the dashboard.
   const finalizeAuth = async () => {
@@ -172,6 +187,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading,
     login,
     register,
+    registerQuick,
     finalizeAuth,
     logout,
     refreshUser,

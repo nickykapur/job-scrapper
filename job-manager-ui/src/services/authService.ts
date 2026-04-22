@@ -13,6 +13,7 @@ export interface User {
   email: string;
   full_name?: string;
   is_admin: boolean;
+  onboarding_completed?: boolean;
 }
 
 export interface LoginResponse {
@@ -67,6 +68,20 @@ class AuthService {
     localStorage.setItem('access_token', response.data.access_token);
     localStorage.setItem('user', JSON.stringify(response.data.user));
 
+    return response.data;
+  }
+
+  /**
+   * Quick register (email + full name only — server assigns username + pass1234).
+   * Used by the onboarding signup flow. User is expected to change password later.
+   */
+  async registerQuick(email: string, fullName?: string): Promise<LoginResponse & { default_password: string }> {
+    const response = await axios.post(`${API_URL}/register-quick`, {
+      email,
+      full_name: fullName,
+    });
+    localStorage.setItem('access_token', response.data.access_token);
+    localStorage.setItem('user', JSON.stringify(response.data.user));
     return response.data;
   }
 

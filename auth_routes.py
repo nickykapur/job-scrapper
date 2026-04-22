@@ -59,6 +59,7 @@ class UserResponse(BaseModel):
     is_admin: bool
     created_at: str
     last_login: Optional[str]
+    onboarding_completed: bool = False
 
 class AuthResponse(BaseModel):
     access_token: str
@@ -205,6 +206,24 @@ async def get_current_user_info(current_user: Dict[str, Any] = Depends(get_curre
                 print(f"[slack] notify_login (session resume) failed: {e}")
             await user_db.update_last_login(user['id'])
 
+    # onboarding_completed column lives on `users` and is added by
+    # onboarding_routes.init_onboarding_tables. Read it with a small helper query
+    # so we stay resilient if the column isn't yet present.
+    onboarding_completed = False
+    try:
+        conn = await user_db.get_connection()
+        if conn:
+            try:
+                row = await conn.fetchrow(
+                    "SELECT onboarding_completed FROM users WHERE id = $1", user['id']
+                )
+                if row and row['onboarding_completed']:
+                    onboarding_completed = True
+            finally:
+                await user_db._release(conn)
+    except Exception:
+        pass
+
     return {
         "user_id": user['id'],
         "username": user['username'],
@@ -212,7 +231,8 @@ async def get_current_user_info(current_user: Dict[str, Any] = Depends(get_curre
         "full_name": user.get('full_name'),
         "is_admin": user['is_admin'],
         "created_at": user['created_at'].isoformat() if user.get('created_at') else None,
-        "last_login": user['last_login'].isoformat() if user.get('last_login') else None
+        "last_login": user['last_login'].isoformat() if user.get('last_login') else None,
+        "onboarding_completed": onboarding_completed,
     }
 
 

@@ -238,6 +238,22 @@ export const jobApi = {
   // Admin: List all user CV uploads
   adminListCVUploads: async (): Promise<any> =>
     (await api.get('/api/admin/cv-uploads')).data,
+
+  // Onboarding
+  getOnboardingStatus: async (): Promise<any> =>
+    (await api.get('/api/onboarding/status')).data,
+
+  completeOnboarding: async (): Promise<any> =>
+    (await api.post('/api/onboarding/complete')).data,
+
+  getDerivedKeywords: async (): Promise<any> =>
+    (await api.get('/api/users/me/derived-keywords')).data,
+
+  getScraperConfig: async (): Promise<any> =>
+    (await api.get('/api/users/me/scraper-config')).data,
+
+  saveScraperConfig: async (country: string): Promise<any> =>
+    (await api.post('/api/users/me/scraper-config', { country })).data,
 };
 
 export default api;
