@@ -125,7 +125,16 @@ TITLE_KEYWORDS = {
                     'process engineer', 'design engineer', 'quality engineer', 'production', 'plant',
                     'cad', 'simulation', 'test engineer'],
     'events': ['event', 'conference', 'meeting planner', 'hospitality', 'venue', 'banquet', 'catering',
-               'wedding', 'mice', 'tourism', 'convention', 'exhibition', 'trade show', 'coordinator event']
+               'wedding', 'mice', 'tourism', 'convention', 'exhibition', 'trade show', 'coordinator event'],
+    'customer_service': ['customer service', 'customer support', 'customer care', 'call center', 'contact center',
+                         'help desk', 'helpdesk', 'customer success', 'client services', 'customer experience',
+                         'customer relations', 'service representative', 'support representative',
+                         'guest services', 'front desk', 'receptionist', 'customer specialist', 'customer associate'],
+    'media_production': ['video editor', 'video producer', 'video production', 'media producer', 'videographer',
+                         'production assistant', 'broadcast', 'cameraman', 'camera operator', 'cinematographer',
+                         'motion graphics', 'multimedia', 'content creator', 'audio engineer', 'podcast'],
+    'painter': ['painter', 'painting', 'residential painter', 'commercial painter', 'industrial painter',
+                'spray painter', 'exterior painter', 'interior painter', 'house painter', 'paint technician'],
 }
 
 def is_relevant_job(title, job_type):
@@ -629,8 +638,14 @@ def scrape_single_country(location, country_name, railway_url, dry_run=False):
                                 if not is_relevant_job(job_title, job_type):
                                     continue
 
-                                job_data['job_type'] = job_type
-                                jobs_by_type.setdefault(job_type, {})[job_id] = job_data
+                                # Trust the content-based type already detected by linkedin_job_scraper
+                                # (from the job title). Only fall back to search-term type if not set.
+                                # This prevents e.g. "Sales Representative" found via a "customer_service"
+                                # search from being mislabeled — it stays 'sales' in the DB.
+                                detected_type = job_data.get('job_type')
+                                final_type = detected_type if detected_type and detected_type != 'other' else job_type
+                                job_data['job_type'] = final_type
+                                jobs_by_type.setdefault(final_type, {})[job_id] = job_data
                                 all_new_jobs[job_id] = job_data
                             else:
                                 # Update easy_apply flag if set

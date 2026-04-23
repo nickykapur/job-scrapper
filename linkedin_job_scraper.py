@@ -992,7 +992,19 @@ class LinkedInJobScraper:
             if keyword in text:
                 return 'hr'
 
-        # 9. Software (last - broadest category, catches remaining tech roles)
+        # 9. Customer Service (before software — broad but specific enough)
+        customer_service_keywords = [
+            'customer service', 'customer support', 'customer care', 'call center', 'contact center',
+            'help desk', 'helpdesk', 'customer success representative', 'client services representative',
+            'customer experience specialist', 'service representative', 'support representative',
+            'guest services', 'front desk agent', 'receptionist', 'customer specialist',
+            'customer associate', 'customer relations representative',
+        ]
+        for keyword in customer_service_keywords:
+            if keyword in text:
+                return 'customer_service'
+
+        # 10. Software (last - broadest category, catches remaining tech roles)
         for keyword in software_keywords:
             if keyword in text:
                 return 'software'
