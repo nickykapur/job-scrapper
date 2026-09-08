@@ -132,6 +132,60 @@ which makes it the cheapest way to separate "scraper broken" from "everything el
 
 ---
 
+## 2b. End-to-end pipeline — ✅ WRITES CONFIRMED 2026-09-08
+
+[Run #34275020173](https://github.com/nickykapur/job-scrapper/actions/runs/34275020173) (Ireland,
+manual, 45-min timeout) is the first fully successful scrape since 2026-06-24:
+
+```
+[SUMMARY] Ireland: 318/322 searches OK, 897 new jobs
+[UPLOAD] Uploading 897 jobs to Railway...
+[API] Chunk 1/9 ... 9/9 (97 jobs)
+[TIMING] Ireland — total 1040s | scraping=1036s | upload=3s
+```
+
+All nine chunks were accepted with no timeouts and no non-200s. **The restored backend accepts
+writes.** Scrape took 17m22s, comfortably inside the new 45-minute cap.
+
+`[UPLOAD] Success: 0 new jobs added` is **not** a failure: `/sync_jobs` only does a queue INSERT
+into `job_upload_queue` and returns, so it cannot know the inserted count. The in-process
+`_queue_worker` drains the queue afterwards. Judge success by the chunks being accepted, not by
+that number.
+
+### Known break: `enforce-country-limit` times out
+
+The cleanup step returned HTTP 500 after 96 seconds:
+
+```json
+{"detail": "Failed to enforce limit: "}
+```
+
+The **empty** exception message is the tell. `database_models.py:202` builds the pool with
+`command_timeout=60`, and `str(asyncio.TimeoutError())` is the empty string — so the DELETE blew
+through the 60s pool timeout, well before the 120s server-side `statement_timeout` could fire.
+
+Prime suspect: **`idx_jobs_enforce` is missing.** The composite index that this exact query needs
+(`PARTITION BY country, job_type ORDER BY scraped_at DESC`) is declared only in
+`database_setup.sql:34` and is **never created at runtime** — `init_database()` does not create it
+and no Python file references it. A database that predates that line simply does not have it, so
+the window-function DELETE falls back to a full scan.
+
+Check and fix:
+
+```sql
+SELECT indexname FROM pg_indexes WHERE tablename = 'jobs';
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_jobs_enforce ON jobs(country, job_type, scraped_at DESC);
+```
+
+`/api/admin/user-activity` also failed in the same run (30s curl timeout), which points the same
+way: the database is slow under load, not that the endpoints are wrong.
+
+**Beware the reported numbers.** "Total Jobs: 0" and "Cleaned: 0" in the Slack message and step
+summary are `.get(..., 0)` fallbacks parsed from that error response — they are not a count of
+zero rows. Nothing has yet reported an actual row count from this database.
+
+---
+
 ## 3. Once a backend exists
 
 ```bash
