@@ -2946,7 +2946,7 @@ async def get_monitoring(current_user: Dict[str, Any] = Depends(get_current_user
 
     github_token = os.environ.get("GITHUB_TOKEN", "")
     sentry_dsn = os.environ.get("SENTRY_DSN", "")
-    workflows = ["parallel-scraper.yml", "test-scraper.yml"]
+    workflows = ["job-scraper.yml", "test-scraper.yml"]
 
     async def fetch_workflow_runs(filename: str):
         url = f"https://api.github.com/repos/nickykapur/job-scrapper/actions/workflows/{filename}/runs?per_page=5"

@@ -10,12 +10,13 @@ Two separate things are switched off, and only one of them is a switch.
 |---|---|
 | Last successful scrape | run #1544, **2026-06-24 17:49 UTC** |
 | Why scraping stopped | GitHub set `parallel-scraper.yml` to `disabled_inactivity` (scheduled workflows are auto-disabled after 60 days without repo activity) |
+| Re-enable route taken | renamed to `job-scraper.yml` — a new path registers as a new, **active** workflow (see below) |
 | Why it can't just be re-enabled | **Railway is no longer being paid** — the backend and its Postgres are gone |
 | Time since | ~2.5 months |
 | Repo visibility | **public** (Actions minutes are free — hosting is the only cost) |
 
 The scraper never wrote to Postgres directly. It POSTs to `$RAILWAY_URL/sync_jobs`, hardcoded in
-`parallel-scraper.yml` to `https://web-production-110bb.up.railway.app`. With nothing at that URL,
+`job-scraper.yml` to `https://web-production-110bb.up.railway.app`. With nothing at that URL,
 re-enabling the workflow produces green runs that upload into the void. **Restoring a backend is a
 prerequisite, not a follow-up.**
 
@@ -23,7 +24,7 @@ Current workflow states:
 
 | Workflow | State | Action |
 |---|---|---|
-| `parallel-scraper.yml` | `disabled_inactivity` | re-enable **after** a backend exists |
+| `job-scraper.yml` (was `parallel-scraper.yml`) | renamed to bypass `disabled_inactivity` | **live once merged to `main`** |
 | `daily-analytics.yml` | `disabled_manually` | needs `DATABASE_URL` + `SLACK_WEBHOOK_URL` |
 | `start-vm.yml` | `disabled_inactivity` | leftover Azure VM starter, unrelated to the product |
 | `test-scraper.yml` | active (manual) | **usable right now — needs no backend** |
@@ -144,14 +145,14 @@ lost. It looks healthy. It is not. This is the failure mode most likely to waste
 
 Then update **both** places the old URL is hardcoded:
 
-- `parallel-scraper.yml` — `RAILWAY_URL` (upload target) and `API_BASE_URL` (active-users check),
+- `job-scraper.yml` — `RAILWAY_URL` (upload target) and `API_BASE_URL` (active-users check),
   plus the `curl` calls in the cleanup job
 - `get_scraping_targets.py:17` — default `api_base_url`
 
 Better: make them a repo variable rather than three hardcoded copies.
 
 Finally, confirm at least one **active** user exists with countries and job types set —
-`parallel-scraper.yml` calls `/api/admin/scraping-targets` first and silently skips the entire run
+`job-scraper.yml` calls `/api/admin/scraping-targets` first and silently skips the entire run
 if there are none. On a rebuilt database that will be the default state.
 
 ### Expect a big trim on the first cleanup run
@@ -265,6 +266,30 @@ other 25 endpoints already use.
 
 **`jobs_database.json` is committed** — 5.8 MB, 6,435 jobs, 907 flagged as applied — and it's real
 user activity in a public repo.
+
+---
+
+## The rename, and why it only counts on `main`
+
+`parallel-scraper.yml` was auto-disabled (`disabled_inactivity`) and GitHub offers no API to
+re-enable it — only the button in the Actions UI. Since workflows are keyed by **file path**, the
+file was renamed to `.github/workflows/job-scraper.yml`, which registers as a new workflow in the
+default `active` state. The old path keeps the disabled flag and drops off the list once the file
+is gone.
+
+**This only takes effect once the rename is on `main`.** GitHub reads `schedule` triggers solely
+from the default branch, and a workflow must exist there to be dispatchable at all. Sitting on a
+feature branch, the renamed file does nothing.
+
+What it costs:
+
+- the ~1,544 runs of history attached to the old workflow stay with the old path
+- the badge URL changes
+- `railway_server.py` had the old filename hardcoded in `/api/admin/monitoring`; updated in the
+  same commit, so the admin pipeline view keeps working
+
+What it does **not** fix: the 60-day inactivity timer applies to the new workflow too. If the repo
+goes quiet for another 60 days, GitHub disables this one the same way.
 
 ---
 
