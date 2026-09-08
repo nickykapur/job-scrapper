@@ -105,19 +105,29 @@ mostly expired — probably not worth importing.
 
 ---
 
-## 2. Do the LinkedIn selectors still work?
+## 2. Do the LinkedIn selectors still work? — ✅ VERIFIED 2026-09-08
 
-Worth doing **regardless of the hosting decision**, and it needs no backend at all — this is the
-one useful thing you can do right now.
+**Yes.** Answered by [run #34238097197](https://github.com/nickykapur/job-scrapper/actions/runs/34238097197)
+(`test-scraper.yml`, Ireland, dry-run, no DB writes):
 
-Run **Actions → "Test Scraper (Dry Run)" → Ireland**, `min_jobs_expected: 5`. It scrapes for real,
-skips all DB writes, uploads results as an artifact, and fails loudly on low counts. Check the
-sample titles in the step summary — they should look like real jobs.
+```
+[SUMMARY] Ireland: 127/127 searches OK, 933 new jobs
+  (software: 301, sales: 238, finance: 120, engineering: 87, hr: 80,
+   cybersecurity: 47, marketing: 32, events: 16, biotech: 11)
+[COMPLETE] All 127 searches finished for Ireland in 643s
+```
 
-If it returns 0, the scraper already detects the auth wall (`/login`, `/checkpoint`, `/authwall`
-at `linkedin_job_scraper.py:224-247`) — check the log for that before assuming the selectors
-broke. After 2.5 months, selector drift is likely; **if this fails, the hosting question is moot
-until the scraper is fixed.** Cheap test, run it first.
+**127 of 127 searches succeeded.** Titles look like real listings (Design Engineer,
+Manufacturing Engineer, Continuous Improvement Engineer, Event Manager). No selector drift after
+2.5 months idle.
+
+One search hit LinkedIn's authwall on its first attempt (`Event Manager`, redirected to
+`/authwall`) and **succeeded on retry with 22 jobs** — the bot-detection handling at
+`linkedin_job_scraper.py:224-247` works as designed. Occasional blocks are normal and self-healing;
+a run is only in trouble if a large share of searches fail.
+
+Re-run this workflow any time the pipeline looks wrong — it needs no backend and touches no data,
+which makes it the cheapest way to separate "scraper broken" from "everything else broken".
 
 ---
 
