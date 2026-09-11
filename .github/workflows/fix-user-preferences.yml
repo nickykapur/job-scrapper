@@ -33,6 +33,11 @@ on:
         required: false
         default: ''
         type: string
+      keywords:
+        description: 'Extra search terms for this user, comma separated (these widen what gets scraped)'
+        required: false
+        default: ''
+        type: string
 
 jobs:
   fix-preferences:
@@ -59,6 +64,7 @@ jobs:
           [ -n "${{ inputs.job_types }}" ] && ARGS="$ARGS --job-types '${{ inputs.job_types }}'"
           [ -n "${{ inputs.countries }}" ] && ARGS="$ARGS --countries '${{ inputs.countries }}'"
           [ -n "${{ inputs.experience_levels }}" ] && ARGS="$ARGS --experience-levels '${{ inputs.experience_levels }}'"
+          [ -n "${{ inputs.keywords }}" ] && ARGS="$ARGS --keywords '${{ inputs.keywords }}'"
 
           echo "Mode: ${{ inputs.apply == true && 'APPLY' || 'DRY-RUN' }}"
           eval python3 fix_user_preferences.py $ARGS | tee /tmp/result.txt

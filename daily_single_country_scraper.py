@@ -462,7 +462,14 @@ def scrape_single_country(location, country_name, railway_url, dry_run=False):
         "SaaS Sales",
         "B2B Sales",
         "Customer Success Manager",
-        "Account Management"
+        "Account Management",
+        # Tech-sales phrasing — SaaS/B2B above miss listings that self-describe
+        # as software or enterprise sales rather than by the sales motion.
+        "Tech Sales",
+        "Software Sales",
+        "Enterprise Sales",
+        "Sales Executive",
+        "Business Development Manager"
     ]
 
     finance_search_terms = [

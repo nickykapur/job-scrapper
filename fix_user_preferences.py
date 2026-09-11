@@ -149,6 +149,10 @@ async def main():
                         help='Override the onboarding country, comma separated')
     parser.add_argument('--experience-levels', type=csv_arg, default=[],
                         help='Override the CV-derived experience levels, comma separated')
+    parser.add_argument('--keywords', type=csv_arg, default=[],
+                        help='Extra LinkedIn search terms for this user, comma separated. '
+                             '/api/admin/scraping-targets aggregates these into the scrape, '
+                             'so they widen what gets collected, not just what is shown.')
     args = parser.parse_args()
 
     for name, values, allowed in (
@@ -242,13 +246,15 @@ async def main():
         updates, values = [], []
         for column, value in (('job_types', job_types),
                               ('preferred_countries', countries),
-                              ('experience_levels', levels)):
+                              ('experience_levels', levels),
+                              ('keywords', args.keywords)):
             if value:
                 values.append(value)
                 updates.append(f"{column} = ${len(values)}")
 
         print(f"[PROPOSED] job_types={job_types} countries={countries or '(unchanged)'} "
-              f"levels={levels or '(unchanged)'}")
+              f"levels={levels or '(unchanged)'} "
+              f"keywords={args.keywords or '(unchanged)'}")
 
         if not args.apply:
             print("[DRY-RUN] Nothing written. Re-run with --apply to save.")
@@ -262,13 +268,14 @@ async def main():
         )
 
         saved = await conn.fetchrow(
-            """SELECT job_types, preferred_countries, experience_levels
+            """SELECT job_types, preferred_countries, experience_levels, keywords
                FROM user_preferences WHERE user_id = $1""",
             user_id,
         )
         print(f"[SAVED] job_types={list(saved['job_types'])} "
               f"countries={list(saved['preferred_countries'])} "
-              f"levels={list(saved['experience_levels'])}")
+              f"levels={list(saved['experience_levels'])} "
+              f"keywords={list(saved['keywords'] or [])}")
         print("[INFO] Takes effect on her next page load — /api/jobs filters per request.")
         return 0
     finally:
