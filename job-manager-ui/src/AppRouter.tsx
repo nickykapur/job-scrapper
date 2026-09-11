@@ -14,13 +14,14 @@ import OnboardingPage from './pages/OnboardingPage';
 
 // Lazy-load the dashboard — keeps MUI + Recharts out of the landing page bundle
 const App = React.lazy(() => import('./App'));
+// Settings is MUI-heavy too, and only reachable once signed in
+const SettingsPage = React.lazy(() => import('./pages/SettingsPage'));
 
 const AppFallback = () => (
   <div className="flex justify-center items-center min-h-screen">
     <Loader2 className="h-8 w-8 animate-spin text-primary" />
   </div>
 );
-// import SettingsPage from './pages/SettingsPage'; // Temporarily disabled - MUI migration pending
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Admin usernames that can access the main app even without completing onboarding.
@@ -90,16 +91,14 @@ const AppRouter: React.FC = () => {
           )
         }
       />
-      {/* Temporarily disabled - MUI migration pending
       <Route
         path="/settings"
         element={
           <ProtectedRoute>
-            <SettingsPage />
+            <Suspense fallback={<AppFallback />}><SettingsPage /></Suspense>
           </ProtectedRoute>
         }
       />
-      */}
 
       {/* Catch all - redirect to home */}
       <Route path="*" element={<Navigate to="/" replace />} />
