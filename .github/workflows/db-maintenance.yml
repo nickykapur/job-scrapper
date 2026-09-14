@@ -18,7 +18,7 @@ on:
       migration:
         description: 'Migration file (migrate only)'
         required: false
-        default: '004_per_user_job_signatures.sql'
+        default: '006_index_original_job_id.sql'
         type: string
       apply:
         description: 'Write changes (leave unchecked for a dry-run)'
