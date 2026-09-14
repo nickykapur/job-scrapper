@@ -114,7 +114,10 @@ TITLE_KEYWORDS = {
     'cybersecurity': ['security', 'cyber', 'soc', 'infosec', 'information security', 'penetration',
                       'vulnerability', 'threat', 'incident response', 'ciso'],
     'sales': ['sales', 'account executive', 'account manager', 'business development', 'bdr', 'sdr',
-              'revenue', 'quota', 'territory', 'inside sales', 'outside sales'],
+              'revenue', 'quota', 'territory', 'inside sales', 'outside sales',
+              # Searched for but previously absent here, so every result was
+              # scraped and then dropped by the relevance gate.
+              'customer success', 'account management'],
     'finance': ['finance', 'financial', 'accountant', 'accounting', 'fp&a', 'controller', 'treasury',
                 'audit', 'tax', 'bookkeeper', 'cfo', 'fund', 'investment'],
     'marketing': ['marketing', 'brand', 'content', 'seo', 'sem', 'ppc', 'social media', 'digital marketing',
@@ -137,8 +140,20 @@ TITLE_KEYWORDS = {
                 'spray painter', 'exterior painter', 'interior painter', 'house painter', 'paint technician'],
 }
 
+# Phrases that contain a category keyword but mean a different job. Checked
+# before the positive keywords, because a substring match cannot tell
+# "Sales Ledger Administrator" (finance admin) from a sales role.
+TITLE_EXCLUSIONS = {
+    'sales': [
+        'sales ledger',      # accounts receivable, not selling
+        'after sales', 'aftersales',
+        'revenue accountant', 'revenue analyst', 'revenue assurance',
+    ],
+}
+
+
 def is_relevant_job(title, job_type):
-    """Check if job title contains relevant keywords for the job type"""
+    """Check if job title contains relevant keywords for the job type."""
     if not title or not job_type:
         return True  # Allow if we can't validate
 
@@ -147,7 +162,16 @@ def is_relevant_job(title, job_type):
         return True  # No keywords defined, allow all
 
     title_lower = title.lower()
-    return any(kw in title_lower for kw in keywords)
+
+    for phrase in TITLE_EXCLUSIONS.get(job_type, []):
+        if phrase in title_lower:
+            return False
+
+    # Match on word boundaries, not bare substrings. Plain `'sales' in title`
+    # classifies every Salesforce Developer, Administrator and Consultant as a
+    # sales job - which in the Dublin market is a great deal of noise in
+    # somebody's sales feed.
+    return any(re.search(r'\b' + re.escape(kw) + r'\b', title_lower) for kw in keywords)
 
 def get_active_job_types(railway_url):
     """Fetch active job types + any user-defined custom keywords from the API.
