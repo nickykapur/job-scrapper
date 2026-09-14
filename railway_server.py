@@ -635,16 +635,15 @@ async def get_jobs_api(current_user: Optional[Dict[str, Any]] = Depends(get_curr
                     # This catches cases where job was deleted and re-scraped with new ID
                     # Store both applied and rejected status to correctly mark reposts
                     signatures = await conn.fetch("""
-                        SELECT DISTINCT
-                            js.company,
-                            js.normalized_title,
-                            MAX(CASE WHEN uji.applied THEN 1 ELSE 0 END)::boolean as was_applied,
-                            MAX(CASE WHEN uji.rejected THEN 1 ELSE 0 END)::boolean as was_rejected
-                        FROM job_signatures js
-                        JOIN user_job_interactions uji ON uji.job_id = js.original_job_id
-                        WHERE uji.user_id = $1
-                        AND (uji.applied = TRUE OR uji.rejected = TRUE)
-                        GROUP BY js.company, js.normalized_title
+                        SELECT
+                            company,
+                            normalized_title,
+                            bool_or(was_applied)  as was_applied,
+                            bool_or(was_rejected) as was_rejected
+                        FROM job_signatures
+                        WHERE user_id = $1
+                          AND (was_applied OR was_rejected)
+                        GROUP BY company, normalized_title
                     """, current_user['user_id'])
 
                     for sig in signatures:
@@ -1332,6 +1331,8 @@ async def update_job_api(request: JobUpdateRequest, current_user: Optional[Dict[
 
                             if job and job['company'] and job['title']:
                                 signature_created = await db.add_job_signature(
+                                    user_id=user_id,
+                                    applied=True,
                                     company=job['company'],
                                     title=job['title'],
                                     country=job['country'] or '',
@@ -1497,6 +1498,8 @@ async def update_job_api(request: JobUpdateRequest, current_user: Optional[Dict[
 
                             if job and job['company'] and job['title']:
                                 signature_created = await db.add_job_signature(
+                                    user_id=user_id,
+                                    rejected=True,
                                     company=job['company'],
                                     title=job['title'],
                                     country=job['country'] or '',
@@ -3611,15 +3614,20 @@ async def backfill_rejected_signatures():
     if not conn:
         raise HTTPException(status_code=500, detail="Could not connect to database")
     try:
-        # Get all rejected jobs
+        # Read per-user interactions, not the legacy global jobs.rejected flag,
+        # which predates multi-user and says nothing about who rejected what.
+        # This also repairs signatures lost to the old shared-row overwrite.
+        # Interactions whose job row has since been deleted by cleanup cannot be
+        # recovered — company and title are gone with it.
         rejected_jobs = await conn.fetch("""
-            SELECT id, title, company, country
-            FROM jobs
-            WHERE rejected = TRUE
-            ORDER BY scraped_at DESC
+            SELECT j.id, j.title, j.company, j.country, uji.user_id
+            FROM user_job_interactions uji
+            JOIN jobs j ON j.id = uji.job_id
+            WHERE uji.rejected = TRUE
+            ORDER BY j.scraped_at DESC
         """)
 
-        print(f"📊 Found {len(rejected_jobs)} rejected jobs")
+        print(f"📊 Found {len(rejected_jobs)} rejection interactions")
 
         backfilled = 0
         errors = 0
@@ -3627,6 +3635,8 @@ async def backfill_rejected_signatures():
         for job in rejected_jobs:
             try:
                 success = await db.add_job_signature(
+                    user_id=job['user_id'],
+                    rejected=True,
                     company=job['company'],
                     title=job['title'],
                     country=job['country'],
@@ -3692,14 +3702,16 @@ async def run_deduplication_migration():
 
         print("\n🔄 Backfilling job signatures for existing applied jobs...")
 
+        # Per-user interactions rather than the legacy global jobs.applied flag.
         applied_jobs = await conn.fetch("""
-            SELECT id, title, company, country
-            FROM jobs
-            WHERE applied = TRUE
-            ORDER BY scraped_at DESC
+            SELECT j.id, j.title, j.company, j.country, uji.user_id
+            FROM user_job_interactions uji
+            JOIN jobs j ON j.id = uji.job_id
+            WHERE uji.applied = TRUE
+            ORDER BY j.scraped_at DESC
         """)
 
-        print(f"📊 Found {len(applied_jobs)} applied jobs")
+        print(f"📊 Found {len(applied_jobs)} application interactions")
 
         backfilled = 0
         errors = 0
@@ -3707,6 +3719,8 @@ async def run_deduplication_migration():
         for job in applied_jobs:
             try:
                 success = await db.add_job_signature(
+                    user_id=job['user_id'],
+                    applied=True,
                     company=job['company'],
                     title=job['title'],
                     country=job['country'],

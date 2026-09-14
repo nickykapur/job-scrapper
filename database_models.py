@@ -127,7 +127,9 @@ class JobDatabase:
             if own_conn:
                 await self._release(conn)
 
-    async def add_job_signature(self, company: str, title: str, country: str, job_id: str) -> bool:
+    async def add_job_signature(self, company: str, title: str, country: str, job_id: str,
+                                user_id: int = None, applied: bool = False,
+                                rejected: bool = False) -> bool:
         """
         Add a job signature to track that the user has applied to this type of job at this company.
 
@@ -147,19 +149,41 @@ class JobDatabase:
         if not normalized_title:
             return False
 
+        # Signatures are per-user since migration 004. A user-less row can never
+        # match the lookup, so refuse rather than write something that looks
+        # saved but suppresses nothing. Only the pre-multi-user scripts
+        # backfill_rejected_signatures.py and run_deduplication_migration.py
+        # reach here — use POST /api/admin/backfill-rejected-signatures instead.
+        if user_id is None:
+            print("⚠️  add_job_signature called without user_id — skipping "
+                  "(per-user signatures required; see migration 004)")
+            return False
+
         conn = await self.get_connection()
         if not conn:
             return False
 
         try:
+            # Signatures are per-user. A shared row cannot work: whoever wrote
+            # it last owned original_job_id, and everyone else's suppression
+            # broke silently. See 004_per_user_job_signatures.sql.
+            # was_applied / was_rejected live here rather than being derived from
+            # user_job_interactions, so suppression survives the original job row
+            # being deleted by cleanup. OR them together: rejecting one posting
+            # and applying to another with the same signature sets both.
             await conn.execute("""
-                INSERT INTO job_signatures (company, normalized_title, country, original_job_id)
-                VALUES ($1, $2, $3, $4)
-                ON CONFLICT (company, normalized_title, country)
+                INSERT INTO job_signatures
+                    (company, normalized_title, country, original_job_id, user_id,
+                     was_applied, was_rejected)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                ON CONFLICT (user_id, company, normalized_title, country)
+                WHERE user_id IS NOT NULL
                 DO UPDATE SET
-                    applied_date = CURRENT_TIMESTAMP,
-                    original_job_id = EXCLUDED.original_job_id
-            """, company, normalized_title, country, job_id)
+                    applied_date    = CURRENT_TIMESTAMP,
+                    original_job_id = EXCLUDED.original_job_id,
+                    was_applied     = job_signatures.was_applied  OR EXCLUDED.was_applied,
+                    was_rejected    = job_signatures.was_rejected OR EXCLUDED.was_rejected
+            """, company, normalized_title, country, job_id, user_id, applied, rejected)
 
             print(f"✅ Added job signature: '{normalized_title}' at {company}")
             return True
@@ -462,6 +486,8 @@ class JobDatabase:
                     company=existing['company'],
                     title=existing['title'],
                     country=existing['country'],
+                    applied=bool(applied),
+                    rejected=bool(rejected),
                     job_id=job_id
                 )
                 if rejected:
