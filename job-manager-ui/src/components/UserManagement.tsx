@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Users, CheckCircle, XCircle, Clock, AlertCircle, Plus, X, Trash2 } from 'lucide-react';
+import { Users, CheckCircle, XCircle, Clock, AlertCircle, Plus, X, Trash2, KeyRound, Copy } from 'lucide-react';
 import { jobApi } from '../services/api';
 
 interface CountryBreakdown {
@@ -75,6 +75,14 @@ export const UserManagement: React.FC = () => {
 
   const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
   const [confirmDeleteUserId, setConfirmDeleteUserId] = useState<number | null>(null);
+
+  // Password reset state. resetResult keeps the password visible until the admin
+  // dismisses it — it is never stored or retrievable afterwards.
+  const [resetPasswordUserId, setResetPasswordUserId] = useState<number | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [resettingUserId, setResettingUserId] = useState<number | null>(null);
+  const [resetResult, setResetResult] = useState<{ username: string; password: string } | null>(null);
+  const [resetError, setResetError] = useState<string | null>(null);
 
   // Job types breakdown state
   const [expandedJobTypesUserId, setExpandedJobTypesUserId] = useState<number | null>(null);
@@ -171,6 +179,54 @@ export const UserManagement: React.FC = () => {
       console.error('Failed to update countries:', err);
     } finally {
       setUpdatingCountry(null);
+    }
+  };
+
+  // Mirrors auth_utils.validate_password_strength — the API rejects anything
+  // weaker, and a password that fails it could not be changed by the user later.
+  const passwordProblem = (pw: string): string | null => {
+    if (pw.length < 8) return 'At least 8 characters';
+    if (!/[a-zA-Z]/.test(pw)) return 'Needs at least one letter';
+    if (!/\d/.test(pw)) return 'Needs at least one number';
+    return null;
+  };
+
+  const generatePassword = () => {
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+    const bytes = new Uint32Array(14);
+    crypto.getRandomValues(bytes);
+    let pw = Array.from(bytes, b => alphabet[b % alphabet.length]).join('');
+    // Guarantee the policy holds regardless of what randomness produced.
+    if (passwordProblem(pw)) pw = pw.slice(0, 12) + 'a7';
+    setNewPassword(pw);
+    setResetError(null);
+  };
+
+  const openResetPassword = (userId: number) => {
+    setResetPasswordUserId(resetPasswordUserId === userId ? null : userId);
+    setNewPassword('');
+    setResetError(null);
+    setResetResult(null);
+  };
+
+  const handleResetPassword = async (user: UserData) => {
+    const problem = passwordProblem(newPassword);
+    if (problem) {
+      setResetError(problem);
+      return;
+    }
+
+    setResettingUserId(user.id);
+    setResetError(null);
+    try {
+      await jobApi.resetUserPassword(user.id, newPassword);
+      setResetResult({ username: user.username, password: newPassword });
+      setResetPasswordUserId(null);
+      setNewPassword('');
+    } catch (err: any) {
+      setResetError(err?.response?.data?.detail || 'Failed to reset password');
+    } finally {
+      setResettingUserId(null);
     }
   };
 
@@ -495,6 +551,38 @@ export const UserManagement: React.FC = () => {
       </div>
 
       {/* Users Table */}
+      {resetResult && (
+        <Card className="border-green-500/50 bg-green-500/5">
+          <CardContent className="p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <div className="text-sm font-medium mb-1">
+                  Password set for {resetResult.username}
+                </div>
+                <div className="font-mono text-lg break-all">{resetResult.password}</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Copy it now — it is hashed in the database and cannot be shown again.
+                  Their existing sessions stay valid for up to 7 days.
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => navigator.clipboard?.writeText(resetResult.password)}
+                >
+                  <Copy className="h-4 w-4 mr-1" />
+                  Copy
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setResetResult(null)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>All Users</CardTitle>
@@ -635,6 +723,18 @@ export const UserManagement: React.FC = () => {
                                 'Activate'
                               )}
                             </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openResetPassword(user.id)}
+                              disabled={user.is_admin}
+                              title={user.is_admin
+                                ? "Admin passwords cannot be reset from here"
+                                : 'Set a new password for this user'}
+                            >
+                              <KeyRound className="h-4 w-4 mr-1" />
+                              Password
+                            </Button>
                             {!user.is_admin && (
                               confirmDeleteUserId === user.id ? (
                                 <div className="flex items-center gap-1">
@@ -706,6 +806,45 @@ export const UserManagement: React.FC = () => {
                       )}
 
                       {/* Expanded job types row */}
+                      {resetPasswordUserId === user.id && (
+                        <tr className="border-b bg-muted/30">
+                          <td colSpan={8} className="p-4">
+                            <div className="mb-2 text-sm font-medium text-muted-foreground">
+                              New password for {user.full_name || user.username}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Input
+                                type="text"
+                                value={newPassword}
+                                onChange={e => { setNewPassword(e.target.value); setResetError(null); }}
+                                placeholder="At least 8 characters, one letter, one number"
+                                className="max-w-xs"
+                                autoComplete="off"
+                              />
+                              <Button size="sm" variant="outline" onClick={generatePassword}>
+                                Generate
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() => handleResetPassword(user)}
+                                disabled={resettingUserId === user.id || !newPassword}
+                              >
+                                {resettingUserId === user.id ? 'Saving...' : 'Set password'}
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={() => openResetPassword(user.id)}>
+                                Cancel
+                              </Button>
+                            </div>
+                            {resetError && (
+                              <div className="mt-2 text-xs text-red-600">{resetError}</div>
+                            )}
+                            <div className="mt-2 text-xs text-muted-foreground">
+                              Shown once after saving — it is hashed, so it cannot be read back later.
+                              Send it privately and have them change it in Settings.
+                            </div>
+                          </td>
+                        </tr>
+                      )}
                       {expandedJobTypesUserId === user.id && (
                         <tr className="border-b bg-muted/30">
                           <td colSpan={8} className="p-4">

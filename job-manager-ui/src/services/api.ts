@@ -192,6 +192,10 @@ export const jobApi = {
   updateUserJobTypes: async (userId: number, jobTypes: string[]): Promise<any> =>
     (await api.post(`/api/admin/users/${userId}/job-types`, { job_types: jobTypes })).data,
 
+  // Admin: Set a new password for a user (no self-serve recovery exists)
+  resetUserPassword: async (userId: number, newPassword: string): Promise<any> =>
+    (await api.post(`/api/admin/users/${userId}/reset-password`, { new_password: newPassword })).data,
+
   // Admin: Cleanup jobs by category
   cleanupJobs: async (action: 'rejected' | 'applied' | 'older_30d' | 'older_60d' | 'stale_posted_date'): Promise<any> =>
     (await api.post(`/api/admin/cleanup?action=${action}`)).data,

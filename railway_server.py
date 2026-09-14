@@ -2530,6 +2530,9 @@ class UpdateUserCountriesRequest(BaseModel):
 class UpdateUserJobTypesRequest(BaseModel):
     job_types: List[str]
 
+class ResetUserPasswordRequest(BaseModel):
+    new_password: str
+
 class ActivityEventRequest(BaseModel):
     event_type: str
     event_data: Optional[Dict[str, Any]] = None
@@ -3287,6 +3290,69 @@ async def update_user_job_types(
         current_user.get("username"), user_id, request.job_types
     )
     return {"success": True, "user_id": user_id, "job_types": request.job_types}
+
+
+@app.post("/api/admin/users/{user_id}/reset-password")
+async def admin_reset_user_password(
+    user_id: int,
+    request: ResetUserPasswordRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
+    """Set a new password for a user (admin only).
+
+    There is no self-serve password recovery, and /api/auth/change-password
+    needs the old password, so a locked-out user has no other route back in.
+    """
+    if not current_user.get('is_admin'):
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    if not AUTH_AVAILABLE:
+        raise HTTPException(status_code=500, detail="Authentication module not available")
+
+    from auth_utils import hash_password, validate_password_strength
+
+    # Same policy the change-password endpoint enforces. Skipping it here would
+    # hand out a password the user then cannot replace.
+    valid, error = validate_password_strength(request.new_password)
+    if not valid:
+        raise HTTPException(status_code=400, detail=error)
+
+    conn = await db.get_connection()
+    if not conn:
+        raise HTTPException(status_code=500, detail="Database connection failed")
+    try:
+        user = await conn.fetchrow(
+            "SELECT id, username, is_admin FROM users WHERE id = $1", user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # An admin may reset their own password, but not another admin's —
+        # otherwise any admin account can be taken over from this screen.
+        if user['is_admin'] and user['id'] != current_user.get('user_id'):
+            raise HTTPException(
+                status_code=403,
+                detail="Cannot reset another admin's password",
+            )
+
+        await conn.execute(
+            "UPDATE users SET password_hash = $1, updated_at = $2 WHERE id = $3",
+            hash_password(request.new_password), datetime.utcnow(), user_id,
+        )
+    finally:
+        await db._release(conn)
+
+    # Never log the password itself.
+    logger.info(
+        "Admin %s reset the password for user %s (ID: %d)",
+        current_user.get('username'), user['username'], user_id,
+    )
+    return {
+        "success": True,
+        "user_id": user_id,
+        "username": user['username'],
+        "message": f"Password reset for '{user['username']}'",
+        "note": "Existing sessions stay valid for up to 7 days.",
+    }
 
 
 async def _store_activity_event(user_id: int, event_type: str, event_data: dict):
