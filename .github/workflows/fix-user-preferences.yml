@@ -59,6 +59,11 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
+          # Without pipefail the job takes tee's exit status, so a failing
+          # script reports success — which is exactly how this one hid a
+          # broken migration.
+          set -o pipefail
+
           ARGS="--user '${{ inputs.user }}'"
           [ "${{ inputs.apply }}" == "true" ] && ARGS="$ARGS --apply"
           [ -n "${{ inputs.job_types }}" ] && ARGS="$ARGS --job-types '${{ inputs.job_types }}'"
