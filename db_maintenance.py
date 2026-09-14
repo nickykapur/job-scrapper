@@ -4,6 +4,7 @@ One-off database maintenance tasks that need DATABASE_URL.
 
     migrate      apply a SQL file from database_migrations/
     purge-langs  delete jobs whose title is not in an acceptable language
+    purge-stale  trim the backlog of old jobs down to the per-country caps
 
 Both are dry-run unless --apply is passed.
 
@@ -110,9 +111,78 @@ async def purge_languages(conn, apply):
     return 0
 
 
+# Same caps enforce-country-limit uses, so the one-off backlog trim and the
+# routine per-scrape cleanup agree.
+CAPS = {'software': 1000, 'marketing': 100}
+DEFAULT_CAP = 60
+
+
+async def purge_stale(conn, apply):
+    """Trim old jobs to the per-country caps, in batches.
+
+    enforce-country-limit does this in a single statement, which cannot finish
+    inside the pool's 60s timeout against a backlog this size. Batching keeps
+    each statement short.
+
+    Unlike that endpoint, this protects jobs someone has interacted with.
+    user_job_interactions.job_id is ON DELETE CASCADE, so deleting a job also
+    deletes every user's applied/rejected record for it — their history would
+    disappear with the listing.
+    """
+    total = await conn.fetchval("SELECT COUNT(*) FROM jobs")
+    protected_recent = await conn.fetchval(
+        "SELECT COUNT(*) FROM jobs WHERE scraped_at >= NOW() - INTERVAL '72 hours'")
+    protected_used = await conn.fetchval(
+        "SELECT COUNT(DISTINCT job_id) FROM user_job_interactions")
+    print(f"[INFO] {total} jobs | {protected_recent} scraped in last 72h | "
+          f"{protected_used} with user history")
+
+    select_doomed = """
+        SELECT id FROM (
+            SELECT id, job_type,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY country, COALESCE(job_type, 'other')
+                       ORDER BY scraped_at DESC
+                   ) AS rn
+            FROM jobs
+            WHERE scraped_at < NOW() - INTERVAL '72 hours'
+              AND id NOT IN (SELECT job_id FROM user_job_interactions
+                             WHERE job_id IS NOT NULL)
+        ) ranked
+        WHERE (job_type = 'software'  AND rn > 1000)
+           OR (job_type = 'marketing' AND rn > 100)
+           OR (COALESCE(job_type, 'other') NOT IN ('software', 'marketing') AND rn > 60)
+        LIMIT $1
+    """
+
+    would_go = await conn.fetchval(
+        f"SELECT COUNT(*) FROM ({select_doomed.replace('LIMIT $1', '')}) x")
+    print(f"[INFO] {would_go} jobs are over cap and safe to remove")
+    print(f"[INFO] {total - would_go} would remain")
+
+    if not apply or not would_go:
+        if not apply:
+            print("[DRY-RUN] Nothing deleted. Re-run with --apply.")
+        return 0
+
+    removed = 0
+    while True:
+        result = await conn.execute(
+            f"DELETE FROM jobs WHERE id IN ({select_doomed})", 2000)
+        n = int(result.split()[-1])
+        removed += n
+        print(f"[INFO] deleted {removed}/{would_go}")
+        if n == 0:
+            break
+
+    remaining = await conn.fetchval("SELECT COUNT(*) FROM jobs")
+    print(f"[SAVED] removed {removed} jobs; {remaining} remain")
+    return 0
+
+
 async def main():
     parser = argparse.ArgumentParser(description='Database maintenance')
-    parser.add_argument('task', choices=['migrate', 'purge-langs'])
+    parser.add_argument('task', choices=['migrate', 'purge-langs', 'purge-stale'])
     parser.add_argument('--migration', default='004_per_user_job_signatures.sql',
                         help='File in database_migrations/ (migrate only)')
     parser.add_argument('--apply', action='store_true', help='Write changes')
@@ -127,6 +197,8 @@ async def main():
     try:
         if args.task == 'migrate':
             return await run_migration(conn, args.migration, args.apply)
+        if args.task == 'purge-stale':
+            return await purge_stale(conn, args.apply)
         return await purge_languages(conn, args.apply)
     finally:
         await conn.close()

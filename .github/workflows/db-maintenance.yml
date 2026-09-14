@@ -14,6 +14,7 @@ on:
         options:
           - migrate
           - purge-langs
+          - purge-stale
       migration:
         description: 'Migration file (migrate only)'
         required: false
