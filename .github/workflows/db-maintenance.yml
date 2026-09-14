@@ -1,0 +1,67 @@
+name: Database Maintenance
+
+# Applies a migration, or removes jobs the language filter would now reject.
+# Both dry-run unless "apply" is ticked. Output names counts and job titles only.
+
+on:
+  workflow_dispatch:
+    inputs:
+      task:
+        description: 'What to run'
+        required: true
+        default: migrate
+        type: choice
+        options:
+          - migrate
+          - purge-langs
+      migration:
+        description: 'Migration file (migrate only)'
+        required: false
+        default: '004_per_user_job_signatures.sql'
+        type: string
+      apply:
+        description: 'Write changes (leave unchecked for a dry-run)'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  maintenance:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      # purge-langs imports linkedin_job_scraper to reuse the real language
+      # detector, and that module imports selenium at load time. No browser is
+      # launched — only the module needs to import.
+      - name: Install dependencies
+        run: pip install asyncpg selenium beautifulsoup4 requests webdriver-manager
+
+      - name: Run task
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          ARGS="${{ inputs.task }}"
+          [ "${{ inputs.task }}" == "migrate" ] && ARGS="$ARGS --migration '${{ inputs.migration }}'"
+          [ "${{ inputs.apply }}" == "true" ] && ARGS="$ARGS --apply"
+
+          echo "Mode: ${{ inputs.apply == true && 'APPLY' || 'DRY-RUN' }}"
+          eval python3 db_maintenance.py $ARGS | tee /tmp/result.txt
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Database Maintenance — ${{ inputs.task }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Mode:** ${{ inputs.apply == true && 'APPLY (written)' || 'DRY-RUN (nothing written)' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat /tmp/result.txt 2>/dev/null || echo "No output — the step failed before running." >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
