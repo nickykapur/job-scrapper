@@ -355,50 +355,73 @@ class LinkedInJobScraper:
         spanish_speaking_countries = ['spain', 'españa', 'panama', 'chile', 'santiago', 'madrid', 'barcelona']
         is_spanish_location = any(country in location_lower for country in spanish_speaking_countries)
 
-        # Spanish-specific indicators (only check if NOT in Spanish-speaking country)
-        # These are job-related words that are clearly Spanish
-        spanish_indicators = [
-            'desarrollador', 'programador', 'ingeniero', 'ingeniería',
-            'científico', 'analista', 'arquitecto', 'datos'
+        # Two tiers of evidence.
+        #
+        # DECISIVE tokens are unambiguous in a job title — seeing one is enough.
+        # WEAK tokens are function words that also appear in English titles and
+        # proper nouns ("per", "la", "chef"), so those still need the ratio test.
+        #
+        # The original lists only covered engineering vocabulary, which is why
+        # non-English SALES titles ("Ejecutivo de Ventas", "Kundenberater") were
+        # getting through untouched.
+
+        # Gender tags are near-proof of a German- or French-market posting.
+        strong_markers = ['m/w/d', 'w/m/d', 'm/w/x', 'm/w', 'h/f', 'f/h', '(m/w/d)', '(h/f)']
+        for marker in strong_markers:
+            if marker in title_lower:
+                return False
+
+        spanish_decisive = [
+            'desarrollador', 'programador', 'ingeniero', 'ingeniería', 'científico',
+            'arquitecto', 'ejecutivo', 'ejecutiva', 'ventas', 'cuentas', 'asesor',
+            'asesora', 'gestor', 'gestora', 'vendedor', 'vendedora', 'atención',
+            'cliente', 'clientes', 'jefe', 'gerente', 'comercializacion',
         ]
+        spanish_weak = ['analista', 'datos']
 
-        # Common words that appear in non-English job titles
-        # NOTE: Avoid common English/Spanish words like "senior", "de", "e", etc.
-        # These indicators should be UNIQUE to non-English/Spanish languages
-
-        # German-specific indicators
-        german_indicators = [
-            'und', 'für', 'mit', 'oder', 'als', 'bei', 'von', 'zu', 'im', 'am',
-            'entwickler', 'ingenieur', 'softwareentwickler'
+        german_decisive = [
+            'entwickler', 'ingenieur', 'softwareentwickler', 'vertrieb',
+            'vertriebsmitarbeiter', 'kundenberater', 'kundenbetreuer', 'mitarbeiter',
+            'innendienst', 'aussendienst', 'außendienst', 'sachbearbeiter',
+            'kaufmann', 'kauffrau', 'leiter', 'leiterin', 'betreuer', 'berater',
+            'vertriebsinnendienst',
         ]
+        german_weak = ['und', 'für', 'mit', 'oder', 'als', 'bei', 'von', 'zu', 'im', 'am']
 
-        # French-specific indicators
-        french_indicators = [
-            'et', 'ou', 'avec', 'dans', 'sur', 'le', 'la', 'les', 'des',
-            'développeur', 'ingénieur', 'chef', 'responsable'
+        french_decisive = [
+            'développeur', 'ingénieur', 'vendeur', 'vendeuse', 'chargé', 'chargée',
+            'clientèle', 'ventes', 'commerciale', 'commercial(e)', 'responsable',
         ]
+        french_weak = ['et', 'ou', 'avec', 'dans', 'sur', 'le', 'la', 'les', 'des', 'chef']
 
-        # Italian-specific indicators
-        italian_indicators = [
-            'per', 'con', 'il', 'lo', 'gli', 'le', 'del', 'della',
-            'sviluppatore', 'ingegnere', 'responsabile'
+        italian_decisive = [
+            'sviluppatore', 'ingegnere', 'responsabile', 'venditore', 'venditrice',
+            'addetto', 'addetta', 'vendita', 'commesso',
         ]
+        italian_weak = ['per', 'con', 'il', 'lo', 'gli', 'del', 'della']
 
-        # Portuguese-specific indicators
-        portuguese_indicators = [
-            'ou', 'com', 'do', 'da', 'dos', 'das',
-            'desenvolvedor', 'engenheiro'
-        ]
+        portuguese_decisive = ['desenvolvedor', 'engenheiro', 'vendas', 'atendimento']
+        portuguese_weak = ['com', 'do', 'da', 'dos', 'das']
 
-        # Build list of non-acceptable language indicators
-        non_acceptable_indicators = german_indicators + french_indicators + italian_indicators + portuguese_indicators
+        decisive = german_decisive + french_decisive + italian_decisive + portuguese_decisive
+        weak = german_weak + french_weak + italian_weak + portuguese_weak
 
-        # If NOT in Spanish-speaking country, also reject Spanish
+        # Spanish is acceptable in Spanish-speaking markets, so only count it
+        # against the job elsewhere.
         if not is_spanish_location:
-            non_acceptable_indicators.extend(spanish_indicators)
+            decisive = decisive + spanish_decisive
+            weak = weak + spanish_weak
+
+        non_acceptable_indicators = weak
 
         # Split title into words
         words = title_lower.split()
+
+        # One unambiguous word is enough — no ratio needed. Strip surrounding
+        # punctuation so "(m/w/d)" or "Ventas," still match.
+        for word in words:
+            if word.strip('()[],.:;/-') in decisive:
+                return False
 
         # If we find any non-acceptable language indicators, reject
         # Even a single strong indicator (like "desarrollador", "ingeniero") is enough
@@ -406,9 +429,13 @@ class LinkedInJobScraper:
         # For other languages: any indicator triggers rejection
         indicator_count = sum(1 for word in words if word in non_acceptable_indicators)
 
-        if indicator_count > 0:
+        # Weak tokens are ambiguous on their own, so require corroboration. One
+        # was previously enough, which dropped English titles that borrow French
+        # words — "Chef de Partie" was being discarded on the strength of "chef".
+        # The decisive list above now catches the clear cases, so this can afford
+        # to be conservative.
+        if indicator_count >= 2:
             percentage = indicator_count / len(words) if len(words) > 0 else 0
-            # Very low threshold (10%) since our indicators are very specific
             if percentage > 0.1:
                 return False
 
