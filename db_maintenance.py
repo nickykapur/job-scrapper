@@ -290,6 +290,37 @@ async def diagnose(conn, user_ref):
           )
     """, countries, job_types, uid)
     print(f"[STAGE 5] after repost suppression: {survivors}")
+
+    # Everything above counts across the whole 7-day window. The request path
+    # never sees the whole window — get_all_jobs caps it. Re-run the real query
+    # verbatim, time it, and count how much of this user's share actually
+    # survives the cap.
+    import time
+    t0 = time.monotonic()
+    served_rows = await conn.fetch("""
+        SELECT id, country, job_type, company, normalized_title
+        FROM jobs
+        WHERE scraped_at > NOW() - INTERVAL '7 days'
+        ORDER BY scraped_at DESC
+        LIMIT 20000
+    """)
+    elapsed = time.monotonic() - t0
+    print(f"[STAGE 6] real get_all_jobs window: {len(served_rows)} rows in {elapsed:.1f}s "
+          f"(5 columns; the endpoint selects 23 and serialises them all)")
+
+    mine = [r for r in served_rows
+            if (not countries or r['country'] in countries)
+            and (r['job_type'] is None or r['job_type'] in job_types)]
+    print(f"[STAGE 7] of those {len(served_rows)}, {len(mine)} match this user's country+type")
+
+    oldest = await conn.fetchval("""
+        SELECT MIN(scraped_at) FROM (
+            SELECT scraped_at FROM jobs
+            WHERE scraped_at > NOW() - INTERVAL '7 days'
+            ORDER BY scraped_at DESC LIMIT 20000
+        ) t
+    """)
+    print(f"[STAGE 7] the cap cuts off at {oldest} — nothing older reaches any user")
     print(f"[RESULT] roughly {survivors} jobs should reach user {uid} before "
           f"keyword and experience-level filtering in Python")
     return 0
