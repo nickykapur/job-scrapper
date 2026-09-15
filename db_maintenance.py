@@ -321,6 +321,44 @@ async def diagnose(conn, user_ref):
         ) t
     """)
     print(f"[STAGE 7] the cap cuts off at {oldest} — nothing older reaches any user")
+
+    # The last filter, and the only one left unmeasured. A job carrying an
+    # experience_level outside the user's list is dropped outright; a NULL level
+    # is guessed from the title and passes whenever 'mid' or 'senior' is wanted.
+    breakdown = await conn.fetch("""
+        SELECT COALESCE(experience_level, '(none)') AS lvl, COUNT(*) AS n
+        FROM (
+            SELECT experience_level, country, job_type FROM jobs
+            WHERE scraped_at > NOW() - INTERVAL '7 days'
+            ORDER BY scraped_at DESC LIMIT 20000
+        ) served
+        WHERE ($1::text[] IS NULL OR cardinality($1::text[]) = 0 OR country = ANY($1::text[]))
+          AND (job_type IS NULL OR job_type = ANY($2::text[]))
+        GROUP BY 1 ORDER BY n DESC
+    """, countries, job_types)
+    print("[STAGE 8] those rows by experience_level:")
+    for r in breakdown:
+        keep = r['lvl'] in levels or r['lvl'] == '(none)'
+        print(f"    {r['lvl']:<12} {r['n']:>5}  {'kept' if keep else 'DROPPED'}")
+
+    final = await conn.fetchval("""
+        SELECT COUNT(*) FROM (
+            SELECT id, country, job_type, experience_level, company, normalized_title
+            FROM jobs
+            WHERE scraped_at > NOW() - INTERVAL '7 days'
+            ORDER BY scraped_at DESC LIMIT 20000
+        ) j
+        WHERE ($1::text[] IS NULL OR cardinality($1::text[]) = 0 OR j.country = ANY($1::text[]))
+          AND (j.job_type IS NULL OR j.job_type = ANY($2::text[]))
+          AND (j.experience_level IS NULL OR j.experience_level = ANY($4::text[]))
+          AND NOT EXISTS (
+              SELECT 1 FROM job_signatures s
+              WHERE s.user_id = $3 AND (s.was_applied OR s.was_rejected)
+                AND LOWER(s.company) = LOWER(j.company)
+                AND LOWER(s.normalized_title) = LOWER(COALESCE(j.normalized_title, ''))
+          )
+    """, countries, job_types, uid, levels)
+    print(f"[STAGE 9] FINAL — jobs this user should actually see: {final}")
     print(f"[RESULT] roughly {survivors} jobs should reach user {uid} before "
           f"keyword and experience-level filtering in Python")
     return 0
