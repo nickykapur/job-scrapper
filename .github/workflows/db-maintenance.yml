@@ -15,10 +15,16 @@ on:
           - migrate
           - purge-langs
           - purge-stale
+          - diagnose
       migration:
         description: 'Migration file (migrate only)'
         required: false
         default: '006_index_original_job_id.sql'
+        type: string
+      user:
+        description: 'User id, username, or name fragment (diagnose only)'
+        required: false
+        default: ''
         type: string
       apply:
         description: 'Write changes (leave unchecked for a dry-run)'
@@ -56,6 +62,7 @@ jobs:
 
           ARGS="${{ inputs.task }}"
           [ "${{ inputs.task }}" == "migrate" ] && ARGS="$ARGS --migration '${{ inputs.migration }}'"
+          [ -n "${{ inputs.user }}" ] && ARGS="$ARGS --user '${{ inputs.user }}'"
           [ "${{ inputs.apply }}" == "true" ] && ARGS="$ARGS --apply"
 
           echo "Mode: ${{ inputs.apply == true && 'APPLY' || 'DRY-RUN' }}"

@@ -180,9 +180,125 @@ async def purge_stale(conn, apply):
     return 0
 
 
+
+async def diagnose(conn, user_ref):
+    """Read-only. Walk the same path /api/jobs walks and count survivors.
+
+    /api/jobs does not filter in SQL — it loads a window of jobs into memory and
+    drops them one at a time in Python. When a board goes empty there is no log
+    of which stage emptied it, so reproduce the stages here and print the count
+    after each.
+    """
+    print("[STAGE 0] whole table")
+    total = await conn.fetchval("SELECT COUNT(*) FROM jobs")
+    print(f"  {total} rows in jobs")
+
+    # get_all_jobs: WHERE scraped_at > NOW() - INTERVAL '7 days' LIMIT 20000.
+    # Nothing outside this window can ever reach a user, whatever their prefs.
+    window = await conn.fetchval(
+        "SELECT COUNT(*) FROM jobs WHERE scraped_at > NOW() - INTERVAL '7 days'")
+    served = min(window, 20000)
+    print(f"[STAGE 1] 7-day window: {window} rows; /api/jobs serves at most {served} (LIMIT 20000)")
+    if window > 20000:
+        print(f"  [WARN] {window - 20000} rows in the window are past the LIMIT and never sent")
+
+    user = await conn.fetchrow("""
+        SELECT id FROM users
+        WHERE CAST(id AS TEXT) = $1 OR username ILIKE $1
+           OR username ILIKE '%' || $1 || '%' OR email ILIKE '%' || $1 || '%'
+           OR COALESCE(full_name, '') ILIKE '%' || $1 || '%'
+        ORDER BY id LIMIT 1
+    """, user_ref)
+    if not user:
+        print(f"[ERROR] No user matched {user_ref!r}")
+        return 1
+    uid = user['id']
+    print(f"[USER] id={uid}")   # id only — this repository is public
+
+    prefs = await conn.fetchrow("""
+        SELECT job_types, preferred_countries, experience_levels
+        FROM user_preferences WHERE user_id = $1
+    """, uid)
+    if not prefs:
+        print("  [WARN] no user_preferences row — /api/jobs returns the raw window unfiltered")
+        return 0
+
+    job_types = list(prefs['job_types'] or [])
+    countries = list(prefs['preferred_countries'] or [])
+    levels = list(prefs['experience_levels'] or [])
+    print(f"  job_types={job_types}")
+    print(f"  countries={countries}")
+    print(f"  experience_levels={levels}")
+
+    # Stage 2/3 mirror the two `continue` branches that reject a job outright.
+    # A job with a NULL job_type falls through to keyword sniffing in Python, so
+    # count it separately rather than pretending SQL decides it.
+    n_country = await conn.fetchval("""
+        SELECT COUNT(*) FROM jobs
+        WHERE scraped_at > NOW() - INTERVAL '7 days'
+          AND ($1::text[] IS NULL OR cardinality($1::text[]) = 0 OR country = ANY($1::text[]))
+    """, countries)
+    print(f"[STAGE 2] after country filter: {n_country}")
+
+    n_type = await conn.fetchval("""
+        SELECT COUNT(*) FROM jobs
+        WHERE scraped_at > NOW() - INTERVAL '7 days'
+          AND ($1::text[] IS NULL OR cardinality($1::text[]) = 0 OR country = ANY($1::text[]))
+          AND (job_type IS NULL OR job_type = ANY($2::text[]))
+    """, countries, job_types)
+    typed = await conn.fetchval("""
+        SELECT COUNT(*) FROM jobs
+        WHERE scraped_at > NOW() - INTERVAL '7 days'
+          AND ($1::text[] IS NULL OR cardinality($1::text[]) = 0 OR country = ANY($1::text[]))
+          AND job_type = ANY($2::text[])
+    """, countries, job_types)
+    print(f"[STAGE 3] after job_type filter: {n_type} ({typed} typed + {n_type - typed} untyped)")
+
+    print("[STAGE 4] what this user has already acted on")
+    n_inter = await conn.fetchval(
+        "SELECT COUNT(*) FROM user_job_interactions WHERE user_id = $1", uid)
+    n_sig = await conn.fetchval(
+        "SELECT COUNT(*) FROM job_signatures WHERE user_id = $1", uid)
+    n_sig_active = await conn.fetchval("""
+        SELECT COUNT(*) FROM job_signatures
+        WHERE user_id = $1 AND (was_applied OR was_rejected)
+    """, uid)
+    print(f"  {n_inter} interactions, {n_sig} signatures ({n_sig_active} applied/rejected)")
+
+    # A NULL company or normalized_title makes the signature loader raise
+    # AttributeError on .lower(); the handler swallows it, so every later
+    # signature is silently dropped and reposts come back.
+    n_null = await conn.fetchval("""
+        SELECT COUNT(*) FROM job_signatures
+        WHERE user_id = $1 AND (company IS NULL OR normalized_title IS NULL)
+    """, uid)
+    if n_null:
+        print(f"  [WARN] {n_null} signature rows have a NULL company or normalized_title")
+
+    # Suppression matches on company + normalized_title, ignoring country.
+    survivors = await conn.fetchval("""
+        SELECT COUNT(*) FROM jobs j
+        WHERE j.scraped_at > NOW() - INTERVAL '7 days'
+          AND ($1::text[] IS NULL OR cardinality($1::text[]) = 0 OR j.country = ANY($1::text[]))
+          AND (j.job_type IS NULL OR j.job_type = ANY($2::text[]))
+          AND NOT EXISTS (
+              SELECT 1 FROM job_signatures s
+              WHERE s.user_id = $3
+                AND (s.was_applied OR s.was_rejected)
+                AND LOWER(s.company) = LOWER(j.company)
+                AND LOWER(s.normalized_title) = LOWER(COALESCE(j.normalized_title, ''))
+          )
+    """, countries, job_types, uid)
+    print(f"[STAGE 5] after repost suppression: {survivors}")
+    print(f"[RESULT] roughly {survivors} jobs should reach user {uid} before "
+          f"keyword and experience-level filtering in Python")
+    return 0
+
+
 async def main():
     parser = argparse.ArgumentParser(description='Database maintenance')
-    parser.add_argument('task', choices=['migrate', 'purge-langs', 'purge-stale'])
+    parser.add_argument('task', choices=['migrate', 'purge-langs', 'purge-stale', 'diagnose'])
+    parser.add_argument('--user', default='', help='User id/username/name fragment (diagnose only)')
     parser.add_argument('--migration', default='004_per_user_job_signatures.sql',
                         help='File in database_migrations/ (migrate only)')
     parser.add_argument('--apply', action='store_true', help='Write changes')
@@ -197,6 +313,11 @@ async def main():
     try:
         if args.task == 'migrate':
             return await run_migration(conn, args.migration, args.apply)
+        if args.task == 'diagnose':
+            if not args.user:
+                print("[ERROR] diagnose needs --user")
+                return 2
+            return await diagnose(conn, args.user)
         if args.task == 'purge-stale':
             return await purge_stale(conn, args.apply)
         return await purge_languages(conn, args.apply)
