@@ -364,14 +364,72 @@ async def diagnose(conn, user_ref):
     return 0
 
 
+
+async def probe_api(base_url):
+    """Read-only. Ask the live app what it serves, from a host that can reach it.
+
+    Everything else here talks to the database. That cannot distinguish "the
+    rows are present" from "the endpoint that serves them is broken", and those
+    need different fixes.
+    """
+    import json as _json
+    import time as _time
+    import urllib.error
+    import urllib.request
+
+    def get(path, timeout=90):
+        url = base_url.rstrip('/') + path
+        t0 = _time.monotonic()
+        try:
+            with urllib.request.urlopen(url, timeout=timeout) as r:
+                body = r.read()
+                return r.status, body, _time.monotonic() - t0, None
+        except urllib.error.HTTPError as e:
+            return e.code, e.read(), _time.monotonic() - t0, None
+        except Exception as e:
+            return None, b'', _time.monotonic() - t0, repr(e)
+
+    status, body, secs, err = get('/health')
+    print(f"[PROBE] /health -> {status} in {secs:.1f}s" + (f" ERROR {err}" if err else ""))
+    if body:
+        print(f"         {body[:300].decode('utf-8', 'replace')}")
+
+    # Unauthenticated /api/jobs returns the whole window with no user filtering,
+    # so this measures the serving path itself rather than one user's filters.
+    status, body, secs, err = get('/api/jobs')
+    print(f"[PROBE] /api/jobs -> {status} in {secs:.1f}s" + (f" ERROR {err}" if err else ""))
+    if err:
+        print("         No response at all — the endpoint did not return in time.")
+        return 1
+    if status != 200:
+        print(f"         {body[:500].decode('utf-8', 'replace')}")
+        return 1
+
+    try:
+        data = _json.loads(body)
+    except Exception as e:
+        print(f"         Response was not JSON: {e!r}; {len(body)} bytes")
+        return 1
+
+    real = [k for k in data if not k.startswith('_')] if isinstance(data, dict) else data
+    print(f"         {len(real)} jobs, {len(body)} bytes")
+    if not real:
+        print("         [WARN] the endpoint answered but served zero jobs")
+    return 0
+
+
 async def main():
     parser = argparse.ArgumentParser(description='Database maintenance')
-    parser.add_argument('task', choices=['migrate', 'purge-langs', 'purge-stale', 'diagnose'])
+    parser.add_argument('task', choices=['migrate', 'purge-langs', 'purge-stale', 'diagnose', 'probe-api'])
     parser.add_argument('--user', default='', help='User id/username/name fragment (diagnose only)')
     parser.add_argument('--migration', default='004_per_user_job_signatures.sql',
                         help='File in database_migrations/ (migrate only)')
     parser.add_argument('--apply', action='store_true', help='Write changes')
     args = parser.parse_args()
+
+    if args.task == 'probe-api':
+        base = os.environ.get('RAILWAY_URL', 'https://web-production-110bb.up.railway.app')
+        return await probe_api(base)
 
     db_url = os.environ.get('DATABASE_URL')
     if not db_url:
