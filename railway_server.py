@@ -524,13 +524,18 @@ async def _queue_worker():
             logger.error("Queue worker loop error: %s\n%s", e, _tb.format_exc())
             await asyncio.sleep(5)
 
-async def load_jobs():
-    """Load jobs from database ONLY - no JSON fallback"""
+async def load_jobs(countries=None):
+    """Load jobs from database ONLY - no JSON fallback.
+
+    countries narrows the query to those countries plus jobs with no country
+    set. Callers that filter by country afterwards get the same result from a
+    much smaller response.
+    """
     if not db or not DATABASE_AVAILABLE:
         raise HTTPException(status_code=500, detail="Database not available")
 
     try:
-        jobs_data = await db.get_all_jobs()
+        jobs_data = await db.get_all_jobs(countries=countries)
         return jobs_data
     except Exception as e:
         print(f"❌ Database load failed: {e}")
@@ -603,11 +608,16 @@ async def get_current_user_optional(authorization: Optional[str] = Header(None))
 @app.get("/api/jobs")
 async def get_jobs_api(current_user: Optional[Dict[str, Any]] = Depends(get_current_user_optional)):
     """Get all jobs from database - filtered by user preferences if authenticated"""
-    all_jobs = await load_jobs()
-
     # If user is not authenticated, return all jobs
     if not current_user:
-        return all_jobs
+        return await load_jobs()
+
+    # Defined up front because the except handler below reads both, and the
+    # calls that set them can themselves raise. all_jobs used to be loaded
+    # before the try for this reason; it is now loaded inside it, so the
+    # handler needs a value it can rely on.
+    all_jobs = None
+    user_interactions = {}
 
     # If authenticated, filter by user preferences AND user interactions
     try:
@@ -615,6 +625,13 @@ async def get_jobs_api(current_user: Optional[Dict[str, Any]] = Depends(get_curr
             from user_database import UserDatabase
             user_db = UserDatabase()
             preferences = await user_db.get_user_preferences(current_user['user_id'])
+
+            # Read preferences BEFORE loading jobs so the country filter can be
+            # applied in SQL. Loading first and filtering afterwards meant every
+            # request transferred all 20,000 rows — 15.6 MB — to deliver the
+            # couple of hundred a user can actually see.
+            all_jobs = await load_jobs(
+                countries=(preferences or {}).get('preferred_countries'))
 
             # Get this user's job interactions to filter out jobs they've already seen/interacted with
             conn = await db.get_connection()
@@ -933,10 +950,15 @@ async def get_jobs_api(current_user: Optional[Dict[str, Any]] = Depends(get_curr
                         job_data['saved'] = interaction['saved']
                     merged_jobs[job_id] = job_data
                 return merged_jobs
+        # AUTH_AVAILABLE is false: no preferences to apply, so serve the window.
+        return await load_jobs()
     except Exception as e:
         print(f"❌ Error filtering jobs by preferences: {e}")
         import traceback
         traceback.print_exc()
+        # The failure may have happened before the jobs were loaded.
+        if all_jobs is None:
+            all_jobs = await load_jobs()
         # On error, still return unfiltered jobs with user interactions merged
         # This ensures users at least see their applied/rejected status
         if current_user and user_interactions:

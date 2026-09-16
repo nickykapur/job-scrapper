@@ -280,14 +280,20 @@ class JobDatabase:
         finally:
             await self._release(conn)
 
-    async def get_all_jobs(self) -> Dict[str, Any]:
-        """Get all jobs from database or JSON"""
+    async def get_all_jobs(self, countries=None) -> Dict[str, Any]:
+        """Get all jobs from database or JSON.
+
+        countries: optional list. When given, the database returns only jobs in
+        those countries plus jobs with no country set. Callers that filter by
+        country in Python afterwards get an identical result from a far smaller
+        response — see _get_jobs_from_postgres.
+        """
         if self.use_postgres:
-            return await self._get_jobs_from_postgres()
+            return await self._get_jobs_from_postgres(countries=countries)
         else:
             return self._get_jobs_from_json()
 
-    async def _get_jobs_from_postgres(self) -> Dict[str, Any]:
+    async def _get_jobs_from_postgres(self, countries=None) -> Dict[str, Any]:
         """Get jobs from PostgreSQL"""
         conn = await self.get_connection()
         if not conn:
@@ -299,17 +305,41 @@ class JobDatabase:
             # manageable (1000 software, 100 marketing, 60 others per country)
             # so there should never be more than ~17k rows in this window.
             # Previously 14 days — caused 60s+ timeouts when enforce was down.
-            jobs_query = """
+            #
+            # The comment above describes an assumption that no longer holds:
+            # enforce-country-limit has not completed in months, the window is
+            # over 40,000 rows, and LIMIT 20000 discards the excess. Unfiltered,
+            # this endpoint serialises 20,000 jobs into a 15.6 MB response that
+            # the browser must download and parse before rendering anything.
+            #
+            # Filtering by country here is what fixes that. It is not a new
+            # restriction: /api/jobs already drops every job whose country is
+            # set and not among the user's, one at a time in Python, after
+            # paying to transfer it. Jobs with no country are kept because that
+            # code falls back to matching the location string for them.
+            #
+            # It also undoes the starvation the cap causes. One country's jobs
+            # are a small slice of the newest 20,000, so a user could be denied
+            # jobs that were inside the 7-day window but behind 17 other cities
+            # in the ordering. Filtered first, the whole window fits.
+            params = []
+            country_clause = ""
+            if countries:
+                params.append(list(countries))
+                country_clause = "AND (country IS NULL OR country = ANY($1::text[]))"
+
+            jobs_query = f"""
                 SELECT id, title, company, location, posted_date, job_url,
                        scraped_at, applied, rejected, is_new, easy_apply, category, notes,
                        first_seen, last_seen_24h, excluded, country, job_type, experience_level,
                        easy_apply_status, easy_apply_verified_at, easy_apply_verification_method
                 FROM jobs
                 WHERE scraped_at > NOW() - INTERVAL '7 days'
+                {country_clause}
                 ORDER BY scraped_at DESC
                 LIMIT 20000
             """
-            rows = await conn.fetch(jobs_query)
+            rows = await conn.fetch(jobs_query, *params)
 
             # Convert to dictionary format
             jobs = {}

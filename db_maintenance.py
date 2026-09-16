@@ -240,6 +240,23 @@ async def diagnose(conn, user_ref):
     """, countries)
     print(f"[STAGE 2] after country filter: {n_country}")
 
+    # The SQL country filter keeps NULL-country rows, because /api/jobs falls
+    # back to matching the location string for them. If that set is large the
+    # filter saves less than it appears to, so measure it rather than assume.
+    n_null_country = await conn.fetchval("""
+        SELECT COUNT(*) FROM jobs
+        WHERE scraped_at > NOW() - INTERVAL '7 days' AND country IS NULL
+    """)
+    n_served_filtered = await conn.fetchval("""
+        SELECT COUNT(*) FROM jobs
+        WHERE scraped_at > NOW() - INTERVAL '7 days'
+          AND ($1::text[] IS NULL OR cardinality($1::text[]) = 0
+               OR country IS NULL OR country = ANY($1::text[]))
+    """, countries)
+    print(f"  {n_null_country} rows in the window have no country and are always kept")
+    print(f"  [PAYLOAD] SQL-filtered response would carry {n_served_filtered} rows "
+          f"instead of 20000")
+
     n_type = await conn.fetchval("""
         SELECT COUNT(*) FROM jobs
         WHERE scraped_at > NOW() - INTERVAL '7 days'
