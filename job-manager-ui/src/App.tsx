@@ -58,6 +58,7 @@ import { useDarkMode } from './hooks/use-dark-mode';
 import { useActivityTracker } from './hooks/useActivityTracker';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import type { Job, JobStats, FilterState } from './types';
+import { postedAtMs } from './utils/jobAge';
 
 const App: React.FC = () => {
   const navigate = useNavigate();
@@ -270,25 +271,9 @@ const App: React.FC = () => {
     navigate('/login');
   };
 
-  // Parse LinkedIn's relative date strings ("5 days ago", "2 weeks ago", etc.)
-  // into a comparable timestamp. Falls back to scraped_at if unparseable.
-  const postedDateToTs = (job: Job): number => {
-    const raw = (job.posted_date || '').toLowerCase().replace(/^posted\s+/, '').trim();
-    const now = Date.now();
-    const m = raw.match(/^(\d+)\s+(second|minute|min|hour|day|week|month)/);
-    if (m) {
-      const n = parseInt(m[1], 10);
-      const unit = m[2];
-      const ms: Record<string, number> = {
-        second: 1000, minute: 60_000, min: 60_000,
-        hour: 3_600_000, day: 86_400_000, week: 604_800_000, month: 2_592_000_000,
-      };
-      return now - n * (ms[unit] ?? 86_400_000);
-    }
-    if (raw === 'just now' || raw === 'moments ago') return now;
-    // Fall back to scraped_at
-    return new Date(job.scraped_at || 0).getTime();
-  };
+  // posted_date is LinkedIn's relative text frozen at scrape time, so its
+  // offset runs from the scrape, not from now. See utils/jobAge.
+  const postedDateToTs = (job: Job): number => postedAtMs(job);
 
   // Filter and sort jobs
   const cleanJobs = useMemo(() => {

@@ -21,6 +21,7 @@ import type { Job } from '../types';
 import { getCountryFromLocation } from '../utils/countryUtils';
 import { jobApi } from '../services/api';
 import toast from 'react-hot-toast';
+import { postedAgeLabel } from '../utils/jobAge';
 
 interface JobCardProps {
   job: Job;
@@ -386,7 +387,7 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onMarkApplied, onRejectJo
           {(job.posted_date || timeAgo) && (
             <div className={s.metaRow}>
               <ClockRegular style={{ fontSize: '13px', flexShrink: 0 }} />
-              <span>{job.posted_date}</span>
+              <span>{postedAgeLabel(job)}</span>
               {timeAgo && <span style={{ color: '#52525b' }}>· scraped {timeAgo}</span>}
             </div>
           )}
