@@ -138,6 +138,13 @@ except Exception as e:
     me_router = None
     init_onboarding_tables = None
 
+# Hide a job when the user has already applied to or rejected another posting
+# with the same company and normalised title. Off: the normaliser is too lossy
+# for this to be safe (see the block in /api/jobs that reads it). Set
+# SUPPRESS_REPOSTS_BY_SIGNATURE=true to turn it back on without a deploy.
+SUPPRESS_REPOSTS_BY_SIGNATURE = os.environ.get(
+    "SUPPRESS_REPOSTS_BY_SIGNATURE", "false").strip().lower() in ("1", "true", "yes")
+
 app = FastAPI(title="LinkedIn Job Manager", version="1.0.0")
 
 # Include authentication router if available
@@ -678,12 +685,34 @@ async def get_jobs_api(current_user: Optional[Dict[str, Any]] = Depends(get_curr
                         job_data['rejected'] = interaction['rejected']
                         job_data['saved'] = interaction['saved']
 
-                    # Check if this is a repost of a job they already applied to or rejected
+                    # Signature-based repost suppression is OFF.
+                    #
+                    # It matched on company + normalize_job_title(title), and that
+                    # normaliser strips seniority and roman numerals:
+                    #
+                    #   Senior Account Manager  -> account manager
+                    #   Account Manager II      -> account manager
+                    #   Junior Account Executive-> account executive
+                    #
+                    # So rejecting one posting hid every present and future posting
+                    # with that title at that company, at any level, permanently.
+                    # Measured on user 69: of 169 Dublin sales jobs matching her
+                    # filters, this hid 137 and left 32. In a market where agencies
+                    # repost the same titles daily that is most of the feed.
+                    #
+                    # Jobs she actually acted on are still filtered, by job_id, in
+                    # the user_interactions block above - that match is exact and
+                    # unaffected by this.
+                    #
+                    # The signatures table and migration 004 are left in place; the
+                    # rows keep accumulating and nothing here is lost. Re-enabling
+                    # needs a rule that can tell one re-scraped posting from a new
+                    # opening with a similar title, which company + normalised title
+                    # cannot do.
                     company = job_data.get('company', '').strip()
                     title = job_data.get('title', '').strip()
                     is_repost = False
-                    if company and title:
-                        # Normalize title (remove senior, junior, etc.)
+                    if SUPPRESS_REPOSTS_BY_SIGNATURE and company and title:
                         normalized_title = db.normalize_job_title(title) if db else title.lower()
                         signature_key = f"{company.lower()}|{normalized_title.lower()}"
 
