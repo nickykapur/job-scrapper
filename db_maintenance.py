@@ -435,9 +435,83 @@ async def probe_api(base_url):
     return 0
 
 
+
+async def freshness(conn):
+    """Read-only. Are new jobs actually landing, and are they landing fresh?
+
+    Users report every listing showing the same age. Two different things can
+    cause that: uploads not reaching the jobs table at all, or reaching it with
+    a stale posted_date. Separate them.
+    """
+    newest = await conn.fetchrow(
+        "SELECT MAX(scraped_at) AS newest, MAX(first_seen) AS newest_seen FROM jobs")
+    print(f"[FRESH] newest scraped_at: {newest['newest']}")
+    print(f"[FRESH] newest first_seen: {newest['newest_seen']}")
+
+    print("[FRESH] rows added per day (by scraped_at), last 8 days:")
+    rows = await conn.fetch("""
+        SELECT date_trunc('day', scraped_at) AS d, COUNT(*) AS n
+        FROM jobs WHERE scraped_at > NOW() - INTERVAL '8 days'
+        GROUP BY 1 ORDER BY 1 DESC
+    """)
+    for r in rows:
+        print(f"    {str(r['d'])[:10]}  {r['n']:>6}")
+
+    print("[FRESH] Ireland only:")
+    rows = await conn.fetch("""
+        SELECT date_trunc('day', scraped_at) AS d, COUNT(*) AS n
+        FROM jobs WHERE scraped_at > NOW() - INTERVAL '8 days' AND country = 'Ireland'
+        GROUP BY 1 ORDER BY 1 DESC
+    """)
+    for r in rows:
+        print(f"    {str(r['d'])[:10]}  {r['n']:>6}")
+
+    # posted_date is LinkedIn's own "x ago" text, captured at scrape time and
+    # stored verbatim. If the UI renders it as-is it never ages, so a row
+    # scraped days ago still shows whatever string it had then.
+    print("[FRESH] most common posted_date values among Ireland sales jobs in the window:")
+    rows = await conn.fetch("""
+        SELECT COALESCE(posted_date, '(null)') AS pd, COUNT(*) AS n
+        FROM jobs
+        WHERE scraped_at > NOW() - INTERVAL '7 days'
+          AND country = 'Ireland' AND job_type = 'sales'
+        GROUP BY 1 ORDER BY n DESC LIMIT 12
+    """)
+    for r in rows:
+        print(f"    {r['pd'][:40]:<40} {r['n']:>5}")
+
+    # The scraper uploads into a queue; a background worker drains it into
+    # jobs. If that worker is stalled the scrape logs still say success while
+    # nothing new reaches any user.
+    try:
+        rows = await conn.fetch("""
+            SELECT status, COUNT(*) AS n, MAX(created_at) AS newest
+            FROM job_upload_queue GROUP BY status ORDER BY n DESC
+        """)
+        print("[QUEUE] job_upload_queue by status:")
+        for r in rows:
+            print(f"    {r['status']:<12} {r['n']:>5}   newest {r['newest']}")
+        stuck = await conn.fetch("""
+            SELECT id, status, created_at, job_count, LEFT(COALESCE(error_text,''), 200) AS err
+            FROM job_upload_queue
+            WHERE status IN ('pending', 'processing', 'failed')
+            ORDER BY created_at DESC LIMIT 10
+        """)
+        if stuck:
+            print("[QUEUE] most recent pending/processing/failed items:")
+            for r in stuck:
+                print(f"    #{r['id']} {r['status']:<11} {r['created_at']} "
+                      f"{r['job_count']} jobs  {r['err']}")
+        else:
+            print("[QUEUE] nothing pending, processing or failed")
+    except Exception as e:
+        print(f"[QUEUE] could not read job_upload_queue: {e!r}")
+    return 0
+
+
 async def main():
     parser = argparse.ArgumentParser(description='Database maintenance')
-    parser.add_argument('task', choices=['migrate', 'purge-langs', 'purge-stale', 'diagnose', 'probe-api'])
+    parser.add_argument('task', choices=['migrate', 'purge-langs', 'purge-stale', 'diagnose', 'probe-api', 'freshness'])
     parser.add_argument('--user', default='', help='User id/username/name fragment (diagnose only)')
     parser.add_argument('--migration', default='004_per_user_job_signatures.sql',
                         help='File in database_migrations/ (migrate only)')
@@ -457,6 +531,8 @@ async def main():
     try:
         if args.task == 'migrate':
             return await run_migration(conn, args.migration, args.apply)
+        if args.task == 'freshness':
+            return await freshness(conn)
         if args.task == 'diagnose':
             if not args.user:
                 print("[ERROR] diagnose needs --user")

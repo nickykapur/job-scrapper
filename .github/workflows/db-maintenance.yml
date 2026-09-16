@@ -17,6 +17,7 @@ on:
           - purge-stale
           - diagnose
           - probe-api
+          - freshness
       migration:
         description: 'Migration file (migrate only)'
         required: false
