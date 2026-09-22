@@ -18,6 +18,7 @@ on:
           - diagnose
           - probe-api
           - freshness
+          - compare
       migration:
         description: 'Migration file (migrate only)'
         required: false

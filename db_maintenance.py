@@ -509,9 +509,103 @@ async def freshness(conn):
     return 0
 
 
+async def compare(conn, user_ref):
+    """Read-only. Database truth vs what the API actually hands one user.
+
+    The complaint is that a user's newest job is hours older than the newest
+    job in the database. Walk the same path the request walks and print the
+    newest survivors at each step, so the step that loses the fresh ones is
+    visible rather than inferred.
+    """
+    user = await conn.fetchrow("""
+        SELECT id FROM users
+        WHERE CAST(id AS TEXT) = $1 OR username ILIKE $1
+           OR username ILIKE '%' || $1 || '%' OR email ILIKE '%' || $1 || '%'
+           OR COALESCE(full_name, '') ILIKE '%' || $1 || '%'
+        ORDER BY id LIMIT 1
+    """, user_ref)
+    if not user:
+        print(f"[ERROR] No user matched {user_ref!r}")
+        return 1
+    uid = user['id']
+
+    prefs = await conn.fetchrow("""
+        SELECT job_types, preferred_countries, experience_levels
+        FROM user_preferences WHERE user_id = $1
+    """, uid)
+    job_types = list((prefs['job_types'] if prefs else None) or [])
+    countries = list((prefs['preferred_countries'] if prefs else None) or [])
+    levels = list((prefs['experience_levels'] if prefs else None) or [])
+    print(f"[USER] id={uid} countries={countries} types={job_types} levels={levels}")
+
+    now = await conn.fetchval("SELECT NOW()")
+    print(f"[NOW]  {now}")
+
+    async def newest(label, sql, *params):
+        rows = await conn.fetch(sql, *params)
+        print(f"\n[{label}]")
+        if not rows:
+            print("    (nothing)")
+            return
+        for r in rows[:5]:
+            age_h = (now - r['scraped_at']).total_seconds() / 3600
+            print(f"    {age_h:6.1f}h  {str(r['job_type']):<10} "
+                  f"{str(r['experience_level']):<7} {str(r['posted_date'])[:13]:<13} "
+                  f"{r['title'][:44]}")
+
+    await newest("A. DATABASE - newest rows overall, no filters",
+        "SELECT title, posted_date, scraped_at, job_type, experience_level "
+        "FROM jobs ORDER BY scraped_at DESC LIMIT 5")
+
+    await newest("B. DATABASE - newest in her country",
+        "SELECT title, posted_date, scraped_at, job_type, experience_level FROM jobs "
+        "WHERE ($1::text[] IS NULL OR cardinality($1::text[])=0 OR country = ANY($1::text[])) "
+        "ORDER BY scraped_at DESC LIMIT 5", countries)
+
+    await newest("C. DATABASE - newest in her country AND job type",
+        "SELECT title, posted_date, scraped_at, job_type, experience_level FROM jobs "
+        "WHERE ($1::text[] IS NULL OR cardinality($1::text[])=0 OR country = ANY($1::text[])) "
+        "AND (job_type IS NULL OR job_type = ANY($2::text[])) "
+        "ORDER BY scraped_at DESC LIMIT 5", countries, job_types)
+
+    await newest("D. SERVED - newest the API sends her (real query + her filters)",
+        "SELECT title, posted_date, scraped_at, job_type, experience_level FROM ("
+        "  SELECT * FROM jobs "
+        "  WHERE scraped_at > NOW() - INTERVAL '7 days' "
+        "    AND ($1::text[] IS NULL OR cardinality($1::text[])=0 "
+        "         OR country IS NULL OR country = ANY($1::text[])) "
+        "  ORDER BY scraped_at DESC LIMIT 20000"
+        ") w WHERE (job_type IS NULL OR job_type = ANY($2::text[])) "
+        "AND (experience_level IS NULL OR experience_level = ANY($3::text[])) "
+        "ORDER BY scraped_at DESC LIMIT 5", countries, job_types, levels)
+
+    ages = await conn.fetch("""
+        SELECT width_bucket(EXTRACT(EPOCH FROM (NOW() - scraped_at)) / 3600,
+                            0, 168, 7) AS b, COUNT(*) AS n
+        FROM (
+            SELECT * FROM jobs
+            WHERE scraped_at > NOW() - INTERVAL '7 days'
+              AND ($1::text[] IS NULL OR cardinality($1::text[])=0
+                   OR country IS NULL OR country = ANY($1::text[]))
+            ORDER BY scraped_at DESC LIMIT 20000
+        ) w
+        WHERE (job_type IS NULL OR job_type = ANY($2::text[]))
+          AND (experience_level IS NULL OR experience_level = ANY($3::text[]))
+        GROUP BY 1 ORDER BY 1
+    """, countries, job_types, levels)
+    print("\n[AGE OF WHAT SHE RECEIVES] by scrape age, 24h buckets:")
+    total = 0
+    for r in ages:
+        lo = (r['b'] - 1) * 24
+        print(f"    {lo:>3}-{lo+24:<3}h  {r['n']:>5}")
+        total += r['n']
+    print(f"    total {total}")
+    return 0
+
+
 async def main():
     parser = argparse.ArgumentParser(description='Database maintenance')
-    parser.add_argument('task', choices=['migrate', 'purge-langs', 'purge-stale', 'diagnose', 'probe-api', 'freshness'])
+    parser.add_argument('task', choices=['migrate', 'purge-langs', 'purge-stale', 'diagnose', 'probe-api', 'freshness', 'compare'])
     parser.add_argument('--user', default='', help='User id/username/name fragment (diagnose only)')
     parser.add_argument('--migration', default='004_per_user_job_signatures.sql',
                         help='File in database_migrations/ (migrate only)')
@@ -531,6 +625,11 @@ async def main():
     try:
         if args.task == 'migrate':
             return await run_migration(conn, args.migration, args.apply)
+        if args.task == 'compare':
+            if not args.user:
+                print("[ERROR] compare needs --user")
+                return 2
+            return await compare(conn, args.user)
         if args.task == 'freshness':
             return await freshness(conn)
         if args.task == 'diagnose':
