@@ -603,9 +603,82 @@ async def compare(conn, user_ref):
     return 0
 
 
+async def jobtypes(conn, country_ref):
+    """Read-only. Does a job_type exist in the table at all, and if not, were
+    matching titles collected under some other type?
+
+    A user's board can be empty for two very different reasons: the search
+    never ran, or it ran and the results were filed under a different type.
+    Counting rows by type separates them.
+    """
+    print("[ALL TIME] rows by job_type, whole table:")
+    rows = await conn.fetch("""
+        SELECT COALESCE(job_type, '(null)') AS jt, COUNT(*) AS n
+        FROM jobs GROUP BY 1 ORDER BY n DESC
+    """)
+    for r in rows:
+        print(f"    {r['jt']:<18} {r['n']:>7}")
+
+    print(f"\n[{country_ref.upper()}] rows by job_type, last 7 days:")
+    rows = await conn.fetch("""
+        SELECT COALESCE(job_type, '(null)') AS jt, COUNT(*) AS n
+        FROM jobs
+        WHERE country = $1 AND scraped_at > NOW() - INTERVAL '7 days'
+        GROUP BY 1 ORDER BY n DESC
+    """, country_ref)
+    for r in rows:
+        print(f"    {r['jt']:<18} {r['n']:>7}")
+
+    # If the search did run, titles like these are in the table under whatever
+    # type the finding search term belonged to.
+    print(f"\n[{country_ref.upper()}] titles that LOOK like sustainability work, "
+          f"last 7 days, by the type they were actually filed under:")
+    rows = await conn.fetch("""
+        SELECT COALESCE(job_type, '(null)') AS jt, COUNT(*) AS n
+        FROM jobs
+        WHERE country = $1 AND scraped_at > NOW() - INTERVAL '7 days'
+          AND (title ILIKE '%nachhaltig%' OR title ILIKE '%sustainab%'
+               OR title ILIKE '%esg%' OR title ILIKE '%klimaschutz%'
+               OR title ILIKE '%csrd%' OR title ILIKE '%carbon%')
+        GROUP BY 1 ORDER BY n DESC
+    """, country_ref)
+    if not rows:
+        print("    (none at all — the sustainability searches did not run, or "
+              "found nothing)")
+    for r in rows:
+        print(f"    {r['jt']:<18} {r['n']:>7}")
+
+    print(f"\n[{country_ref.upper()}] examples of those titles:")
+    rows = await conn.fetch("""
+        SELECT title, COALESCE(job_type,'(null)') AS jt, location
+        FROM jobs
+        WHERE country = $1 AND scraped_at > NOW() - INTERVAL '7 days'
+          AND (title ILIKE '%nachhaltig%' OR title ILIKE '%sustainab%'
+               OR title ILIKE '%esg%' OR title ILIKE '%klimaschutz%'
+               OR title ILIKE '%csrd%')
+        ORDER BY scraped_at DESC LIMIT 10
+    """, country_ref)
+    if not rows:
+        print("    (none)")
+    for r in rows:
+        print(f"    [{r['jt']:<14}] {str(r['location'] or '')[:28]:<28} {r['title'][:44]}")
+
+    # Which locations exist, to test the city filter's substring assumption.
+    print(f"\n[{country_ref.upper()}] location strings, last 7 days:")
+    rows = await conn.fetch("""
+        SELECT COALESCE(location,'(null)') AS loc, COUNT(*) AS n
+        FROM jobs WHERE country = $1 AND scraped_at > NOW() - INTERVAL '7 days'
+        GROUP BY 1 ORDER BY n DESC LIMIT 12
+    """, country_ref)
+    for r in rows:
+        hamburg = 'hamburg' in r['loc'].lower()
+        print(f"    {'HAMBURG' if hamburg else '       '} {r['n']:>6}  {r['loc'][:44]}")
+    return 0
+
+
 async def main():
     parser = argparse.ArgumentParser(description='Database maintenance')
-    parser.add_argument('task', choices=['migrate', 'purge-langs', 'purge-stale', 'diagnose', 'probe-api', 'freshness', 'compare'])
+    parser.add_argument('task', choices=['migrate', 'purge-langs', 'purge-stale', 'diagnose', 'probe-api', 'freshness', 'compare', 'jobtypes'])
     parser.add_argument('--user', default='', help='User id/username/name fragment (diagnose only)')
     parser.add_argument('--migration', default='004_per_user_job_signatures.sql',
                         help='File in database_migrations/ (migrate only)')
@@ -625,6 +698,8 @@ async def main():
     try:
         if args.task == 'migrate':
             return await run_migration(conn, args.migration, args.apply)
+        if args.task == 'jobtypes':
+            return await jobtypes(conn, args.user or 'Germany')
         if args.task == 'compare':
             if not args.user:
                 print("[ERROR] compare needs --user")

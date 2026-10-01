@@ -19,6 +19,7 @@ on:
           - probe-api
           - freshness
           - compare
+          - jobtypes
       migration:
         description: 'Migration file (migrate only)'
         required: false
