@@ -355,6 +355,18 @@ class LinkedInJobScraper:
         spanish_speaking_countries = ['spain', 'españa', 'panama', 'chile', 'santiago', 'madrid', 'barcelona']
         is_spanish_location = any(country in location_lower for country in spanish_speaking_countries)
 
+        # Same courtesy for German-speaking markets. Without this, a user based
+        # in Hamburg or Berlin receives almost nothing: German postings are
+        # written in German and nearly all carry an (m/w/d) gender tag, so every
+        # one of them was being discarded. Tested on ten real German-market
+        # sustainability titles and it kept zero of ten.
+        german_speaking_countries = ['germany', 'deutschland', 'berlin', 'hamburg', 'munich',
+                                     'münchen', 'frankfurt', 'cologne', 'köln', 'stuttgart',
+                                     'düsseldorf', 'dusseldorf', 'austria', 'österreich',
+                                     'vienna', 'wien', 'switzerland', 'schweiz', 'zurich',
+                                     'zürich', 'basel', 'bern', 'geneva']
+        is_german_location = any(c in location_lower for c in german_speaking_countries)
+
         # Two tiers of evidence.
         #
         # DECISIVE tokens are unambiguous in a job title — seeing one is enough.
@@ -365,11 +377,15 @@ class LinkedInJobScraper:
         # non-English SALES titles ("Ejecutivo de Ventas", "Kundenberater") were
         # getting through untouched.
 
-        # Gender tags are near-proof of a German- or French-market posting.
+        # Gender tags are near-proof of a German- or French-market posting, which
+        # is a reason to reject only when the user is not looking at that market.
+        # In Germany they are on the majority of listings, including ones with
+        # fully English titles like "Sustainability Manager (m/w/d)".
         strong_markers = ['m/w/d', 'w/m/d', 'm/w/x', 'm/w', 'h/f', 'f/h', '(m/w/d)', '(h/f)']
-        for marker in strong_markers:
-            if marker in title_lower:
-                return False
+        if not is_german_location:
+            for marker in strong_markers:
+                if marker in title_lower:
+                    return False
 
         spanish_decisive = [
             'desarrollador', 'programador', 'ingeniero', 'ingeniería', 'científico',
@@ -403,8 +419,14 @@ class LinkedInJobScraper:
         portuguese_decisive = ['desenvolvedor', 'engenheiro', 'vendas', 'atendimento']
         portuguese_weak = ['com', 'do', 'da', 'dos', 'das']
 
-        decisive = german_decisive + french_decisive + italian_decisive + portuguese_decisive
-        weak = german_weak + french_weak + italian_weak + portuguese_weak
+        decisive = french_decisive + italian_decisive + portuguese_decisive
+        weak = french_weak + italian_weak + portuguese_weak
+
+        # German is acceptable in German-speaking markets, so only count it
+        # against the job elsewhere — mirroring the Spanish rule below.
+        if not is_german_location:
+            decisive = decisive + german_decisive
+            weak = weak + german_weak
 
         # Spanish is acceptable in Spanish-speaking markets, so only count it
         # against the job elsewhere.

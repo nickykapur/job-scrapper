@@ -46,10 +46,24 @@ async def main():
         print("[ERROR] DATABASE_URL not set")
         return 2
 
+    # No TEMP_PASSWORD secret needed. With none set we mint a strong random
+    # one, never print it, and nobody ever needs to know it: the admin UI's
+    # Password button generates a fresh one and shows it in the browser, where
+    # it is not written to a world-readable Actions log. That makes creating an
+    # account a single step with no setup.
     password = os.environ.get('NEW_PASSWORD') or ''
+    generated = False
     if not password:
-        print("[ERROR] NEW_PASSWORD is empty — set the TEMP_PASSWORD secret.")
-        return 2
+        import secrets
+        # Excludes I O l 0 1 so it can be read aloud or retyped without doubt.
+        alphabet = ('ABCDEFGHJKLMNPQRSTUVWXYZ'
+                    'abcdefghijkmnopqrstuvwxyz'
+                    '23456789')
+        # Guarantee a letter and a digit, which validate_password_strength wants.
+        password = (secrets.choice('ABCDEFGHJKLMNPQRSTUVWXYZ')
+                    + secrets.choice('23456789')
+                    + ''.join(secrets.choice(alphabet) for _ in range(14)))
+        generated = True
 
     from auth_utils import validate_password_strength, validate_email, validate_username
     for label, check, value in (('username', validate_username, args.username),
@@ -152,7 +166,13 @@ async def main():
             if hasattr(db, '_release'):
                 await db._release(conn)
 
-    print("[NOTE] The password is the TEMP_PASSWORD secret and is deliberately not shown.")
+    if generated:
+        print("[NOTE] A random 16-character password was generated and NOT printed —")
+        print("       this log is public. Nobody has it, which is intentional.")
+        print("       To give them a password: Admin -> Users -> Password -> Generate,")
+        print("       then Copy. That shows it in the browser, not in a log.")
+    else:
+        print("[NOTE] The password is the TEMP_PASSWORD secret and is deliberately not shown.")
     return 0
 
 

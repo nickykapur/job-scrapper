@@ -167,6 +167,19 @@ TITLE_EXCLUSIONS = {
 }
 
 
+# Stems matched as plain substrings rather than whole words, because German
+# builds compound nouns and a word boundary never falls inside one:
+# \bnachhaltigkeit\b does not match "Nachhaltigkeitsmanager", so every German
+# title was being discarded (5 of 7 real ones, measured). These stems are long
+# and specific enough that a substring match carries no false-positive risk --
+# unlike 'sales', which is why the English keywords still use word boundaries.
+TITLE_STEMS = {
+    'sustainability': ['nachhaltigkeit', 'klimaschutz', 'klimaneutral', 'dekarbonisierung',
+                       'emissionen', 'treibhausgas', 'kreislaufwirtschaft',
+                       'umweltmanagement', 'csr-', 'esg-'],
+}
+
+
 def is_relevant_job(title, job_type):
     """Check if job title contains relevant keywords for the job type."""
     if not title or not job_type:
@@ -181,6 +194,11 @@ def is_relevant_job(title, job_type):
     for phrase in TITLE_EXCLUSIONS.get(job_type, []):
         if phrase in title_lower:
             return False
+
+    # Compound-language stems first; see TITLE_STEMS.
+    for stem in TITLE_STEMS.get(job_type, []):
+        if stem in title_lower:
+            return True
 
     # Match on word boundaries, not bare substrings. Plain `'sales' in title`
     # classifies every Salesforce Developer, Administrator and Consultant as a
@@ -601,7 +619,16 @@ def scrape_single_country(location, country_name, railway_url, dry_run=False):
         "Corporate Sustainability",
         "Decarbonisation",
         "Sustainable Finance Analyst",
-        "Environmental Consultant"
+        "Environmental Consultant",
+        # German-language terms. LinkedIn matches the query against the posting's
+        # own language, so an English-only term set simply does not find the
+        # German majority of the Hamburg, Berlin, Vienna and Zurich markets.
+        "Nachhaltigkeitsmanager",
+        "Nachhaltigkeit",
+        "ESG Manager",
+        "Nachhaltigkeitsberichterstattung",
+        "Klimaschutzmanager",
+        "Werkstudent Nachhaltigkeit"
     ]
 
     events_search_terms = [
