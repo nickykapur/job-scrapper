@@ -180,6 +180,15 @@ TITLE_STEMS = {
 }
 
 
+# Every job type that has default search terms. Used as the fallback when
+# /api/admin/scraping-targets is unreachable, and cross-checked against the
+# API's answer so a new type cannot be added in one place and forgotten here.
+FALLBACK_JOB_TYPES = [
+    'software', 'hr', 'cybersecurity', 'sales', 'finance',
+    'marketing', 'biotech', 'engineering', 'events', 'sustainability',
+]
+
+
 def is_relevant_job(title, job_type):
     """Check if job title contains relevant keywords for the job type."""
     if not title or not job_type:
@@ -215,30 +224,48 @@ def get_active_job_types(railway_url):
     Custom keywords come from user preferences set in the admin frontend.
     Falls back to all types with no custom keywords if the API is unreachable.
     """
-    try:
-        if not railway_url.startswith('http'):
-            railway_url = f'https://{railway_url}'
+    if not railway_url.startswith('http'):
+        railway_url = f'https://{railway_url}'
 
-        response = requests.get(f"{railway_url}/api/admin/scraping-targets", timeout=15)
-        if response.status_code == 200:
-            data = response.json()
-            result = {}
-            for config in data.get('job_type_configs', []):
-                jt = config['type']
-                result[jt] = config.get('custom_keywords', [])
-            if result:
-                print(f"[API] Active job types: {', '.join(sorted(result.keys()))}")
-                for jt, keywords in result.items():
-                    if keywords:
-                        print(f"[API]   {jt}: +{len(keywords)} custom keywords from users")
-                return result
-    except Exception as e:
-        print(f"[WARN] Could not fetch active job types: {e}")
+    # Retried, because one failed call silently drops every user's configured
+    # job type in favour of the fallback below. Railway restarts on each deploy,
+    # so a scrape starting just after a push could miss the window and quietly
+    # scrape the wrong thing for 30 minutes. That is what happened on the first
+    # Hamburg run: a brand new sustainability user got no sustainability search.
+    for attempt in range(3):
+        try:
+            response = requests.get(
+                f"{railway_url}/api/admin/scraping-targets", timeout=15)
+            if response.status_code == 200:
+                data = response.json()
+                result = {}
+                for config in data.get('job_type_configs', []):
+                    jt = config['type']
+                    result[jt] = config.get('custom_keywords', [])
+                if result:
+                    print(f"[API] Active job types: {', '.join(sorted(result.keys()))}")
+                    for jt, keywords in result.items():
+                        if keywords:
+                            print(f"[API]   {jt}: +{len(keywords)} custom keywords from users")
+                    missing = sorted(set(result) - set(FALLBACK_JOB_TYPES))
+                    if missing:
+                        print(f"[API] NOTE: {', '.join(missing)} is active but absent from "
+                              f"FALLBACK_JOB_TYPES — it would be lost if this call ever fails")
+                    return result
+            print(f"[WARN] scraping-targets returned HTTP {response.status_code} "
+                  f"(attempt {attempt + 1}/3)")
+        except Exception as e:
+            print(f"[WARN] Could not fetch active job types (attempt {attempt + 1}/3): {e}")
+        if attempt < 2:
+            time.sleep(5 * (attempt + 1))
 
-    # Fallback: scrape all types, no custom keywords
-    all_types = ['software', 'hr', 'cybersecurity', 'sales', 'finance', 'marketing', 'biotech', 'engineering', 'events']
-    print(f"[WARN] Falling back to all job types")
-    return {t: [] for t in all_types}
+    # Fallback: scrape every type we have search terms for. This list must track
+    # default_terms in run_country_scrape; a type missing here is simply never
+    # searched, with no error anywhere — which is how a sustainability user's
+    # first scrape came back empty.
+    print("[WARN] Falling back to all job types — any user-specific type not in "
+          "FALLBACK_JOB_TYPES will NOT be scraped this run")
+    return {t: [] for t in FALLBACK_JOB_TYPES}
 
 def load_existing_jobs_from_railway(railway_url):
     """Load existing jobs from Railway database via API"""
