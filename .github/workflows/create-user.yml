@@ -89,13 +89,9 @@ jobs:
           # script would report success.
           set -o pipefail
 
-          if [ -z "$NEW_PASSWORD" ]; then
-            echo "TEMP_PASSWORD secret is not set."
-            echo "Add it under Settings -> Secrets and variables -> Actions, then re-run."
-            echo "It must be 8+ characters with at least one letter and one number,"
-            echo "or they will not be able to change it afterwards."
-            exit 1
-          fi
+          # No guard on NEW_PASSWORD: create_user.py generates a random one when
+          # the TEMP_PASSWORD secret is unset, so no setup is required to create
+          # an account. Set the secret only if you want a known initial password.
 
           ARGS="--username '${{ inputs.username }}' --email '${{ inputs.email }}'"
           [ -n "${{ inputs.full_name }}" ] && ARGS="$ARGS --full-name '${{ inputs.full_name }}'"
@@ -121,4 +117,5 @@ jobs:
           cat /tmp/result.txt 2>/dev/null || echo "No output — the step failed before running." >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "The password is the TEMP_PASSWORD secret's value and is deliberately not shown." >> $GITHUB_STEP_SUMMARY
+          echo "No password is shown. With TEMP_PASSWORD unset a random one is generated and discarded;" >> $GITHUB_STEP_SUMMARY
+          echo "use Admin -> Users -> Password -> Generate to issue one in the browser when needed." >> $GITHUB_STEP_SUMMARY
