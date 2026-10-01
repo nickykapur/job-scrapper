@@ -74,19 +74,14 @@ jobs:
         with:
           python-version: '3.11'
 
-      # bcrypt MUST be pinned to 4.0.1. passlib 1.7.4 reads bcrypt.__about__,
-      # which bcrypt 5.x removed; its backend probe then dies with "password
-      # cannot be longer than 72 bytes" and no hash can be produced.
-      # user_database imports auth_utils, which imports python-jose for JWT, so
-      # jose is needed even though no token is minted here. Versions match
-      # requirements-fastapi.txt so the hash this writes is byte-identical to
-      # the one the running app would produce. bcrypt MUST stay at 4.0.1:
-      # passlib 1.7.4 reads bcrypt.__about__, which 5.x removed.
+      # Deliberately lean: create_user.py uses asyncpg and passlib directly and
+      # never imports auth_utils, which would drag in python-jose AND fastapi.
+      # bcrypt MUST stay at 4.0.1 — passlib 1.7.4 reads bcrypt.__about__, which
+      # 5.x removed, and the backend probe then fails to hash anything.
       - name: Install dependencies
         run: |
-          pip install asyncpg email-validator             "python-jose[cryptography]==3.3.0" "passlib==1.7.4" "bcrypt==4.0.1"
-          python3 -c "from auth_utils import hash_password; print('auth_utils imports OK')"
-          python3 -c "from user_database import UserDatabase; print('user_database imports OK')"
+          pip install asyncpg "passlib==1.7.4" "bcrypt==4.0.1"
+          python3 -c "import create_user; print('create_user imports OK')"
 
       - name: Create user
         env:
