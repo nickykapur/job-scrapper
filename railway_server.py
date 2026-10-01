@@ -815,6 +815,30 @@ async def get_jobs_api(current_user: Optional[Dict[str, Any]] = Depends(get_curr
                                     if any(kw in title_desc for kw in aml_keywords):
                                         type_match = True
                                         break
+                                elif pref_type == 'sustainability' or pref_type == 'esg' or pref_type == 'climate':
+                                    # Only reached for jobs with no job_type set;
+                                    # tagged rows match on the field directly.
+                                    sust_keywords = [
+                                        'sustainability', 'sustainable', 'esg', 'csrd', 'esrs',
+                                        'carbon accounting', 'carbon footprint', 'climate',
+                                        'decarbonisation', 'decarbonization', 'net zero', 'net-zero',
+                                        'greenhouse gas', 'ghg', 'emissions', 'circular economy',
+                                        'sbti', 'tcfd', 'responsible investment', 'sustainable finance',
+                                        'corporate social responsibility', 'csr manager',
+                                        'nachhaltigkeit', 'klimaschutz'
+                                    ]
+                                    # Same traps as the scraper's exclusion list: carbon is a
+                                    # material, climate is also air conditioning, and
+                                    # "Environmental Officer" is usually health and safety.
+                                    if any(x in title_lower for x in ['carbon fibre', 'carbon fiber',
+                                                                      'carbon black', 'carbon steel',
+                                                                      'climate control', 'hvac',
+                                                                      'environmental health',
+                                                                      'environmental services']):
+                                        break
+                                    if any(kw in title_desc for kw in sust_keywords):
+                                        type_match = True
+                                        break
                                 elif pref_type == 'marketing' or pref_type == 'digital_marketing' or pref_type == 'content' or pref_type == 'communications' or pref_type == 'crm' or pref_type == 'analytics':
                                     marketing_keywords = [
                                         'digital marketing', 'marketing manager', 'marketing executive', 'marketing coordinator', 'marketing specialist',

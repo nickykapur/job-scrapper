@@ -138,12 +138,27 @@ TITLE_KEYWORDS = {
                          'motion graphics', 'multimedia', 'content creator', 'audio engineer', 'podcast'],
     'painter': ['painter', 'painting', 'residential painter', 'commercial painter', 'industrial painter',
                 'spray painter', 'exterior painter', 'interior painter', 'house painter', 'paint technician'],
+    # Corporate sustainability / ESG reporting, as distinct from field
+    # environmental work. The reporting vocabulary (CSRD, ESRS, VSME, GHG,
+    # SBTi) is what separates an ESG analyst role from an EHS or waste job.
+    'sustainability': ['sustainability', 'sustainable', 'esg', 'csrd', 'esrs', 'vsme',
+                       'carbon', 'climate', 'decarbonisation', 'decarbonization',
+                       'net zero', 'net-zero', 'ghg', 'greenhouse gas', 'emissions',
+                       'circular economy', 'csr', 'sbti', 'tcfd', 'environmental',
+                       'responsible investment', 'green finance'],
 }
 
 # Phrases that contain a category keyword but mean a different job. Checked
 # before the positive keywords, because a substring match cannot tell
 # "Sales Ledger Administrator" (finance admin) from a sales role.
 TITLE_EXCLUSIONS = {
+    # 'carbon', 'climate' and 'environmental' are the loose ones. Carbon is a
+    # material as well as an emission, climate is also air conditioning, and in
+    # Ireland "Environmental Officer" is usually health-and-safety or waste
+    # rather than corporate reporting.
+    'sustainability': ['carbon fibre', 'carbon fiber', 'carbon black', 'carbon steel',
+                       'climate control', 'hvac', 'environmental health',
+                       'environmental services', 'environmental technician'],
     'sales': [
         'sales ledger',      # accounts receivable, not selling
         'after sales', 'aftersales',
@@ -568,6 +583,27 @@ def scrape_single_country(location, country_name, railway_url, dry_run=False):
     ]
 
     # Events / Hospitality search terms (for Blanca - Event Management)
+    sustainability_search_terms = [
+        "Sustainability Analyst",
+        "ESG Analyst",
+        "Sustainability Consultant",
+        "ESG Consultant",
+        "Sustainability Reporting",
+        "ESG Reporting Analyst",
+        "Sustainability Specialist",
+        "Carbon Accounting",
+        "Carbon Footprint Analyst",
+        "Climate Change Analyst",
+        "CSRD Reporting",
+        "Sustainability Graduate",
+        "ESG Data Analyst",
+        "Sustainability Officer",
+        "Corporate Sustainability",
+        "Decarbonisation",
+        "Sustainable Finance Analyst",
+        "Environmental Consultant"
+    ]
+
     events_search_terms = [
         "Event Manager",
         "Event Coordinator",
@@ -595,6 +631,7 @@ def scrape_single_country(location, country_name, railway_url, dry_run=False):
         'biotech':       biotech_search_terms,
         'engineering':   engineering_search_terms,
         'events':        events_search_terms,
+        'sustainability': sustainability_search_terms,
     }
 
     # Build term_to_job_type mapping:

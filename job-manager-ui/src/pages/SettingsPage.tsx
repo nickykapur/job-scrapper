@@ -63,7 +63,7 @@ const SettingsPage: React.FC = () => {
   const [companyInput, setCompanyInput] = useState('');
 
   // Available options
-  const JOB_TYPES = ['software', 'hr', 'cybersecurity', 'sales', 'finance', 'marketing', 'data', 'design', 'biotech', 'engineering', 'events'];
+  const JOB_TYPES = ['software', 'hr', 'cybersecurity', 'sales', 'finance', 'marketing', 'data', 'design', 'biotech', 'engineering', 'events', 'sustainability'];
   const EXPERIENCE_LEVELS = ['entry', 'junior', 'mid', 'senior', 'executive'];
   const COUNTRIES = ['Ireland', 'Spain', 'Panama', 'Luxembourg', 'Germany', 'Switzerland', 'United States', 'Remote'];
 
