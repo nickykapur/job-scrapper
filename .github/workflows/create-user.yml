@@ -1,0 +1,124 @@
+name: Create User
+
+# Creates an account and its preferences in one step.
+#
+# The password is read from the TEMP_PASSWORD repository secret and is never
+# printed: Actions logs on this repository are public. Whoever set the secret
+# already knows the value. The email is an input and is not echoed either.
+#
+# This exists because the create_*_user.py scripts in the repository each
+# hardcode a real email address and a plaintext password.
+
+on:
+  workflow_dispatch:
+    inputs:
+      username:
+        description: 'Username for the new account (letters, numbers, underscore)'
+        required: true
+        type: string
+      email:
+        description: 'Their email address (used for login and password reset)'
+        required: true
+        type: string
+      full_name:
+        description: 'Full name (optional)'
+        required: false
+        default: ''
+        type: string
+      job_types:
+        description: 'Job types, comma separated (software,hr,cybersecurity,sales,finance,marketing,data,design,biotech,engineering,events,sustainability)'
+        required: true
+        default: 'sustainability'
+        type: string
+      countries:
+        description: 'Countries, comma separated (Ireland,Germany,Spain,United Kingdom,Switzerland,Luxembourg,Panama,United States)'
+        required: true
+        default: 'Germany'
+        type: string
+      cities:
+        description: 'Restrict to these cities, comma separated (e.g. Hamburg). Needs city_filter ticked.'
+        required: false
+        default: 'Hamburg'
+        type: string
+      city_filter:
+        description: 'Apply the cities above (requires migration 007)'
+        required: false
+        default: true
+        type: boolean
+      experience_levels:
+        description: 'Levels, comma separated (entry,junior,mid,senior,executive)'
+        required: false
+        default: 'entry,junior,mid'
+        type: string
+      keywords:
+        description: 'Extra search terms, comma separated (these widen what gets scraped)'
+        required: false
+        default: 'CSRD,ESRS,GHG Protocol,Carbon Footprint,Nachhaltigkeit'
+        type: string
+      apply:
+        description: 'Actually create the account (leave unchecked for a dry-run)'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  create-user:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      # bcrypt MUST be pinned to 4.0.1. passlib 1.7.4 reads bcrypt.__about__,
+      # which bcrypt 5.x removed; its backend probe then dies with "password
+      # cannot be longer than 72 bytes" and no hash can be produced.
+      - name: Install dependencies
+        run: pip install asyncpg passlib "bcrypt==4.0.1" email-validator
+
+      - name: Create user
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEW_PASSWORD: ${{ secrets.TEMP_PASSWORD }}
+        run: |
+          # Without pipefail the job takes tee's exit status, so a failing
+          # script would report success.
+          set -o pipefail
+
+          if [ -z "$NEW_PASSWORD" ]; then
+            echo "TEMP_PASSWORD secret is not set."
+            echo "Add it under Settings -> Secrets and variables -> Actions, then re-run."
+            echo "It must be 8+ characters with at least one letter and one number,"
+            echo "or they will not be able to change it afterwards."
+            exit 1
+          fi
+
+          ARGS="--username '${{ inputs.username }}' --email '${{ inputs.email }}'"
+          [ -n "${{ inputs.full_name }}" ] && ARGS="$ARGS --full-name '${{ inputs.full_name }}'"
+          [ -n "${{ inputs.job_types }}" ] && ARGS="$ARGS --job-types '${{ inputs.job_types }}'"
+          [ -n "${{ inputs.countries }}" ] && ARGS="$ARGS --countries '${{ inputs.countries }}'"
+          [ -n "${{ inputs.cities }}" ] && ARGS="$ARGS --cities '${{ inputs.cities }}'"
+          [ "${{ inputs.city_filter }}" == "true" ] && ARGS="$ARGS --enforce-city-filter"
+          [ -n "${{ inputs.experience_levels }}" ] && ARGS="$ARGS --experience-levels '${{ inputs.experience_levels }}'"
+          [ -n "${{ inputs.keywords }}" ] && ARGS="$ARGS --keywords '${{ inputs.keywords }}'"
+          [ "${{ inputs.apply }}" == "true" ] && ARGS="$ARGS --apply"
+
+          echo "Mode: ${{ inputs.apply == true && 'APPLY' || 'DRY-RUN' }}"
+          eval python3 create_user.py $ARGS | tee /tmp/result.txt
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Create User" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Mode:** ${{ inputs.apply == true && 'APPLY (account created)' || 'DRY-RUN (nothing written)' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat /tmp/result.txt 2>/dev/null || echo "No output — the step failed before running." >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The password is the TEMP_PASSWORD secret's value and is deliberately not shown." >> $GITHUB_STEP_SUMMARY
