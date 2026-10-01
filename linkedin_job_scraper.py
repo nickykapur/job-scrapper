@@ -999,12 +999,49 @@ class LinkedInJobScraper:
             'events trainee', 'events officer', 'event officer'
         ]
 
+        # Sustainability / ESG. This classifier is the one that decides a job's
+        # type, and a type it does not know falls through to 'other', which the
+        # caller DISCARDS. So a job type added to daily_single_country_scraper
+        # but not here is searched for, found, and then silently thrown away:
+        # the Hamburg run searched 354 terms, GHG Protocol alone found 16 jobs,
+        # and every one was dropped as "(type: other)".
+        #
+        # Terms are deliberately specific. Bare 'carbon', 'climate' and
+        # 'environmental' are left out: they also mean carbon fibre, air
+        # conditioning and health-and-safety. German compounds are matched as
+        # substrings because no word boundary falls inside Nachhaltigkeitsmanager.
+        sustainability_keywords = [
+            'sustainability', 'sustainable finance', 'esg', 'csrd', 'esrs', 'vsme',
+            'sbti', 'tcfd', 'carbon footprint', 'carbon accounting',
+            'greenhouse gas', 'ghg protocol', 'net zero', 'net-zero',
+            'decarbonisation', 'decarbonization', 'circular economy',
+            'corporate social responsibility',
+            # German — the majority of this market
+            'nachhaltigkeit', 'nachhaltige', 'nachhaltiges', 'nachhaltiger',
+            'klimaschutz', 'klimaneutral', 'dekarbonisierung', 'treibhausgas',
+            'kreislaufwirtschaft', 'umweltmanagement',
+        ]
+
+        # These contain a term above but mean another job.
+        sustainability_exclusions = [
+            'carbon fibre', 'carbon fiber', 'carbon black', 'carbon steel',
+            'climate control', 'hvac',
+        ]
+
         # === CHECK ORDER: most specific first, broad software last ===
 
         # 1. Cybersecurity (most specific)
         for keyword in cybersecurity_keywords:
             if keyword in text:
                 return 'cybersecurity'
+
+        # 1b. Sustainability / ESG — ahead of sales and finance, so
+        # "Sustainability Account Manager" and "Carbon Accounting Manager" land
+        # here rather than being claimed by 'account manager' or 'accounting'.
+        if not any(x in text for x in sustainability_exclusions):
+            for keyword in sustainability_keywords:
+                if keyword in text:
+                    return 'sustainability'
 
         # 2. Engineering (before software - 'engineer' is too broad for software)
         for keyword in engineering_keywords:
