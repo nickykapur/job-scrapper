@@ -36,6 +36,7 @@ import asyncpg
 VALID_JOB_TYPES = [
     'software', 'hr', 'cybersecurity', 'sales', 'finance',
     'marketing', 'data', 'design', 'biotech', 'engineering', 'events',
+    'sustainability',
 ]
 VALID_LEVELS = ['entry', 'junior', 'mid', 'senior', 'executive']
 
@@ -66,6 +67,11 @@ TYPE_KEYWORDS = {
     'design':        ['ux', 'ui designer', 'product designer', 'graphic design', 'figma'],
     'events':        ['event manager', 'event coordinator', 'conference', 'hospitality',
                       'venue', 'catering', 'wedding planner'],
+    'sustainability': ['sustainability', 'sustainable', 'esg', 'csrd', 'esrs', 'vsme',
+                       'carbon footprint', 'carbon accounting', 'ghg protocol',
+                       'greenhouse gas', 'decarbonisation', 'net zero', 'sbti',
+                       'climate', 'emissions', 'circular economy',
+                       'corporate social responsibility', 'nachhaltigkeit'],
 }
 
 # insights.seniority is finer-grained than user_preferences.experience_levels.
@@ -153,6 +159,19 @@ async def main():
                         help='Extra LinkedIn search terms for this user, comma separated. '
                              '/api/admin/scraping-targets aggregates these into the scrape, '
                              'so they widen what gets collected, not just what is shown.')
+    parser.add_argument('--cities', type=csv_arg, default=[],
+                        help='Restrict to these cities within the chosen countries, comma '
+                             'separated (e.g. Hamburg). Matched as a substring against the '
+                             "job's location string. Only takes effect together with "
+                             '--enforce-city-filter.')
+    parser.add_argument('--enforce-city-filter', dest='enforce_city_filter',
+                        action='store_true', default=None,
+                        help='Actually apply --cities. Off for everyone by default: the '
+                             'column exists only from migration 007, and until then the '
+                             'filter in /api/jobs never ran at all.')
+    parser.add_argument('--no-enforce-city-filter', dest='enforce_city_filter',
+                        action='store_false',
+                        help='Turn city filtering back off, widening to the whole country.')
     args = parser.parse_args()
 
     for name, values, allowed in (
@@ -185,9 +204,20 @@ async def main():
         user_id = matches[0]['id']
         print(f"[INFO] User id {user_id} (active={matches[0]['is_active']})")
 
+        # enforce_city_filter arrives in migration 007; tolerate its absence so
+        # this still runs against a database that has not had 007 applied.
+        has_city_flag = await conn.fetchval(
+            """SELECT EXISTS (
+                   SELECT 1 FROM information_schema.columns
+                   WHERE table_name = 'user_preferences'
+                     AND column_name = 'enforce_city_filter'
+               )"""
+        )
+        city_cols = ", enforce_city_filter" if has_city_flag else ""
         current = await conn.fetchrow(
-            """SELECT job_types, preferred_countries, experience_levels, keywords
-               FROM user_preferences WHERE user_id = $1""",
+            f"""SELECT job_types, preferred_countries, experience_levels, keywords,
+                       preferred_cities{city_cols}
+                FROM user_preferences WHERE user_id = $1""",
             user_id,
         )
         if not current:
@@ -196,7 +226,16 @@ async def main():
 
         print(f"[CURRENT] job_types={list(current['job_types'] or [])} "
               f"countries={list(current['preferred_countries'] or [])} "
-              f"levels={list(current['experience_levels'] or [])}")
+              f"levels={list(current['experience_levels'] or [])} "
+              f"cities={list(current['preferred_cities'] or [])} "
+              f"enforce_city_filter="
+              f"{current['enforce_city_filter'] if has_city_flag else '(column missing)'}")
+
+        if args.enforce_city_filter is not None and not has_city_flag:
+            print("[ERROR] enforce_city_filter column does not exist yet.")
+            print("        Apply database_migrations/007_add_enforce_city_filter.sql first")
+            print("        (Database Maintenance -> migrate -> 007_add_enforce_city_filter.sql).")
+            return 2
 
         # CV insights — the column is added at runtime by cv_routes.py, so it may
         # be absent on an older database.
@@ -247,14 +286,29 @@ async def main():
         for column, value in (('job_types', job_types),
                               ('preferred_countries', countries),
                               ('experience_levels', levels),
-                              ('keywords', args.keywords)):
+                              ('keywords', args.keywords),
+                              ('preferred_cities', args.cities)):
             if value:
                 values.append(value)
                 updates.append(f"{column} = ${len(values)}")
 
+        # Booleans need an explicit None check — False is a real instruction here,
+        # not an absent one, so the truthiness test used above would drop it.
+        if args.enforce_city_filter is not None:
+            values.append(args.enforce_city_filter)
+            updates.append(f"enforce_city_filter = ${len(values)}")
+
         print(f"[PROPOSED] job_types={job_types} countries={countries or '(unchanged)'} "
               f"levels={levels or '(unchanged)'} "
-              f"keywords={args.keywords or '(unchanged)'}")
+              f"keywords={args.keywords or '(unchanged)'} "
+              f"cities={args.cities or '(unchanged)'} "
+              f"enforce_city_filter="
+              f"{args.enforce_city_filter if args.enforce_city_filter is not None else '(unchanged)'}")
+
+        if args.cities and not (args.enforce_city_filter or
+                                (has_city_flag and current['enforce_city_filter'])):
+            print("[WARN] cities are set but enforce_city_filter is off, so they will be")
+            print("       ignored. Pass --enforce-city-filter to actually restrict.")
 
         if not args.apply:
             print("[DRY-RUN] Nothing written. Re-run with --apply to save.")

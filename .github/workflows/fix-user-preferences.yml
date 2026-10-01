@@ -38,6 +38,16 @@ on:
         required: false
         default: ''
         type: string
+      cities:
+        description: 'Restrict to these cities, comma separated (e.g. Hamburg). Needs city_filter ticked to do anything.'
+        required: false
+        default: ''
+        type: string
+      city_filter:
+        description: 'Apply the cities above (requires migration 007)'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   fix-preferences:
@@ -70,6 +80,8 @@ jobs:
           [ -n "${{ inputs.countries }}" ] && ARGS="$ARGS --countries '${{ inputs.countries }}'"
           [ -n "${{ inputs.experience_levels }}" ] && ARGS="$ARGS --experience-levels '${{ inputs.experience_levels }}'"
           [ -n "${{ inputs.keywords }}" ] && ARGS="$ARGS --keywords '${{ inputs.keywords }}'"
+          [ -n "${{ inputs.cities }}" ] && ARGS="$ARGS --cities '${{ inputs.cities }}'"
+          [ "${{ inputs.city_filter }}" == "true" ] && ARGS="$ARGS --enforce-city-filter"
 
           echo "Mode: ${{ inputs.apply == true && 'APPLY' || 'DRY-RUN' }}"
           eval python3 fix_user_preferences.py $ARGS | tee /tmp/result.txt

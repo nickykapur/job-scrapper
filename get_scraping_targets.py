@@ -95,7 +95,7 @@ def get_scraping_targets():
             'Panama': 'Panama City, Panama',
             'Chile': 'Santiago, Santiago Metropolitan Region, Chile',
             'Netherlands': 'Amsterdam, North Holland, Netherlands',
-            'Germany': 'Berlin, Germany',
+            'Germany': ['Berlin, Germany', 'Hamburg, Germany'],
             'Sweden': 'Stockholm, Stockholm County, Sweden',
             'Belgium': 'Brussels, Belgium',
             'Denmark': 'Copenhagen, Capital Region of Denmark, Denmark',

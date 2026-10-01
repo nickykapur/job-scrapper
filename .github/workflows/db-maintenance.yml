@@ -22,7 +22,7 @@ on:
       migration:
         description: 'Migration file (migrate only)'
         required: false
-        default: '006_index_original_job_id.sql'
+        default: '007_add_enforce_city_filter.sql'
         type: string
       user:
         description: 'User id, username, or name fragment (diagnose only)'
