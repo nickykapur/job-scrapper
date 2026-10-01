@@ -411,6 +411,32 @@ async def probe_api(base_url):
     if body:
         print(f"         {body[:300].decode('utf-8', 'replace')}")
 
+    # THE decisive check for an empty board on a new job type: this is the exact
+    # endpoint the scraper asks which types to search. If a type is configured
+    # on an active user but missing here, the scraper never searches it and the
+    # run still reports success.
+    status, body, secs, err = get('/api/admin/scraping-targets')
+    print(f"[PROBE] /api/admin/scraping-targets -> {status} in {secs:.1f}s"
+          + (f" ERROR {err}" if err else ""))
+    if status == 200 and body:
+        try:
+            d = _json.loads(body)
+            print(f"         active_users_count = {d.get('active_users_count')}")
+            print(f"         job_types          = {d.get('job_types')}")
+            print(f"         countries          = {d.get('countries')}")
+            cfgs = d.get('job_type_configs') or []
+            for c in cfgs:
+                kw = c.get('custom_keywords') or []
+                if kw:
+                    print(f"         {c.get('type')}: +{len(kw)} custom keywords")
+            if 'sustainability' not in (d.get('job_types') or []):
+                print("         [WARN] sustainability is NOT in job_types — the scraper")
+                print("                will never search it, whatever the local code says.")
+        except Exception as e:
+            print(f"         could not parse: {e!r}")
+    elif body:
+        print(f"         {body[:300].decode('utf-8','replace')}")
+
     # Unauthenticated /api/jobs returns the whole window with no user filtering,
     # so this measures the serving path itself rather than one user's filters.
     status, body, secs, err = get('/api/jobs')
