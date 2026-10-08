@@ -839,6 +839,33 @@ async def get_jobs_api(current_user: Optional[Dict[str, Any]] = Depends(get_curr
                                     if any(kw in title_desc for kw in sust_keywords):
                                         type_match = True
                                         break
+                                elif pref_type in ('logistics', 'supply_chain', 'freight', 'shipping'):
+                                    # Only reached for jobs with no job_type set;
+                                    # tagged rows match on the field directly.
+                                    logi_keywords = [
+                                        'logistics', 'supply chain', 'freight forward', 'freight forwarder',
+                                        'freight operations', 'air freight', 'ocean freight', 'sea freight',
+                                        'shipping coordinator', 'shipping executive', 'shipping operations',
+                                        'import/export', 'import export', 'import operations',
+                                        'export operations', 'import coordinator', 'export coordinator',
+                                        'customs clearance', 'customs broker', 'customs declaration',
+                                        'trade compliance', 'incoterms', 'bill of lading', '3pl',
+                                        'documentation executive', 'documentation coordinator',
+                                        'transport coordinator', 'transport planner',
+                                        'warehouse coordinator', 'distribution coordinator',
+                                        'demand planner', 'supply planner',
+                                    ]
+                                    # Same split as the scraper's exclusion list: the
+                                    # driving and warehouse-floor roles are a different job
+                                    # from a freight forwarding desk.
+                                    if any(x in title_lower for x in ['hgv', 'lgv', 'van driver',
+                                                                      'truck driver', 'delivery driver',
+                                                                      'forklift', 'warehouse operative',
+                                                                      'picker', 'packer']):
+                                        break
+                                    if any(kw in title_desc for kw in logi_keywords):
+                                        type_match = True
+                                        break
                                 elif pref_type == 'marketing' or pref_type == 'digital_marketing' or pref_type == 'content' or pref_type == 'communications' or pref_type == 'crm' or pref_type == 'analytics':
                                     marketing_keywords = [
                                         'digital marketing', 'marketing manager', 'marketing executive', 'marketing coordinator', 'marketing specialist',

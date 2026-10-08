@@ -146,6 +146,14 @@ TITLE_KEYWORDS = {
                        'net zero', 'net-zero', 'ghg', 'greenhouse gas', 'emissions',
                        'circular economy', 'csr', 'sbti', 'tcfd', 'environmental',
                        'responsible investment', 'green finance'],
+    # Freight forwarding and shipping operations. Only ever applied to results
+    # of a logistics search term, so the loose entries ('documentation',
+    # 'transport') cost little: the search that found the job already scoped it.
+    'logistics': ['logistics', 'freight', 'forwarding', 'forwarder', 'shipping', 'shipment',
+                  'import', 'export', 'customs', 'supply chain', 'warehouse', 'distribution',
+                  'transport', 'haulage', 'courier', 'documentation', 'dispatch',
+                  'incoterms', '3pl', 'air freight', 'ocean freight', 'sea freight',
+                  'demand planner', 'supply planner', 'inventory'],
 }
 
 # Phrases that contain a category keyword but mean a different job. Checked
@@ -159,6 +167,17 @@ TITLE_EXCLUSIONS = {
     'sustainability': ['carbon fibre', 'carbon fiber', 'carbon black', 'carbon steel',
                        'climate control', 'hvac', 'environmental health',
                        'environmental services', 'environmental technician'],
+    # A "Logistics Coordinator" search on LinkedIn returns plenty of
+    # warehouse-floor and driving jobs alongside the office roles. These are
+    # excluded because the profile this type was added for is freight
+    # forwarding / import-export desk work; drop the driver and warehouse
+    # entries here if someone wants operative roles too.
+    'logistics': [
+        'software', 'developer',          # "Supply Chain Software Developer"
+        'hgv', 'lgv', 'van driver', 'truck driver', 'delivery driver',
+        'forklift', 'warehouse operative', 'picker', 'packer', 'loader',
+        'courier driver', 'rider',
+    ],
     'sales': [
         'sales ledger',      # accounts receivable, not selling
         'after sales', 'aftersales',
@@ -186,6 +205,7 @@ TITLE_STEMS = {
 FALLBACK_JOB_TYPES = [
     'software', 'hr', 'cybersecurity', 'sales', 'finance',
     'marketing', 'biotech', 'engineering', 'events', 'sustainability',
+    'logistics',
 ]
 
 
@@ -658,6 +678,32 @@ def scrape_single_country(location, country_name, railway_url, dry_run=False):
         "Werkstudent Nachhaltigkeit"
     ]
 
+    # Freight forwarding / import-export / shipping desk roles, Dublin market.
+    logistics_search_terms = [
+        "Freight Forwarding Executive",
+        "Freight Forwarder",
+        "Freight Operations Coordinator",
+        "Import/Export Executive",
+        "Import Operations Executive",
+        "Export Operations Executive",
+        "Shipping Coordinator",
+        "Shipping Executive",
+        "Logistics Coordinator",
+        "Logistics Executive",
+        "Logistics Operations Executive",
+        "Logistics Administrator",
+        "Documentation Executive",
+        "Customer Service Executive Logistics",
+        "Air Freight Coordinator",
+        "Ocean Freight Coordinator",
+        "Sea Freight Coordinator",
+        "Customs Clearance Agent",
+        "Customs Broker",
+        "Supply Chain Coordinator",
+        "Supply Chain Administrator",
+        "Transport Coordinator",
+    ]
+
     events_search_terms = [
         "Event Manager",
         "Event Coordinator",
@@ -686,6 +732,7 @@ def scrape_single_country(location, country_name, railway_url, dry_run=False):
         'engineering':   engineering_search_terms,
         'events':        events_search_terms,
         'sustainability': sustainability_search_terms,
+        'logistics':     logistics_search_terms,
     }
 
     # Build term_to_job_type mapping:

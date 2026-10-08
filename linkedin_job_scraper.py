@@ -1028,6 +1028,65 @@ class LinkedInJobScraper:
             'climate control', 'hvac',
         ]
 
+        # Freight forwarding / shipping / logistics operations. Same reasoning
+        # as sustainability above: a type this function does not recognise
+        # returns 'other' and the caller throws the job away, so the search
+        # terms in daily_single_country_scraper are useless without an entry
+        # here.
+        #
+        # The live scraper calls this with the title only (line 1427), so these
+        # phrases are title-shaped. Bare 'import', 'export' and 'shipping' are
+        # left out: they are ordinary words in any job description, and
+        # fix_job_classifications does pass descriptions in.
+        logistics_keywords = [
+            # Freight forwarding
+            'freight forward', 'freight forwarder', 'freight agent',
+            'freight operations', 'freight coordinator', 'freight executive',
+            'air freight', 'ocean freight', 'sea freight', 'road freight',
+            'air export', 'air import',
+            # The two broad ones, specific enough as titles
+            'logistics', 'supply chain',
+            # Shipping
+            'shipping coordinator', 'shipping executive', 'shipping administrator',
+            'shipping operations', 'shipping agent', 'shipping clerk',
+            'shipping specialist', 'shipping manager', 'shipping assistant',
+            # Import / export
+            'import/export', 'import / export', 'import export',
+            'import executive', 'export executive',
+            'import operations', 'export operations',
+            'import coordinator', 'export coordinator',
+            'import clerk', 'export clerk',
+            'import administrator', 'export administrator',
+            'import manager', 'export manager',
+            # Customs and trade compliance
+            'customs clearance', 'customs broker', 'customs agent',
+            'customs declaration', 'customs compliance', 'customs officer',
+            'customs administrator', 'trade compliance', 'export control',
+            'incoterms', 'bill of lading', 'dangerous goods',
+            '3pl', 'third party logistics',
+            # Documentation, in the freight-forwarding sense
+            'documentation executive', 'documentation coordinator',
+            'documentation clerk', 'documentation officer',
+            'shipping documentation', 'export documentation', 'import documentation',
+            # Transport, warehousing and planning
+            'transport coordinator', 'transport planner', 'transport operations',
+            'warehouse coordinator', 'warehouse operations',
+            'inventory coordinator', 'distribution coordinator',
+            'distribution operations',
+            'demand planner', 'supply planner', 'materials planner',
+        ]
+
+        # These contain a term above but belong to another type. Without them
+        # "Supply Chain Software Developer" lands in logistics instead of
+        # software, and "Logistics Account Manager" — a sales job — takes a
+        # slot in a freight forwarder's feed.
+        logistics_exclusions = [
+            'software', 'developer', 'data engineer', 'data scientist',
+            'devops', 'full stack', 'frontend', 'backend',
+            'account executive', 'account manager', 'sales executive',
+            'sales manager', 'sales representative', 'business development',
+        ]
+
         # === CHECK ORDER: most specific first, broad software last ===
 
         # 1. Cybersecurity (most specific)
@@ -1057,6 +1116,17 @@ class LinkedInJobScraper:
         for keyword in events_keywords:
             if keyword in text:
                 return 'events'
+
+        # 4b. Logistics / freight forwarding — after events so that
+        # "Event Logistics Coordinator" stays an events job (events_keywords
+        # already lists 'event logistics'), and ahead of sales, finance,
+        # marketing, hr and customer_service so that
+        # "Customer Service Executive - Logistics" is not claimed by
+        # 'customer service'.
+        if not any(x in text for x in logistics_exclusions):
+            for keyword in logistics_keywords:
+                if keyword in text:
+                    return 'logistics'
 
         # 5. Sales
         for keyword in sales_keywords:

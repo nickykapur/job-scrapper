@@ -17,7 +17,7 @@ export interface Job {
   first_seen?: string;
   last_seen_24h?: string;
   country?: string;
-  job_type?: 'software' | 'hr' | 'cybersecurity' | 'sales' | 'finance' | 'marketing' | 'engineering' | 'biotech' | 'events' | 'sustainability' | 'other';
+  job_type?: 'software' | 'hr' | 'cybersecurity' | 'sales' | 'finance' | 'marketing' | 'engineering' | 'biotech' | 'events' | 'sustainability' | 'logistics' | 'other';
   experience_level?: 'entry' | 'junior' | 'mid' | 'senior';
 }
 

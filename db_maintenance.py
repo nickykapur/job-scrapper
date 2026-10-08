@@ -37,6 +37,32 @@ def load_language_detector():
         object.__new__(LinkedInJobScraper), LinkedInJobScraper)
 
 
+async def _city_prefs(conn, uid):
+    """cities + enforce_city_filter as a printable string.
+
+    enforce_city_filter only exists once migration 007 is applied, so probe for
+    it rather than assuming — the diagnostics are the thing you reach for when a
+    database is in an unexpected state.
+    """
+    has_flag = await conn.fetchval(
+        """SELECT EXISTS (
+               SELECT 1 FROM information_schema.columns
+               WHERE table_name = 'user_preferences'
+                 AND column_name = 'enforce_city_filter'
+           )"""
+    )
+    row = await conn.fetchrow(
+        f"""SELECT preferred_cities
+                   {', enforce_city_filter' if has_flag else ''}
+            FROM user_preferences WHERE user_id = $1""",
+        uid,
+    )
+    if not row:
+        return "cities=(no preferences row)"
+    cities = list(row['preferred_cities'] or [])
+    flag = row['enforce_city_filter'] if has_flag else '(column missing)'
+    return f"cities={cities} enforce_city_filter={flag}"
+
 async def run_migration(conn, name, apply):
     path = os.path.join('database_migrations', name)
     if not os.path.exists(path):
@@ -229,6 +255,7 @@ async def diagnose(conn, user_ref):
     print(f"  job_types={job_types}")
     print(f"  countries={countries}")
     print(f"  experience_levels={levels}")
+    print(f"  {await _city_prefs(conn, uid)}")
 
     # Stage 2/3 mirror the two `continue` branches that reject a job outright.
     # A job with a NULL job_type falls through to keyword sniffing in Python, so
@@ -563,6 +590,7 @@ async def compare(conn, user_ref):
     countries = list((prefs['preferred_countries'] if prefs else None) or [])
     levels = list((prefs['experience_levels'] if prefs else None) or [])
     print(f"[USER] id={uid} countries={countries} types={job_types} levels={levels}")
+    print(f"[USER] {await _city_prefs(conn, uid)}")
 
     now = await conn.fetchval("SELECT NOW()")
     print(f"[NOW]  {now}")

@@ -36,7 +36,7 @@ import asyncpg
 VALID_JOB_TYPES = [
     'software', 'hr', 'cybersecurity', 'sales', 'finance',
     'marketing', 'data', 'design', 'biotech', 'engineering', 'events',
-    'sustainability',
+    'sustainability', 'logistics',
 ]
 VALID_LEVELS = ['entry', 'junior', 'mid', 'senior', 'executive']
 
@@ -72,6 +72,10 @@ TYPE_KEYWORDS = {
                        'greenhouse gas', 'decarbonisation', 'net zero', 'sbti',
                        'climate', 'emissions', 'circular economy',
                        'corporate social responsibility', 'nachhaltigkeit'],
+    'logistics':     ['logistics', 'freight', 'freight forwarding', 'forwarder',
+                      'shipping', 'import', 'export', 'import/export', 'customs',
+                      'customs clearance', 'supply chain', 'transport', 'warehouse',
+                      'distribution', 'incoterms', '3pl', 'haulage'],
 }
 
 # insights.seniority is finer-grained than user_preferences.experience_levels.
