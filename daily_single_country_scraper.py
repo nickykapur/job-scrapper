@@ -175,8 +175,14 @@ TITLE_EXCLUSIONS = {
     'logistics': [
         'software', 'developer',          # "Supply Chain Software Developer"
         'hgv', 'lgv', 'van driver', 'truck driver', 'delivery driver',
-        'forklift', 'warehouse operative', 'picker', 'packer', 'loader',
-        'courier driver', 'rider',
+        'forklift', 'picker', 'packer', 'loader', 'courier driver', 'rider',
+        # 'warehouse operative' was too specific: the first Dublin run served
+        # "Logistics Operative" straight to her board. Bare 'operative' covers
+        # that, "General Operative" and the warehouse variants in one.
+        'operative',
+        # SAP/ERP supply-chain work is an IT role. 'software' and 'developer'
+        # above did not catch "Technology Engineer Sap Supply Chain".
+        'sap', 'erp',
     ],
     'sales': [
         'sales ledger',      # accounts receivable, not selling
