@@ -867,7 +867,8 @@ class LinkedInJobScraper:
             'information security', 'infosec', 'security operations', 'siem',
             'threat detection', 'incident response', 'security engineer',
             'penetration test', 'ethical hacker', 'security architect',
-            'analista soc', 'analista de ciberseguridad', 'seguridad de la información',
+            'analista soc', 'analista de ciberseguridad', 'analista de seguridad',
+            'seguridad de la información',
             'operaciones de seguridad', 'respuesta a incidentes'
         ]
 
@@ -882,6 +883,10 @@ class LinkedInJobScraper:
             'business development', 'sales development', 'sales engineer',
             'sales manager', 'sales associate', 'sales specialist',
             'key account', 'field sales', 'sales consultant',
+            # Searched for by default_terms but absent here, so every result
+            # was classified 'other' and thrown away.
+            'sales executive', 'enterprise sales', 'tech sales',
+            'technical sales', 'software sales',
             # Spanish
             'ejecutivo de ventas', 'gerente de cuenta', 'representante de ventas',
             'desarrollo de negocios', 'ventas', 'ejecutivo comercial',
@@ -915,6 +920,10 @@ class LinkedInJobScraper:
             'talent acquisition', 'recruiter', 'recruitment', 'recruiting',
             'people operations', 'people ops', 'people partner',
             'hr assistant', 'human resources',
+            # Same gap: default search terms that stored as 'other'.
+            'hr manager', 'hr director', 'hr lead', 'hr advisor',
+            'hr administrator', 'hr business partner',
+            'talent manager', 'talent sourcer', 'talent partner',
             # Spanish
             'recursos humanos', 'reclutador', 'reclutamiento', 'selección',
             'talento humano', 'analista de recursos humanos', 'coordinador de rrhh'
@@ -956,7 +965,10 @@ class LinkedInJobScraper:
             'marketing coordinator', 'marketing specialist', 'social media manager',
             'social media', 'seo', 'content marketing', 'content manager',
             'brand manager', 'ppc', 'performance marketing', 'email marketing',
-            'growth marketing', 'campaign manager', 'paid media', 'copywriter'
+            'growth marketing', 'campaign manager', 'paid media', 'copywriter',
+            # Same gap.
+            'crm manager', 'community manager', 'pr manager',
+            'public relations', 'communications manager'
         ]
 
         # Biotech/Life Sciences keywords — no bare 'scientist' (catches data scientist)
@@ -964,7 +976,13 @@ class LinkedInJobScraper:
             'research scientist', 'research associate',
             'cell culture', 'molecular biologist', 'gene therapy', 'crispr',
             'biotechnology', 'lab scientist', 'r&d scientist', 'biologist',
-            'biochemist', 'microbiologist', 'lab technician', 'laboratory'
+            'biochemist', 'microbiologist', 'lab technician', 'laboratory',
+            # Same gap. 'development scientist' has to be listed rather than
+            # left to fall through: software_keywords contains ' dev', which
+            # matches " Development" and claimed these for software.
+            'biotech', 'bioprocess', 'development scientist',
+            'upstream process', 'downstream process',
+            'wissenschaftler', 'laborant', 'biotechnologe'
         ]
 
         # Engineering (non-software) keywords
@@ -972,8 +990,20 @@ class LinkedInJobScraper:
             'mechanical engineer', 'manufacturing engineer', 'industrial engineer',
             'process engineer', 'aerospace engineer', 'design engineer',
             'production engineer', 'quality engineer', 'electrical engineer',
-            'chemical engineer', 'project engineer', 'field engineer'
+            'chemical engineer', 'project engineer', 'field engineer',
+            # Same gap.
+            'r&d engineer', 'test engineer', 'simulation engineer',
+            'continuous improvement engineer', 'associate engineer',
+            'entry level engineer', 'graduate engineer',
+            'maintenance engineer'
         ]
+
+        # Engineering is checked before software because bare 'engineer' is too
+        # broad, which means a software title containing one of the phrases
+        # above would be taken by engineering. 'test engineer' makes that
+        # reachable ("Software Test Engineer"), so hold those back.
+        engineering_exclusions = ['software', 'devops', 'full stack',
+                                  'test automation', 'qa engineer', 'sdet']
 
         # Events & Hospitality keywords
         events_keywords = [
@@ -1016,6 +1046,11 @@ class LinkedInJobScraper:
             'greenhouse gas', 'ghg protocol', 'net zero', 'net-zero',
             'decarbonisation', 'decarbonization', 'circular economy',
             'corporate social responsibility',
+            # Exact phrases only. Bare 'climate' and 'environmental' stay out
+            # (climate control, environmental health and safety), but these two
+            # are unambiguous and are default search terms, so without them
+            # every result they find is discarded.
+            'climate change', 'environmental consultant',
             # German — the majority of this market
             'nachhaltigkeit', 'nachhaltige', 'nachhaltiges', 'nachhaltiger',
             'klimaschutz', 'klimaneutral', 'dekarbonisierung', 'treibhausgas',
@@ -1103,9 +1138,10 @@ class LinkedInJobScraper:
                     return 'sustainability'
 
         # 2. Engineering (before software - 'engineer' is too broad for software)
-        for keyword in engineering_keywords:
-            if keyword in text:
-                return 'engineering'
+        if not any(x in text for x in engineering_exclusions):
+            for keyword in engineering_keywords:
+                if keyword in text:
+                    return 'engineering'
 
         # 3. Biotech (before software - 'research scientist' conflicts)
         for keyword in biotech_keywords:

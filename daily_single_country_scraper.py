@@ -235,6 +235,311 @@ def is_relevant_job(title, job_type):
     # somebody's sales feed.
     return any(re.search(r'\b' + re.escape(kw) + r'\b', title_lower) for kw in keywords)
 
+# Search terms per job type, at module scope so the wiring audit and any
+# other caller can read them without starting a scrape.
+software_search_terms = [
+    "Software Engineer",
+    "Python Developer",
+    "React Developer",
+    "Full Stack Developer",
+    "Backend Developer",
+    "Frontend Developer",
+    "JavaScript Developer",
+    "Node.js Developer",
+    "Junior Software Engineer",
+    "DevOps Engineer",
+    "Cloud Engineer",
+    "Data Engineer",
+    "Machine Learning Engineer",
+    "QA Engineer",
+    "Software Developer",
+    "Web Developer",
+    "Mobile Developer",
+    "Java Developer",
+    "TypeScript Developer",
+    ".NET Developer"
+]
+
+cybersecurity_search_terms = [
+    # English terms
+    "SOC Analyst",
+    "Cybersecurity Analyst",
+    "Security Analyst",
+    "Information Security Analyst",
+    "Junior SOC Analyst",
+    "Security Operations",
+    "Incident Response Analyst",
+    # Spanish terms (for Panama and Spain)
+    "Analista SOC",
+    "Analista de Ciberseguridad",
+    "Analista de Seguridad",
+]
+
+hr_search_terms = [
+    "HR Officer",
+    "Talent Acquisition Coordinator",
+    "Talent Acquisition Specialist",
+    "HR Coordinator",
+    "HR Generalist",
+    "HR Specialist",
+    "Junior Recruiter",
+    "Recruiter",
+    "Recruitment Coordinator",
+    "People Operations",
+    "People Partner",
+    "HR Assistant",
+    "HR Manager",
+    "Talent Manager",
+    "HR Business Partner",
+    "Talent Sourcer"
+]
+
+sales_search_terms = [
+    "Account Manager",
+    "Account Executive",
+    "BDR",
+    "Business Development Representative",
+    "Sales Development Representative",
+    "SDR",
+    "Inside Sales",
+    "Sales Representative",
+    "Junior Account Executive",
+    "SaaS Sales",
+    "B2B Sales",
+    "Customer Success Manager",
+    "Account Management",
+    # Tech-sales phrasing — SaaS/B2B above miss listings that self-describe
+    # as software or enterprise sales rather than by the sales motion.
+    "Tech Sales",
+    "Software Sales",
+    "Enterprise Sales",
+    "Sales Executive",
+    "Business Development Manager"
+]
+
+finance_search_terms = [
+    "FP&A Analyst",
+    "Financial Planning Analyst",
+    "Financial Analyst",
+    "Fund Accounting",
+    "Fund Accountant",
+    "Fund Operations Analyst",
+    "Credit Analyst",
+    "Junior Financial Analyst",
+    "Accounting Analyst",
+    "Finance Analyst",
+    "Treasury Analyst",
+    "Investment Accounting"
+]
+
+# Marketing / Digital Marketing search terms
+marketing_search_terms = [
+    "Digital Marketing Manager",
+    "Performance Marketing",
+    "PPC Manager",
+    "Paid Media Manager",
+    "Social Media Manager",
+    "SEO Manager",
+    "Content Marketing Manager",
+    "CRM Manager",
+    "Email Marketing Manager",
+    "Marketing Manager",
+    "Brand Manager",
+    "Growth Marketing",
+    "Community Manager",
+    "PR Manager",
+]
+
+# Biotech / Life Sciences search terms (for Melis - Molecular Biology)
+biotech_search_terms = [
+    "Research Scientist",
+    "Research Associate",
+    "Cell Culture Scientist",
+    "Molecular Biologist",
+    "Gene Therapy Scientist",
+    "CRISPR Scientist",
+    "Biotech Scientist",
+    "Process Development Scientist",
+    "Upstream Process Scientist",
+    "Downstream Process Scientist",
+    "Lab Technician",
+    "Laboratory Technician",
+    # German terms (for Germany searches)
+    "Wissenschaftler",
+    "Laborant",
+    "Biotechnologe",
+]
+
+# Engineering / Manufacturing search terms (for Maria - Mechanical/Manufacturing Engineering)
+engineering_search_terms = [
+    "Mechanical Engineer",
+    "Manufacturing Engineer",
+    "Production Engineer",
+    "Process Engineer",
+    "Industrial Engineer",
+    "Aerospace Engineer",
+    "Design Engineer",
+    "R&D Engineer",
+    "Quality Engineer",
+    "Test Engineer",
+    "Simulation Engineer",
+    "Continuous Improvement Engineer",
+    "Associate Engineer",
+    "Entry Level Engineer",
+]
+
+# Events / Hospitality search terms (for Blanca - Event Management)
+sustainability_search_terms = [
+    "Sustainability Analyst",
+    "ESG Analyst",
+    "Sustainability Consultant",
+    "ESG Consultant",
+    "Sustainability Reporting",
+    "ESG Reporting Analyst",
+    "Sustainability Specialist",
+    "Carbon Accounting",
+    "Carbon Footprint Analyst",
+    "Climate Change Analyst",
+    "CSRD Reporting",
+    "Sustainability Graduate",
+    "ESG Data Analyst",
+    "Sustainability Officer",
+    "Corporate Sustainability",
+    "Decarbonisation",
+    "Sustainable Finance Analyst",
+    "Environmental Consultant",
+    # German-language terms. LinkedIn matches the query against the posting's
+    # own language, so an English-only term set simply does not find the
+    # German majority of the Hamburg, Berlin, Vienna and Zurich markets.
+    "Nachhaltigkeitsmanager",
+    "Nachhaltigkeit",
+    "ESG Manager",
+    "Nachhaltigkeitsberichterstattung",
+    "Klimaschutzmanager",
+    "Werkstudent Nachhaltigkeit"
+]
+
+# Freight forwarding / import-export / shipping desk roles, Dublin market.
+logistics_search_terms = [
+    "Freight Forwarding Executive",
+    "Freight Forwarder",
+    "Freight Operations Coordinator",
+    "Import/Export Executive",
+    "Import Operations Executive",
+    "Export Operations Executive",
+    "Shipping Coordinator",
+    "Shipping Executive",
+    "Logistics Coordinator",
+    "Logistics Executive",
+    "Logistics Operations Executive",
+    "Logistics Administrator",
+    "Documentation Executive",
+    "Customer Service Executive Logistics",
+    "Air Freight Coordinator",
+    "Ocean Freight Coordinator",
+    "Sea Freight Coordinator",
+    "Customs Clearance Agent",
+    "Customs Broker",
+    "Supply Chain Coordinator",
+    "Supply Chain Administrator",
+    "Transport Coordinator",
+]
+
+events_search_terms = [
+    "Event Manager",
+    "Event Coordinator",
+    "Event Planner",
+    "Event Executive",
+    "Conference Manager",
+    "Corporate Event Manager",
+    "Meeting Planner",
+    "Hospitality Manager",
+    "Venue Manager",
+    "Catering Manager",
+    "Wedding Planner",
+    "MICE Coordinator",
+    "Events Assistant",
+]
+
+# Default search terms per job type (hardcoded fallback/base).
+# FALLBACK_JOB_TYPES above must list every key here.
+DEFAULT_SEARCH_TERMS = {
+    'software':      software_search_terms,
+    'hr':            hr_search_terms,
+    'cybersecurity': cybersecurity_search_terms,
+    'sales':         sales_search_terms,
+    'finance':       finance_search_terms,
+    'marketing':     marketing_search_terms,
+    'biotech':       biotech_search_terms,
+    'engineering':   engineering_search_terms,
+    'events':        events_search_terms,
+    'sustainability': sustainability_search_terms,
+    'logistics':     logistics_search_terms,
+}
+
+
+def audit_job_type_wiring(job_types, default_terms, verbose=True):
+    """Prove each job type survives the whole pipeline before scraping on it.
+
+    A job type has to be known in three separate places, and nothing connects
+    them:
+
+      default_terms              what LinkedIn is searched for
+      TITLE_KEYWORDS             the relevance gate here
+      detect_job_type            decides the STORED type — and a type it does
+                                 not recognise returns 'other', which the
+                                 caller discards
+
+    Missing from the third one, a type is searched for, found, and silently
+    thrown away. That is not hypothetical: Hamburg ran 354 searches, found 16
+    jobs on "GHG Protocol" alone, and stored none of them, because
+    detect_job_type had never heard of sustainability. Nothing in the logs said
+    so — the summary simply had no sustainability line.
+
+    So rather than trust three lists to stay in step, run each type's own search
+    terms through the real gate and the real classifier and report what would
+    actually happen. Returns the list of broken job types.
+    """
+    from linkedin_job_scraper import LinkedInJobScraper
+    # The method touches no instance state, so skip __init__ and its browser.
+    classify = LinkedInJobScraper.detect_job_type.__get__(
+        object.__new__(LinkedInJobScraper), LinkedInJobScraper)
+
+    broken = []
+    for job_type in sorted(job_types):
+        terms = default_terms.get(job_type, [])
+        if not terms:
+            # Custom-keyword-only type: nothing to audit against, and it has no
+            # default search terms, so say so rather than passing it silently.
+            if verbose:
+                print(f"[AUDIT] {job_type}: no default search terms "
+                      f"(custom keywords only)")
+            continue
+
+        kept = [t for t in terms if is_relevant_job(t, job_type)]
+        stored = [t for t in terms if classify(t) == job_type]
+
+        if not stored:
+            broken.append(job_type)
+            print(f"[AUDIT] *** {job_type}: BROKEN — none of {len(terms)} search "
+                  f"terms classify as '{job_type}'. detect_job_type in "
+                  f"linkedin_job_scraper.py does not know this type, so every "
+                  f"job found will be discarded as 'other'.")
+        elif not kept:
+            broken.append(job_type)
+            print(f"[AUDIT] *** {job_type}: BROKEN — none of {len(terms)} search "
+                  f"terms pass the relevance gate. Check TITLE_KEYWORDS"
+                  f"['{job_type}'].")
+        elif verbose:
+            print(f"[AUDIT] {job_type}: {len(kept)}/{len(terms)} terms pass the "
+                  f"gate, {len(stored)}/{len(terms)} store as '{job_type}'")
+
+    if broken:
+        print(f"[AUDIT] {len(broken)} job type(s) would lose every job they "
+              f"find: {', '.join(broken)}")
+    return broken
+
+
 def get_active_job_types(railway_url):
     """Fetch active job types + any user-defined custom keywords from the API.
 
@@ -495,249 +800,15 @@ def scrape_single_country(location, country_name, railway_url, dry_run=False):
     active_job_types = get_active_job_types(railway_url)
     phases["fetch_job_types"] = round(time.time() - _t, 1)
 
-    # Search terms - Multi-user configuration
-    software_search_terms = [
-        "Software Engineer",
-        "Python Developer",
-        "React Developer",
-        "Full Stack Developer",
-        "Backend Developer",
-        "Frontend Developer",
-        "JavaScript Developer",
-        "Node.js Developer",
-        "Junior Software Engineer",
-        "DevOps Engineer",
-        "Cloud Engineer",
-        "Data Engineer",
-        "Machine Learning Engineer",
-        "QA Engineer",
-        "Software Developer",
-        "Web Developer",
-        "Mobile Developer",
-        "Java Developer",
-        "TypeScript Developer",
-        ".NET Developer"
-    ]
-
-    cybersecurity_search_terms = [
-        # English terms
-        "SOC Analyst",
-        "Cybersecurity Analyst",
-        "Security Analyst",
-        "Information Security Analyst",
-        "Junior SOC Analyst",
-        "Security Operations",
-        "Incident Response Analyst",
-        # Spanish terms (for Panama and Spain)
-        "Analista SOC",
-        "Analista de Ciberseguridad",
-        "Analista de Seguridad",
-    ]
-
-    hr_search_terms = [
-        "HR Officer",
-        "Talent Acquisition Coordinator",
-        "Talent Acquisition Specialist",
-        "HR Coordinator",
-        "HR Generalist",
-        "HR Specialist",
-        "Junior Recruiter",
-        "Recruiter",
-        "Recruitment Coordinator",
-        "People Operations",
-        "People Partner",
-        "HR Assistant",
-        "HR Manager",
-        "Talent Manager",
-        "HR Business Partner",
-        "Talent Sourcer"
-    ]
-
-    sales_search_terms = [
-        "Account Manager",
-        "Account Executive",
-        "BDR",
-        "Business Development Representative",
-        "Sales Development Representative",
-        "SDR",
-        "Inside Sales",
-        "Sales Representative",
-        "Junior Account Executive",
-        "SaaS Sales",
-        "B2B Sales",
-        "Customer Success Manager",
-        "Account Management",
-        # Tech-sales phrasing — SaaS/B2B above miss listings that self-describe
-        # as software or enterprise sales rather than by the sales motion.
-        "Tech Sales",
-        "Software Sales",
-        "Enterprise Sales",
-        "Sales Executive",
-        "Business Development Manager"
-    ]
-
-    finance_search_terms = [
-        "FP&A Analyst",
-        "Financial Planning Analyst",
-        "Financial Analyst",
-        "Fund Accounting",
-        "Fund Accountant",
-        "Fund Operations Analyst",
-        "Credit Analyst",
-        "Junior Financial Analyst",
-        "Accounting Analyst",
-        "Finance Analyst",
-        "Treasury Analyst",
-        "Investment Accounting"
-    ]
-
-    # Marketing / Digital Marketing search terms
-    marketing_search_terms = [
-        "Digital Marketing Manager",
-        "Performance Marketing",
-        "PPC Manager",
-        "Paid Media Manager",
-        "Social Media Manager",
-        "SEO Manager",
-        "Content Marketing Manager",
-        "CRM Manager",
-        "Email Marketing Manager",
-        "Marketing Manager",
-        "Brand Manager",
-        "Growth Marketing",
-        "Community Manager",
-        "PR Manager",
-    ]
-
-    # Biotech / Life Sciences search terms (for Melis - Molecular Biology)
-    biotech_search_terms = [
-        "Research Scientist",
-        "Research Associate",
-        "Cell Culture Scientist",
-        "Molecular Biologist",
-        "Gene Therapy Scientist",
-        "CRISPR Scientist",
-        "Biotech Scientist",
-        "Process Development Scientist",
-        "Upstream Process Scientist",
-        "Downstream Process Scientist",
-        "Lab Technician",
-        "Laboratory Technician",
-        # German terms (for Germany searches)
-        "Wissenschaftler",
-        "Laborant",
-        "Biotechnologe",
-    ]
-
-    # Engineering / Manufacturing search terms (for Maria - Mechanical/Manufacturing Engineering)
-    engineering_search_terms = [
-        "Mechanical Engineer",
-        "Manufacturing Engineer",
-        "Production Engineer",
-        "Process Engineer",
-        "Industrial Engineer",
-        "Aerospace Engineer",
-        "Design Engineer",
-        "R&D Engineer",
-        "Quality Engineer",
-        "Test Engineer",
-        "Simulation Engineer",
-        "Continuous Improvement Engineer",
-        "Associate Engineer",
-        "Entry Level Engineer",
-    ]
-
-    # Events / Hospitality search terms (for Blanca - Event Management)
-    sustainability_search_terms = [
-        "Sustainability Analyst",
-        "ESG Analyst",
-        "Sustainability Consultant",
-        "ESG Consultant",
-        "Sustainability Reporting",
-        "ESG Reporting Analyst",
-        "Sustainability Specialist",
-        "Carbon Accounting",
-        "Carbon Footprint Analyst",
-        "Climate Change Analyst",
-        "CSRD Reporting",
-        "Sustainability Graduate",
-        "ESG Data Analyst",
-        "Sustainability Officer",
-        "Corporate Sustainability",
-        "Decarbonisation",
-        "Sustainable Finance Analyst",
-        "Environmental Consultant",
-        # German-language terms. LinkedIn matches the query against the posting's
-        # own language, so an English-only term set simply does not find the
-        # German majority of the Hamburg, Berlin, Vienna and Zurich markets.
-        "Nachhaltigkeitsmanager",
-        "Nachhaltigkeit",
-        "ESG Manager",
-        "Nachhaltigkeitsberichterstattung",
-        "Klimaschutzmanager",
-        "Werkstudent Nachhaltigkeit"
-    ]
-
-    # Freight forwarding / import-export / shipping desk roles, Dublin market.
-    logistics_search_terms = [
-        "Freight Forwarding Executive",
-        "Freight Forwarder",
-        "Freight Operations Coordinator",
-        "Import/Export Executive",
-        "Import Operations Executive",
-        "Export Operations Executive",
-        "Shipping Coordinator",
-        "Shipping Executive",
-        "Logistics Coordinator",
-        "Logistics Executive",
-        "Logistics Operations Executive",
-        "Logistics Administrator",
-        "Documentation Executive",
-        "Customer Service Executive Logistics",
-        "Air Freight Coordinator",
-        "Ocean Freight Coordinator",
-        "Sea Freight Coordinator",
-        "Customs Clearance Agent",
-        "Customs Broker",
-        "Supply Chain Coordinator",
-        "Supply Chain Administrator",
-        "Transport Coordinator",
-    ]
-
-    events_search_terms = [
-        "Event Manager",
-        "Event Coordinator",
-        "Event Planner",
-        "Event Executive",
-        "Conference Manager",
-        "Corporate Event Manager",
-        "Meeting Planner",
-        "Hospitality Manager",
-        "Venue Manager",
-        "Catering Manager",
-        "Wedding Planner",
-        "MICE Coordinator",
-        "Events Assistant",
-    ]
-
-    # Default search terms per job type (hardcoded fallback/base)
-    default_terms = {
-        'software':      software_search_terms,
-        'hr':            hr_search_terms,
-        'cybersecurity': cybersecurity_search_terms,
-        'sales':         sales_search_terms,
-        'finance':       finance_search_terms,
-        'marketing':     marketing_search_terms,
-        'biotech':       biotech_search_terms,
-        'engineering':   engineering_search_terms,
-        'events':        events_search_terms,
-        'sustainability': sustainability_search_terms,
-        'logistics':     logistics_search_terms,
-    }
+    default_terms = DEFAULT_SEARCH_TERMS
 
     # Build term_to_job_type mapping:
     # - For each active job type, use default terms + any custom keywords set via admin frontend
     # - New job types (not in default_terms) use only their custom keywords
+    # Before spending an hour of browser time, check each active type can
+    # actually survive to storage. See audit_job_type_wiring.
+    audit_job_type_wiring(active_job_types.keys(), default_terms)
+
     term_to_job_type = {}
     for job_type, custom_keywords in active_job_types.items():
         base = default_terms.get(job_type, [])
