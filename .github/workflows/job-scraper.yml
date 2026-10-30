@@ -136,6 +136,21 @@ jobs:
             *)             MATRIX="$ALL" ;;
           esac
 
+          # Scheduled runs: keep only cities in countries an active user wants.
+          # If the targets call fell back (no needed_countries), keep them all.
+          if [ "${{ github.event_name }}" != "workflow_dispatch" ] && [ -f targets.json ]; then
+            MATRIX=$(MATRIX="$MATRIX" python3 -c "
+          import json, os, sys
+          matrix = json.loads(os.environ['MATRIX'])
+          needed = json.load(open('targets.json')).get('needed_countries')
+          if needed is not None:
+              dropped = sorted({c['name'] for c in matrix if c['name'] not in needed})
+              matrix = [c for c in matrix if c['name'] in needed]
+              print('Skipping countries with no active users:', ', '.join(dropped) or 'none', file=sys.stderr)
+          print(json.dumps(matrix, separators=(',', ':')))
+          ")
+          fi
+
           echo "countries_matrix=$MATRIX" >> $GITHUB_OUTPUT
           echo "Matrix: $MATRIX"
 
@@ -143,7 +158,7 @@ jobs:
   scrape-country:
     runs-on: ubuntu-latest
     needs: check-scraping-needed
-    if: needs.check-scraping-needed.outputs.should_scrape == 'true'
+    if: needs.check-scraping-needed.outputs.should_scrape == 'true' && needs.check-scraping-needed.outputs.countries_matrix != '[]'
 
     strategy:
       matrix:

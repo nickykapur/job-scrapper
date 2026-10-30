@@ -126,6 +126,10 @@ def get_scraping_targets():
             'skip_scraping': False,
             'active_users_count': active_users_count,
             'countries': countries_to_scrape,
+            # Raw country names from the API; the workflow drops matrix cities
+            # in countries no active user wants. 'countries' above only holds
+            # those in country_locations, which misses e.g. United Kingdom.
+            'needed_countries': countries,
             'job_types': job_types_to_scrape,
             'total_combinations': len(countries_to_scrape) * len(job_types_to_scrape)
         }

@@ -554,8 +554,13 @@ def audit_job_type_wiring(job_types, default_terms, verbose=True):
     return broken
 
 
-def get_active_job_types(railway_url):
+def get_active_job_types(railway_url, country=None):
     """Fetch active job types + any user-defined custom keywords from the API.
+
+    With `country`, only the types active users in that country want — a
+    New York run used to search all 15 types anyone anywhere wanted (376
+    terms, including 'Exterior Painter'). If the country isn't in the
+    per-country map (a manual run, or an older server), all types are used.
 
     Returns Dict[job_type, List[custom_keywords]], e.g.:
         {'software': ['Data Scientist'], 'hr': [], 'biotech': ['Virologist']}
@@ -577,8 +582,15 @@ def get_active_job_types(railway_url):
                 f"{railway_url}/api/admin/scraping-targets", timeout=15)
             if response.status_code == 200:
                 data = response.json()
+                configs = data.get('job_type_configs', [])
+                by_country = data.get('country_job_type_configs') or {}
+                if country and country in by_country:
+                    configs = by_country[country]
+                    print(f"[API] Using job types wanted by active users in {country}")
+                elif country:
+                    print(f"[API] No per-country job types for {country} — using all active types")
                 result = {}
-                for config in data.get('job_type_configs', []):
+                for config in configs:
                     jt = config['type']
                     result[jt] = config.get('custom_keywords', [])
                 if result:
@@ -815,7 +827,7 @@ def scrape_single_country(location, country_name, railway_url, dry_run=False):
     phases["fetch_existing"] = round(time.time() - _t, 1)
 
     _t = time.time()
-    active_job_types = get_active_job_types(railway_url)
+    active_job_types = get_active_job_types(railway_url, country_name)
     phases["fetch_job_types"] = round(time.time() - _t, 1)
 
     default_terms = DEFAULT_SEARCH_TERMS

@@ -2705,8 +2705,14 @@ async def admin_create_user(
     }
 
 @app.get("/api/admin/scraping-targets")
-async def get_scraping_targets():
-    """Get job types and countries that should be scraped based on active users' preferences"""
+async def get_scraping_targets(active_days: int = 14):
+    """Get job types and countries that should be scraped based on active users' preferences.
+
+    A user counts only if is_active is set AND they have used the app in the
+    last `active_days` days (login, a job interaction, a tracked event, or a
+    new account). The flag alone kept users who had left the app being
+    scraped for indefinitely. active_days=0 falls back to the flag alone.
+    """
     if not db or not DATABASE_AVAILABLE:
         raise HTTPException(status_code=500, detail="Database not available")
 
@@ -2728,7 +2734,15 @@ async def get_scraping_targets():
             FROM users u
             LEFT JOIN user_preferences up ON u.id = up.user_id
             WHERE u.is_active = TRUE
-        """)
+              AND ($1 = 0 OR GREATEST(
+                    u.created_at,
+                    u.last_login,
+                    (SELECT MAX(i.updated_at) FROM user_job_interactions i WHERE i.user_id = u.id),
+                    (SELECT MAX(e.occurred_at) FROM user_activity_events e WHERE e.user_id = u.id)
+                  ) > NOW() - make_interval(days => $1))
+        """, active_days)
+        flagged_active_count = await conn.fetchval(
+            "SELECT COUNT(*) FROM users WHERE is_active = TRUE")
     finally:
         await db._release(conn)
 
@@ -2751,8 +2765,15 @@ async def get_scraping_targets():
         all_job_types = set()
         all_countries = set()
         custom_keywords_by_type = {}  # {job_type: set of keywords}
+        # {country: {job_type: set of keywords}} — so each city searches only
+        # the types someone in that country wants, not every type anyone wants
+        types_by_country = {}
 
         for user in users:
+            user_types = [LEGACY_TYPE_MAP.get(t, t) for t in (user['job_types'] or [])] or ['software']
+            # Same defaults as the global fallbacks below
+            user_countries = user['countries'] or ['Ireland']
+
             if user['job_types']:
                 for raw_type in user['job_types']:
                     job_type = LEGACY_TYPE_MAP.get(raw_type, raw_type)
@@ -2761,6 +2782,12 @@ async def get_scraping_targets():
             if user['countries']:
                 for country in user['countries']:
                     all_countries.add(country)
+
+            for country in user_countries:
+                for job_type in user_types:
+                    kws = types_by_country.setdefault(country, {}).setdefault(job_type, set())
+                    if user['job_types']:
+                        kws.update(user['keywords'] or [])
 
             # Attach user keywords to each of their job types (using normalized type)
             if user['keywords'] and user['job_types']:
@@ -2785,14 +2812,23 @@ async def get_scraping_targets():
             for jt in sorted(all_job_types)
         ]
 
+        country_job_type_configs = {
+            country: [{'type': jt, 'custom_keywords': sorted(kws)} for jt, kws in sorted(types.items())]
+            for country, types in sorted(types_by_country.items())
+        }
+
         return {
             'success': True,
             'active_users_count': len(users),
+            'idle_users_skipped': flagged_active_count - len(users),  # flagged active, but no recent use
+            'active_days': active_days,
+            'country_job_type_configs': country_job_type_configs,
             'job_types': sorted(list(all_job_types)),       # kept for backward compat
             'job_type_configs': job_type_configs,            # new: includes custom keywords
             'countries': sorted(list(all_countries)),
-            'scraping_needed': len(all_job_types) > 0 and len(all_countries) > 0,
-            'message': f'Scraping targets generated from {len(users)} active users'
+            'scraping_needed': len(users) > 0,
+            'message': f'Scraping targets generated from {len(users)} active users '
+                       f'({flagged_active_count - len(users)} idle for {active_days}+ days skipped)'
         }
 
     except Exception as e:
