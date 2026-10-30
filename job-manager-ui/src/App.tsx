@@ -287,7 +287,7 @@ const App: React.FC = () => {
         if (job.applied || job.rejected) return;
       } else if (filters.status === 'applied' && !job.applied) return;
       else if (filters.status === 'not_applied' && (job.applied || job.rejected)) return;
-      else if (filters.status === 'new' && !job.is_new) return;
+      else if (filters.status === 'new' && (!job.is_new || job.applied || job.rejected)) return;
       else if (filters.status === 'rejected' && !job.rejected) return;
 
       // Job type filter

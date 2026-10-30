@@ -85,6 +85,10 @@ def get_scraping_targets():
             'events': {
                 'search_terms': ['Event Manager', 'Event Coordinator', 'Event Executive', 'Event Specialist', 'Events Specialist', 'Conference Manager', 'Wedding Planner', 'Hospitality Manager', 'Meeting Planner', 'Event Planner', 'Venue Coordinator', 'Event Production', 'Exhibition Coordinator', 'Corporate Events'],
                 'enabled': 'events' in job_types or 'hospitality' in job_types or 'event_management' in job_types
+            },
+            'media_production': {
+                'search_terms': ['Graphic Designer', 'Junior Graphic Designer', 'Visual Designer', 'Brand Designer', 'Content Designer', 'Digital Designer', 'Creative Designer', 'Video Editor', 'Motion Designer', 'Multimedia Designer', 'Social Media Designer', 'Studio Coordinator'],
+                'enabled': 'media_production' in job_types or 'media' in job_types or 'content' in job_types or 'digital_marketing' in job_types
             }
         }
 
