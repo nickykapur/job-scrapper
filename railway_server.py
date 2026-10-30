@@ -485,8 +485,8 @@ async def _process_queue_once() -> bool:
         try:
             if status == 'done':
                 await c.execute(
-                    "UPDATE job_upload_queue SET status='done', finished_at=NOW(), result=$1::jsonb WHERE id=$2",
-                    json.dumps(result_dict or {}), qid
+                    "DELETE FROM job_upload_queue WHERE id=$1",
+                    qid
                 )
             else:
                 await c.execute(
@@ -515,11 +515,24 @@ async def _queue_worker():
     """Background task: drain job_upload_queue one batch at a time."""
     import traceback as _tb
     logger.info("Queue worker started")
+    _cleanup_counter = 0
     while True:
         try:
             processed = await _process_queue_once()
             if not processed:
                 await asyncio.sleep(3)  # Nothing pending, poll every 3s
+                _cleanup_counter += 1
+                # Every ~10 minutes clean up old failed rows
+                if _cleanup_counter >= 200:
+                    _cleanup_counter = 0
+                    c = await db.get_connection()
+                    if c:
+                        try:
+                            await c.execute(
+                                "DELETE FROM job_upload_queue WHERE status='failed' AND finished_at < NOW() - INTERVAL '7 days'"
+                            )
+                        finally:
+                            await db._release(c)
         except Exception as e:
             logger.error("Queue worker loop error: %s\n%s", e, _tb.format_exc())
             await asyncio.sleep(5)
@@ -753,11 +766,11 @@ async def get_jobs_api(current_user: Optional[Dict[str, Any]] = Depends(get_curr
                     if preferences.get('job_types'):
                         job_type = job_data.get('job_type')
 
-                        # If job_type field exists, use it
-                        if job_type and job_type not in preferences['job_types']:
+                        # If job_type field exists and is a real category (not "other"), use it
+                        if job_type and job_type != 'other' and job_type not in preferences['job_types']:
                             continue
-                        # If job_type field missing, detect from title/description
-                        elif not job_type:
+                        # If job_type field missing or "other", detect from title/description
+                        elif not job_type or job_type == 'other':
                             type_match = False
                             for pref_type in preferences['job_types']:
                                 if pref_type == 'software':
@@ -1631,37 +1644,32 @@ async def update_job_legacy(request: JobUpdateRequest, current_user: Optional[Di
 
 @app.post("/sync_jobs")
 async def sync_jobs(request: SyncJobsRequest):
-    """Sync jobs from local scraper — enqueues for background processing and returns immediately."""
+    """Sync jobs from local scraper — processes directly without queuing."""
     if not db or not DATABASE_AVAILABLE:
         raise HTTPException(status_code=500, detail="Database not available")
 
     job_count = sum(1 for k in request.jobs_data if not k.startswith('_'))
+    logger.info("Processing %d jobs directly (no queue)", job_count)
 
-    conn = await db.get_connection()
-    if not conn:
-        raise HTTPException(status_code=500, detail="Database connection failed")
     try:
-        row = await conn.fetchrow(
-            "INSERT INTO job_upload_queue (jobs_data, job_count) VALUES ($1::jsonb, $2) RETURNING id",
-            json.dumps(request.jobs_data), job_count
-        )
-    finally:
-        await db._release(conn)
-
-    logger.info("Enqueued %d jobs for background processing (queue_id=%s)", job_count, row['id'])
-
-    # Return success immediately; actual counts are 0 since processing is async.
-    # Jobs will appear in the dashboard within seconds as the background worker drains the queue.
-    return {
-        "success": True,
-        "message": f"Queued {job_count} jobs for processing (queue_id={row['id']})",
-        "queue_id": row['id'],
-        "new_jobs": 0,
-        "new_software": 0, "new_hr": 0, "new_cybersecurity": 0,
-        "new_sales": 0, "new_finance": 0, "new_marketing": 0,
-        "new_biotech": 0, "new_engineering": 0, "new_events": 0,
-        "updated_jobs": 0, "skipped_reposts": 0,
-    }
+        result = await db.sync_jobs_from_scraper(request.jobs_data)
+        if 'error' in result:
+            raise HTTPException(status_code=500, detail=result['error'])
+        return {
+            "success": True,
+            "message": f"Processed {job_count} jobs",
+            "new_jobs":       result.get('new_jobs', 0),
+            "updated_jobs":   result.get('updated_jobs', 0),
+            "skipped_reposts": result.get('skipped_reposts', 0),
+            "new_software": 0, "new_hr": 0, "new_cybersecurity": 0,
+            "new_sales": 0, "new_finance": 0, "new_marketing": 0,
+            "new_biotech": 0, "new_engineering": 0, "new_events": 0,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("sync_jobs failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/jobs/bulk-reject")
 async def bulk_reject_jobs(
@@ -4996,6 +5004,390 @@ async def save_interview_tracker(
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        await db._release(conn)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AUTO-APPLY MODULE
+# ─────────────────────────────────────────────────────────────────────────────
+
+import base64
+import re as _re
+import anthropic as _anthropic
+
+def _normalize_question(q: str) -> str:
+    """Lowercase, strip punctuation, collapse whitespace — used as cache key."""
+    return _re.sub(r'\s+', ' ', _re.sub(r'[^\w\s]', '', q.lower())).strip()
+
+class AutoApplyProfile(BaseModel):
+    phone: Optional[str] = None
+    linkedin_url: Optional[str] = None
+    years_experience: Optional[int] = None
+    work_authorized: bool = True
+    requires_visa: bool = False
+    salary_min: Optional[int] = None
+    salary_max: Optional[int] = None
+    education_level: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = "United States"
+    cover_letter: Optional[str] = None
+    extra_qa: Optional[Dict[str, Any]] = {}
+
+class QueueJobRequest(BaseModel):
+    job_id: str
+    job_url: str
+    job_title: Optional[str] = None
+    company: Optional[str] = None
+
+class AnswerRequest(BaseModel):
+    question_raw: str
+    answer: str
+    source: str = "manual"
+
+class AIAnswerRequest(BaseModel):
+    question_raw: str
+
+@app.get("/api/auto-apply/profile")
+async def get_apply_profile(current_user: dict = Depends(get_current_user)):
+    """Get user's auto-apply profile."""
+    if not db or not db.use_postgres:
+        raise HTTPException(status_code=503, detail="Database not available")
+    user_id = current_user.get('id') or current_user.get('user_id')
+    conn = await db.get_connection()
+    try:
+        row = await conn.fetchrow("""
+            SELECT phone, linkedin_url, years_experience, work_authorized,
+                   requires_visa, salary_min, salary_max, education_level,
+                   city, state, country, cover_letter, extra_qa,
+                   resume_filename, updated_at
+            FROM user_apply_profiles WHERE user_id = $1
+        """, user_id)
+        if not row:
+            return {}
+        d = dict(row)
+        d['updated_at'] = d['updated_at'].isoformat() if d.get('updated_at') else None
+        d['extra_qa'] = d['extra_qa'] or {}
+        return d
+    finally:
+        await db._release(conn)
+
+@app.post("/api/auto-apply/profile")
+async def save_apply_profile(
+    profile: AutoApplyProfile,
+    current_user: dict = Depends(get_current_user)
+):
+    """Save or update user's auto-apply profile (without resume)."""
+    if not db or not db.use_postgres:
+        raise HTTPException(status_code=503, detail="Database not available")
+    user_id = current_user.get('id') or current_user.get('user_id')
+    conn = await db.get_connection()
+    try:
+        await conn.execute("""
+            INSERT INTO user_apply_profiles
+              (user_id, phone, linkedin_url, years_experience, work_authorized,
+               requires_visa, salary_min, salary_max, education_level, city,
+               state, country, cover_letter, extra_qa, updated_at)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,NOW())
+            ON CONFLICT (user_id) DO UPDATE SET
+              phone=$2, linkedin_url=$3, years_experience=$4, work_authorized=$5,
+              requires_visa=$6, salary_min=$7, salary_max=$8, education_level=$9,
+              city=$10, state=$11, country=$12, cover_letter=$13,
+              extra_qa=$14, updated_at=NOW()
+        """,
+            user_id, profile.phone, profile.linkedin_url, profile.years_experience,
+            profile.work_authorized, profile.requires_visa, profile.salary_min,
+            profile.salary_max, profile.education_level, profile.city,
+            profile.state, profile.country, profile.cover_letter,
+            json.dumps(profile.extra_qa or {})
+        )
+        return {"success": True}
+    finally:
+        await db._release(conn)
+
+@app.post("/api/auto-apply/profile/resume")
+async def upload_resume(
+    request: Dict[str, Any],
+    current_user: dict = Depends(get_current_user)
+):
+    """Upload resume as base64-encoded PDF. Stores as BYTEA in DB."""
+    if not db or not db.use_postgres:
+        raise HTTPException(status_code=503, detail="Database not available")
+    user_id = current_user.get('id') or current_user.get('user_id')
+    b64 = request.get('resume_b64', '')
+    filename = request.get('filename', 'resume.pdf')
+    if not b64:
+        raise HTTPException(status_code=400, detail="resume_b64 required")
+    try:
+        pdf_bytes = base64.b64decode(b64)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid base64")
+
+    conn = await db.get_connection()
+    try:
+        await conn.execute("""
+            INSERT INTO user_apply_profiles (user_id, resume_pdf, resume_filename, updated_at)
+            VALUES ($1, $2, $3, NOW())
+            ON CONFLICT (user_id) DO UPDATE SET
+              resume_pdf=$2, resume_filename=$3, updated_at=NOW()
+        """, user_id, pdf_bytes, filename)
+        return {"success": True, "filename": filename, "size_kb": round(len(pdf_bytes) / 1024, 1)}
+    finally:
+        await db._release(conn)
+
+@app.get("/api/auto-apply/profile/resume")
+async def get_resume(current_user: dict = Depends(get_current_user)):
+    """Return resume as base64 PDF for the extension to use."""
+    if not db or not db.use_postgres:
+        raise HTTPException(status_code=503, detail="Database not available")
+    user_id = current_user.get('id') or current_user.get('user_id')
+    conn = await db.get_connection()
+    try:
+        row = await conn.fetchrow("""
+            SELECT resume_pdf, resume_filename FROM user_apply_profiles WHERE user_id = $1
+        """, user_id)
+        if not row or not row['resume_pdf']:
+            raise HTTPException(status_code=404, detail="No resume uploaded")
+        return {
+            "filename": row['resume_filename'] or 'resume.pdf',
+            "resume_b64": base64.b64encode(bytes(row['resume_pdf'])).decode()
+        }
+    finally:
+        await db._release(conn)
+
+# ── Queue management ──────────────────────────────────────────────────────────
+
+@app.post("/api/auto-apply/queue")
+async def queue_job(
+    req: QueueJobRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Add a job to the auto-apply queue."""
+    if not db or not db.use_postgres:
+        raise HTTPException(status_code=503, detail="Database not available")
+    user_id = current_user.get('id') or current_user.get('user_id')
+    conn = await db.get_connection()
+    try:
+        await conn.execute("""
+            INSERT INTO auto_apply_queue (user_id, job_id, job_url, job_title, company)
+            VALUES ($1, $2, $3, $4, $5)
+            ON CONFLICT (user_id, job_id) DO NOTHING
+        """, user_id, req.job_id, req.job_url, req.job_title, req.company)
+        return {"success": True}
+    finally:
+        await db._release(conn)
+
+@app.delete("/api/auto-apply/queue/{job_id}")
+async def dequeue_job(job_id: str, current_user: dict = Depends(get_current_user)):
+    """Remove a job from the queue."""
+    if not db or not db.use_postgres:
+        raise HTTPException(status_code=503, detail="Database not available")
+    user_id = current_user.get('id') or current_user.get('user_id')
+    conn = await db.get_connection()
+    try:
+        await conn.execute("""
+            DELETE FROM auto_apply_queue WHERE user_id=$1 AND job_id=$2
+        """, user_id, job_id)
+        return {"success": True}
+    finally:
+        await db._release(conn)
+
+@app.get("/api/auto-apply/queue")
+async def get_queue(current_user: dict = Depends(get_current_user)):
+    """Get the user's auto-apply queue with status breakdown."""
+    if not db or not db.use_postgres:
+        raise HTTPException(status_code=503, detail="Database not available")
+    user_id = current_user.get('id') or current_user.get('user_id')
+    conn = await db.get_connection()
+    try:
+        rows = await conn.fetch("""
+            SELECT id, job_id, job_url, job_title, company, status,
+                   attempt_count, error_reason, applied_at, queued_at
+            FROM auto_apply_queue
+            WHERE user_id = $1
+            ORDER BY queued_at DESC
+            LIMIT 100
+        """, user_id)
+        items = []
+        for r in rows:
+            d = dict(r)
+            d['applied_at'] = d['applied_at'].isoformat() if d.get('applied_at') else None
+            d['queued_at'] = d['queued_at'].isoformat() if d.get('queued_at') else None
+            items.append(d)
+        counts = {}
+        for item in items:
+            s = item['status']
+            counts[s] = counts.get(s, 0) + 1
+        return {"items": items, "counts": counts, "total": len(items)}
+    finally:
+        await db._release(conn)
+
+@app.patch("/api/auto-apply/queue/{job_id}/status")
+async def update_queue_status(
+    job_id: str,
+    body: Dict[str, Any],
+    current_user: dict = Depends(get_current_user)
+):
+    """Extension calls this to update job status (applied/failed/skipped_external)."""
+    if not db or not db.use_postgres:
+        raise HTTPException(status_code=503, detail="Database not available")
+    user_id = current_user.get('id') or current_user.get('user_id')
+    status = body.get('status', 'applied')
+    error_reason = body.get('error_reason')
+    conn = await db.get_connection()
+    try:
+        await conn.execute("""
+            UPDATE auto_apply_queue
+            SET status=$3, error_reason=$4,
+                applied_at = CASE WHEN $3='applied' THEN NOW() ELSE applied_at END,
+                attempt_count = attempt_count + 1
+            WHERE user_id=$1 AND job_id=$2
+        """, user_id, job_id, status, error_reason)
+
+        # If successfully applied, also mark in main jobs table
+        if status == 'applied':
+            await conn.execute("""
+                INSERT INTO user_job_interactions (user_id, job_id, applied, applied_at)
+                VALUES ($1, $2, true, NOW())
+                ON CONFLICT (user_id, job_id) DO UPDATE SET applied=true, applied_at=NOW()
+            """, user_id, job_id)
+
+        return {"success": True}
+    finally:
+        await db._release(conn)
+
+# ── Answer cache ──────────────────────────────────────────────────────────────
+
+@app.get("/api/auto-apply/answers")
+async def get_answer_cache(current_user: dict = Depends(get_current_user)):
+    """Return all cached answers for the extension to use locally."""
+    if not db or not db.use_postgres:
+        raise HTTPException(status_code=503, detail="Database not available")
+    user_id = current_user.get('id') or current_user.get('user_id')
+    conn = await db.get_connection()
+    try:
+        rows = await conn.fetch("""
+            SELECT question_key, question_raw, answer, source, use_count, updated_at
+            FROM auto_apply_answer_cache
+            WHERE user_id=$1
+            ORDER BY use_count DESC
+        """, user_id)
+        items = []
+        for r in rows:
+            d = dict(r)
+            d['updated_at'] = d['updated_at'].isoformat() if d.get('updated_at') else None
+            items.append(d)
+        return {"answers": items}
+    finally:
+        await db._release(conn)
+
+@app.post("/api/auto-apply/answers")
+async def save_answer(
+    req: AnswerRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Save or update a cached answer (manual override)."""
+    if not db or not db.use_postgres:
+        raise HTTPException(status_code=503, detail="Database not available")
+    user_id = current_user.get('id') or current_user.get('user_id')
+    key = _normalize_question(req.question_raw)
+    conn = await db.get_connection()
+    try:
+        await conn.execute("""
+            INSERT INTO auto_apply_answer_cache
+              (user_id, question_key, question_raw, answer, source, use_count, updated_at)
+            VALUES ($1,$2,$3,$4,$5,1,NOW())
+            ON CONFLICT (user_id, question_key) DO UPDATE SET
+              answer=$4, source=$5, use_count=auto_apply_answer_cache.use_count+1, updated_at=NOW()
+        """, user_id, key, req.question_raw, req.answer, req.source)
+        return {"success": True, "question_key": key}
+    finally:
+        await db._release(conn)
+
+@app.post("/api/auto-apply/answers/ai-generate")
+async def ai_generate_answer(
+    req: AIAnswerRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Check cache first. On miss, call Claude to generate an answer,
+    then store it so we never call AI for the same question twice.
+    """
+    if not db or not db.use_postgres:
+        raise HTTPException(status_code=503, detail="Database not available")
+    user_id = current_user.get('id') or current_user.get('user_id')
+    key = _normalize_question(req.question_raw)
+
+    conn = await db.get_connection()
+    try:
+        # Cache lookup
+        cached = await conn.fetchrow("""
+            SELECT answer FROM auto_apply_answer_cache
+            WHERE user_id=$1 AND question_key=$2
+        """, user_id, key)
+
+        if cached:
+            # Increment use count
+            await conn.execute("""
+                UPDATE auto_apply_answer_cache SET use_count=use_count+1, updated_at=NOW()
+                WHERE user_id=$1 AND question_key=$2
+            """, user_id, key)
+            return {"answer": cached['answer'], "source": "cache"}
+
+        # Cache miss — fetch user profile for context
+        profile = await conn.fetchrow("""
+            SELECT phone, linkedin_url, years_experience, work_authorized,
+                   requires_visa, salary_min, salary_max, education_level,
+                   city, state, country, extra_qa
+            FROM user_apply_profiles WHERE user_id=$1
+        """, user_id)
+
+        profile_ctx = ""
+        if profile:
+            profile_ctx = f"""
+User profile:
+- Years of experience: {profile['years_experience']}
+- Work authorized: {profile['work_authorized']}
+- Requires visa: {profile['requires_visa']}
+- Salary expectation: ${profile['salary_min'] or '?'}–${profile['salary_max'] or '?'}/yr
+- Education: {profile['education_level']}
+- Location: {profile['city']}, {profile['state']}, {profile['country']}
+- Extra Q&A: {json.dumps(profile['extra_qa'] or {})}
+"""
+
+        # Call Claude
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        if not api_key:
+            raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY not configured")
+
+        client = _anthropic.Anthropic(api_key=api_key)
+        message = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=300,
+            messages=[{
+                "role": "user",
+                "content": f"""{profile_ctx}
+
+Answer this job application form question concisely and professionally.
+Give ONLY the answer text — no explanation, no quotes, no preamble.
+Keep it under 3 sentences unless the question clearly requires more.
+
+Question: {req.question_raw}"""
+            }]
+        )
+        answer = message.content[0].text.strip()
+
+        # Store in cache
+        await conn.execute("""
+            INSERT INTO auto_apply_answer_cache
+              (user_id, question_key, question_raw, answer, source, use_count, updated_at)
+            VALUES ($1,$2,$3,$4,'ai',1,NOW())
+            ON CONFLICT (user_id, question_key) DO UPDATE SET
+              answer=$4, source='ai', use_count=1, updated_at=NOW()
+        """, user_id, key, req.question_raw, answer)
+
+        return {"answer": answer, "source": "ai"}
+
     finally:
         await db._release(conn)
 

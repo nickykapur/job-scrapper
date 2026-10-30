@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 300px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0d0d10;
+      color: #e5e7eb;
+    }
+
+    .header {
+      padding: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      background: linear-gradient(135deg,#3b82f6,#8b5cf6);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+    .header-text h1 { font-size: 13px; font-weight: 700; }
+    .header-text p  { font-size: 11px; color: rgba(255,255,255,0.4); }
+
+    .section { padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+
+    .stat-row {
+      display: flex; gap: 8px; margin-bottom: 12px;
+    }
+    .stat {
+      flex: 1; background: #111114; border-radius: 10px;
+      padding: 10px 12px; text-align: center;
+    }
+    .stat-val { font-size: 22px; font-weight: 800; color: #3b82f6; letter-spacing: -1px; }
+    .stat-lbl { font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; color: rgba(255,255,255,0.4); margin-top: 2px; }
+
+    .progress-bar {
+      height: 4px; background: rgba(255,255,255,0.08);
+      border-radius: 2px; overflow: hidden; margin-bottom: 6px;
+    }
+    .progress-fill {
+      height: 100%; background: linear-gradient(90deg,#3b82f6,#8b5cf6);
+      border-radius: 2px; transition: width 0.3s;
+    }
+    .progress-label {
+      font-size: 10px; color: rgba(255,255,255,0.4);
+      display: flex; justify-content: space-between;
+    }
+
+    .btn {
+      width: 100%; padding: 10px; border-radius: 10px; border: none;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary { background: linear-gradient(135deg,#3b82f6,#6366f1); color: #fff; }
+    .btn-secondary {
+      background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.7);
+      margin-top: 6px;
+    }
+    .btn:not(:disabled):hover { opacity: 0.85; }
+
+    .login-section { padding: 16px; }
+    .login-section h2 { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+    .login-section p  { font-size: 11px; color: rgba(255,255,255,0.4); margin-bottom: 12px; }
+    input[type="text"], input[type="password"] {
+      width: 100%; padding: 9px 12px; border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.1); background: #111114;
+      color: #e5e7eb; font-size: 12px; margin-bottom: 8px;
+      outline: none;
+    }
+    input:focus { border-color: #3b82f6; }
+
+    .status-dot {
+      display: inline-block; width: 7px; height: 7px;
+      border-radius: 50%; margin-right: 5px;
+    }
+    .status-dot.running { background: #10b981; animation: pulse 1.5s infinite; }
+    .status-dot.idle    { background: rgba(255,255,255,0.2); }
+
+    @keyframes pulse {
+      0%,100% { opacity: 1; } 50% { opacity: 0.3; }
+    }
+
+    .queue-list { margin-top: 8px; max-height: 120px; overflow-y: auto; }
+    .queue-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+      font-size: 11px;
+    }
+    .queue-item:last-child { border-bottom: none; }
+    .badge {
+      font-size: 9px; padding: 2px 6px; border-radius: 6px; font-weight: 600;
+      white-space: nowrap;
+    }
+    .badge-pending  { background: rgba(245,158,11,0.15); color: #f59e0b; }
+    .badge-applied  { background: rgba(16,185,129,0.15); color: #10b981; }
+    .badge-failed   { background: rgba(239,68,68,0.15);  color: #ef4444; }
+    .badge-skipped  { background: rgba(107,114,128,0.15); color: #6b7280; }
+
+    .footer { padding: 10px 16px; font-size: 10px; color: rgba(255,255,255,0.25); text-align: center; }
+    .link { color: #3b82f6; cursor: pointer; text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">⚡</div>
+  <div class="header-text">
+    <h1>Auto Apply</h1>
+    <p>Job Tracker Extension</p>
+  </div>
+</div>
+
+<!-- Login view (shown when not authenticated) -->
+<div id="loginView" class="login-section" style="display:none">
+  <h2>Connect to Job Tracker</h2>
+  <p>Enter your Job Tracker URL and login token to get started.</p>
+  <input type="text" id="apiBaseInput" placeholder="https://your-app.railway.app" />
+  <input type="password" id="tokenInput" placeholder="Paste your API token" />
+  <button class="btn btn-primary" id="loginBtn">Connect</button>
+  <p style="margin-top:10px;font-size:10px;color:rgba(255,255,255,0.3)">
+    Find your token in Job Tracker → Settings → Extension Token
+  </p>
+</div>
+
+<!-- Main view (shown when authenticated) -->
+<div id="mainView" style="display:none">
+  <div class="section">
+    <div class="stat-row">
+      <div class="stat">
+        <div class="stat-val" id="pendingCount">–</div>
+        <div class="stat-lbl">Queued</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val" id="appliedCount" style="color:#10b981">–</div>
+        <div class="stat-lbl">Applied today</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val" id="failedCount" style="color:#ef4444">–</div>
+        <div class="stat-lbl">Skipped</div>
+      </div>
+    </div>
+
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill" style="width:0%"></div>
+    </div>
+    <div class="progress-label">
+      <span><span class="status-dot idle" id="statusDot"></span><span id="statusText">Idle</span></span>
+      <span id="progressLabel">0 / 50 today</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <button class="btn btn-primary" id="startBtn">Start Applying</button>
+    <button class="btn btn-secondary" id="openSettingsBtn">Open Settings</button>
+  </div>
+
+  <div class="section" id="queueSection">
+    <div style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.5);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em">Recent Queue</div>
+    <div class="queue-list" id="queueList">
+      <div style="font-size:11px;color:rgba(255,255,255,0.3);padding:8px 0">No jobs queued yet.</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span class="link" id="logoutLink">Disconnect</span> · Auto Apply Pilot v1.0
+  </div>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>
