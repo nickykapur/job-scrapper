@@ -102,6 +102,14 @@ if _sentry_dsn:
 MAX_CONCURRENT_SEARCHES = 8  # GitHub Actions has enough headroom for 8 parallel browsers
 BATCH_DELAY_SECONDS = 1      # Delay between batches to avoid LinkedIn rate limits
 
+# Stop starting new searches after this long, so there is time left to upload.
+# The workflow step is killed at 45 minutes, and uploading happens only after
+# searching — a city killed mid-search uploaded nothing at all (NY, 30 Oct:
+# 340/376 searches done, 0 jobs saved). Searches already running are allowed
+# to finish; leave room for those plus the upload.
+SEARCH_TIME_BUDGET_SECONDS = int(float(os.environ.get("SCRAPE_TIME_BUDGET_MINUTES", "36")) * 60)
+_stop_searching = threading.Event()
+
 # Title keywords for job type validation
 # Only jobs with these keywords in title will be kept for each job type
 TITLE_KEYWORDS = {
@@ -726,6 +734,10 @@ def search_single_term(term, location, country_name, existing_jobs, job_type, th
     """
     last_error = None
     for attempt in range(1, MAX_SEARCH_RETRIES + 2):  # e.g. 3 total attempts
+        if _stop_searching.is_set():
+            # Time budget spent — don't start (or retry) a search now
+            return {'term': term, 'jobs': {}, 'job_type': job_type, 'success': False,
+                    'skipped': True, 'error': last_error, 'thread_id': thread_id}
         try:
             thread_scraper = _get_thread_scraper(existing_jobs)
             if attempt > 1:
@@ -827,6 +839,7 @@ def scrape_single_country(location, country_name, railway_url, dry_run=False):
     all_new_jobs = {}
     jobs_by_type = {}   # {job_type: {job_id: job_data}} — supports any job type dynamically
     successful_searches = 0
+    skipped_searches = 0  # never run because the time budget ran out
     lock = threading.Lock()  # For thread-safe dictionary updates
 
     print(f"\n[LOCATION] Searching in {location}")
@@ -867,10 +880,25 @@ def scrape_single_country(location, country_name, railway_url, dry_run=False):
             completed += 1
             task = future_to_task[future]
 
+            if (not _stop_searching.is_set()
+                    and time.time() - run_started_at.timestamp() > SEARCH_TIME_BUDGET_SECONDS):
+                _stop_searching.set()
+                not_started = sum(1 for f in future_to_task if f.cancel())
+                logger.warning("[BUDGET] %s: %d-minute search budget spent after %d/%d searches — "
+                               "skipping %d not yet started, finishing the ones running, then uploading",
+                               country_name, SEARCH_TIME_BUDGET_SECONDS // 60, completed,
+                               len(term_to_job_type), not_started)
+
+            if future.cancelled():
+                skipped_searches += 1
+                continue
+
             try:
                 result = future.result()
 
-                if result['success']:
+                if result.get('skipped'):
+                    skipped_searches += 1
+                elif result['success']:
                     successful_searches += 1
 
                     # Thread-safe update of shared dictionaries
@@ -910,12 +938,13 @@ def scrape_single_country(location, country_name, railway_url, dry_run=False):
                 time.sleep(BATCH_DELAY_SECONDS)
 
     phases["scraping"] = round(time.time() - _scraping_start, 1)
-    logger.info("[COMPLETE] All %d searches finished for %s in %.0fs", len(term_to_job_type), country_name, phases["scraping"])
+    logger.info("[COMPLETE] %d/%d searches run for %s in %.0fs", len(term_to_job_type) - skipped_searches,
+                len(term_to_job_type), country_name, phases["scraping"])
     _close_all_scrapers()  # Release all reused Chrome instances — also called in finally below
 
     # Alert when too many searches fail — this is the earliest signal that LinkedIn is
     # blocking us and users will see no new jobs.
-    total_terms = len(term_to_job_type)
+    total_terms = len(term_to_job_type) - skipped_searches  # searches actually attempted
     failure_rate = (total_terms - successful_searches) / total_terms if total_terms else 0
     if failure_rate >= 0.5 and _sentry_dsn:
         sentry_sdk.capture_message(
@@ -926,8 +955,8 @@ def scrape_single_country(location, country_name, railway_url, dry_run=False):
         )
 
     by_type_summary = ", ".join(f"{jt}: {len(jobs)}" for jt, jobs in jobs_by_type.items())
-    logger.info("[SUMMARY] %s: %d/%d searches OK, %d new jobs (%s)",
-                country_name, successful_searches, len(term_to_job_type),
+    logger.info("[SUMMARY] %s: %d/%d searches OK, %d skipped for time, %d new jobs (%s)",
+                country_name, successful_searches, len(term_to_job_type), skipped_searches,
                 len(all_new_jobs), by_type_summary or "none")
 
     # Drop stale jobs that LinkedIn slipped through despite the date filter
@@ -987,7 +1016,7 @@ def scrape_single_country(location, country_name, railway_url, dry_run=False):
 
     # ── POST timing log to backend ────────────────────────────────────────────
     total_duration = int(time.time() - run_started_at.timestamp())
-    failed_searches = len(term_to_job_type) - successful_searches
+    failed_searches = len(term_to_job_type) - successful_searches - skipped_searches
     if railway_url and not dry_run:
         _post_run_log(railway_url, {
             "country": country_name,
